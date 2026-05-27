@@ -1,0 +1,117 @@
+import { createFileRoute, Outlet, redirect, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import {
+  LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
+  Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/app")({
+  beforeLoad: async () => {
+    if (typeof window === "undefined") return;
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) throw redirect({ to: "/login" });
+  },
+  component: AppLayout,
+});
+
+const nav = [
+  { to: "/app", label: "Painel", icon: LayoutDashboard, exact: true },
+  { to: "/app/clientes", label: "Empresas", icon: Building2 },
+  { to: "/app/fluxo-caixa", label: "Fluxo de caixa", icon: ArrowLeftRight },
+  { to: "/app/contas-pagar", label: "Contas a pagar", icon: ArrowUpCircle },
+  { to: "/app/contas-receber", label: "Contas a receber", icon: ArrowDownCircle },
+  { to: "/app/orcamento", label: "Orçamento", icon: Target },
+  { to: "/app/estoque", label: "Estoque", icon: Package },
+  { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
+  { to: "/app/configuracoes", label: "Configurações", icon: Settings },
+];
+
+function AppLayout() {
+  const navigate = useNavigate();
+  const { user, isConsultant, loading } = useAuth();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => { setOpen(false); }, [path]);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    toast.success("Sessão encerrada");
+    navigate({ to: "/login", replace: true });
+  };
+
+  if (loading) {
+    return <div className="min-h-screen grid place-items-center text-muted-foreground">Carregando...</div>;
+  }
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar desktop */}
+      <aside className="hidden md:flex w-64 shrink-0 bg-sidebar text-sidebar-foreground flex-col">
+        <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
+          <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
+            <Wallet className="size-4" />
+          </div>
+          <div>
+            <div className="font-display font-semibold leading-tight">SISTEMAFP PJ</div>
+            <div className="text-[11px] text-sidebar-foreground/60">Gestão financeira</div>
+          </div>
+        </div>
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {nav.map((n) => {
+            const active = n.exact ? path === n.to : path.startsWith(n.to);
+            return (
+              <Link key={n.to} to={n.to} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>
+                <n.icon className="size-4" />
+                {n.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="p-3 border-t border-sidebar-border">
+          <div className="px-3 py-2 text-xs text-sidebar-foreground/60 truncate">
+            {user?.email}
+            {isConsultant && <span className="ml-2 px-1.5 py-0.5 rounded bg-sidebar-primary/20 text-sidebar-primary text-[10px] font-medium">CONSULTOR</span>}
+          </div>
+          <Button onClick={logout} variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+            <LogOut className="size-4" /> Sair
+          </Button>
+        </div>
+      </aside>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          <aside className="relative w-64 bg-sidebar text-sidebar-foreground flex flex-col">
+            <div className="p-5 border-b border-sidebar-border font-display font-semibold">SISTEMAFP PJ</div>
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+              {nav.map((n) => (
+                <Link key={n.to} to={n.to} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-sidebar-accent">
+                  <n.icon className="size-4" /> {n.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="p-3 border-t border-sidebar-border">
+              <Button onClick={logout} variant="ghost" className="w-full justify-start"><LogOut className="size-4" /> Sair</Button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="md:hidden h-14 border-b flex items-center px-4 gap-3 bg-card">
+          <button onClick={() => setOpen(true)} className="p-2 -ml-2"><Menu className="size-5" /></button>
+          <span className="font-display font-semibold">SISTEMAFP PJ</span>
+        </header>
+        <main className="flex-1 p-4 md:p-8 overflow-x-auto">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
