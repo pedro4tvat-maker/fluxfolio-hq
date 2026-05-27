@@ -127,7 +127,7 @@ function PainelGeral() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.map((c) => (
-            <Link key={c.id} to="/app/fluxo-caixa" className="bg-card border rounded-2xl p-5 shadow-card hover:shadow-elevated transition-shadow space-y-4 block">
+            <Link key={c.id} to="/app/fluxo-caixa" onClick={() => localStorage.setItem("sfp:selected_company", c.id)} className="bg-card border rounded-2xl p-5 shadow-card hover:shadow-elevated transition-shadow space-y-4 block">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="font-display font-semibold leading-tight">{c.nome}</h3>
