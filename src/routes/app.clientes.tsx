@@ -1,0 +1,134 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { PlusCircle, Building2, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import { formatDate } from "@/lib/format";
+
+export const Route = createFileRoute("/app/clientes")({ component: ClientesPage });
+
+function ClientesPage() {
+  const { isConsultant } = useAuth();
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["companies-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("companies").select("*").order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [form, setForm] = useState({ nome: "", responsavel: "", documento: "", telefone: "", email: "", segmento: "", cidade: "", estado: "" });
+
+  const startNew = () => { setEditing(null); setForm({ nome: "", responsavel: "", documento: "", telefone: "", email: "", segmento: "", cidade: "", estado: "" }); setOpen(true); };
+  const startEdit = (c: any) => { setEditing(c); setForm({ nome: c.nome ?? "", responsavel: c.responsavel ?? "", documento: c.documento ?? "", telefone: c.telefone ?? "", email: c.email ?? "", segmento: c.segmento ?? "", cidade: c.cidade ?? "", estado: c.estado ?? "" }); setOpen(true); };
+
+  const save = async () => {
+    if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
+    if (editing) {
+      const { error } = await supabase.from("companies").update(form).eq("id", editing.id);
+      if (error) return toast.error(error.message);
+      toast.success("Empresa atualizada");
+    } else {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("companies").insert({ ...form, owner_id: u.user!.id });
+      if (error) return toast.error(error.message);
+      toast.success("Empresa cadastrada");
+    }
+    setOpen(false);
+    qc.invalidateQueries({ queryKey: ["companies-list"] });
+    qc.invalidateQueries({ queryKey: ["dashboard-companies"] });
+  };
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold">Empresas</h1>
+          <p className="text-muted-foreground text-sm mt-1">Gerencie os clientes acompanhados.</p>
+        </div>
+        {isConsultant && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={startNew}><PlusCircle className="size-4" /> Nova empresa</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{editing ? "Editar empresa" : "Nova empresa"}</DialogTitle></DialogHeader>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2 space-y-1.5"><Label>Nome da empresa *</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Responsável</Label><Input value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>CNPJ/CPF</Label><Input value={form.documento} onChange={(e) => setForm({ ...form, documento: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Telefone</Label><Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>E-mail</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Segmento</Label><Input value={form.segmento} onChange={(e) => setForm({ ...form, segmento: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Cidade</Label><Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Estado</Label><Input value={form.estado} maxLength={2} onChange={(e) => setForm({ ...form, estado: e.target.value.toUpperCase() })} /></div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                <Button onClick={save}>Salvar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-muted-foreground">Carregando...</div>
+        ) : !data || data.length === 0 ? (
+          <div className="p-10 text-center">
+            <Building2 className="size-12 mx-auto text-muted-foreground/40" />
+            <p className="mt-3 text-muted-foreground">Nenhuma empresa cadastrada.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="p-3">Empresa</th>
+                  <th className="p-3">Responsável</th>
+                  <th className="p-3">Segmento</th>
+                  <th className="p-3">Cidade/UF</th>
+                  <th className="p-3">Início</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3 w-20"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {data.map((c: any) => (
+                  <tr key={c.id} className="hover:bg-muted/30">
+                    <td className="p-3 font-medium">{c.nome}</td>
+                    <td className="p-3 text-muted-foreground">{c.responsavel || "—"}</td>
+                    <td className="p-3 text-muted-foreground">{c.segmento || "—"}</td>
+                    <td className="p-3 text-muted-foreground">{c.cidade ? `${c.cidade}/${c.estado || ""}` : "—"}</td>
+                    <td className="p-3 text-muted-foreground">{formatDate(c.data_inicio)}</td>
+                    <td className="p-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${c.ativo ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                        {c.ativo ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      {isConsultant && (
+                        <Button size="icon" variant="ghost" onClick={() => startEdit(c)}><Pencil className="size-4" /></Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
