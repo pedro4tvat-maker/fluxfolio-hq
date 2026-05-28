@@ -14,7 +14,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppVendasRouteImport } from './routes/app.vendas'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
+import { Route as AppPrecificacaoRouteImport } from './routes/app.precificacao'
 import { Route as AppOrcamentoRouteImport } from './routes/app.orcamento'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
 import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
@@ -22,6 +24,8 @@ import { Route as AppContasReceberRouteImport } from './routes/app.contas-recebe
 import { Route as AppContasPagarRouteImport } from './routes/app.contas-pagar'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppCentroCustosRouteImport } from './routes/app.centro-custos'
+import { Route as AppEmpresaIdRouteImport } from './routes/app.empresa.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -48,9 +52,19 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppVendasRoute = AppVendasRouteImport.update({
+  id: '/vendas',
+  path: '/vendas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPrecificacaoRoute = AppPrecificacaoRouteImport.update({
+  id: '/precificacao',
+  path: '/precificacao',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOrcamentoRoute = AppOrcamentoRouteImport.update({
@@ -88,12 +102,23 @@ const AppClientesRoute = AppClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCentroCustosRoute = AppCentroCustosRouteImport.update({
+  id: '/centro-custos',
+  path: '/centro-custos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEmpresaIdRoute = AppEmpresaIdRouteImport.update({
+  id: '/empresa/$id',
+  path: '/empresa/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
@@ -101,13 +126,17 @@ export interface FileRoutesByFullPath {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/vendas': typeof AppVendasRoute
   '/app/': typeof AppIndexRoute
+  '/app/empresa/$id': typeof AppEmpresaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
@@ -115,8 +144,11 @@ export interface FileRoutesByTo {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/vendas': typeof AppVendasRoute
   '/app': typeof AppIndexRoute
+  '/app/empresa/$id': typeof AppEmpresaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +156,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
@@ -131,8 +164,11 @@ export interface FileRoutesById {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/vendas': typeof AppVendasRoute
   '/app/': typeof AppIndexRoute
+  '/app/empresa/$id': typeof AppEmpresaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +177,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/signup'
+    | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
     | '/app/contas-pagar'
@@ -148,13 +185,17 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/fluxo-caixa'
     | '/app/orcamento'
+    | '/app/precificacao'
     | '/app/relatorios'
+    | '/app/vendas'
     | '/app/'
+    | '/app/empresa/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/signup'
+    | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
     | '/app/contas-pagar'
@@ -162,14 +203,18 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/fluxo-caixa'
     | '/app/orcamento'
+    | '/app/precificacao'
     | '/app/relatorios'
+    | '/app/vendas'
     | '/app'
+    | '/app/empresa/$id'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/login'
     | '/signup'
+    | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
     | '/app/contas-pagar'
@@ -177,8 +222,11 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/fluxo-caixa'
     | '/app/orcamento'
+    | '/app/precificacao'
     | '/app/relatorios'
+    | '/app/vendas'
     | '/app/'
+    | '/app/empresa/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -225,11 +273,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/vendas': {
+      id: '/app/vendas'
+      path: '/vendas'
+      fullPath: '/app/vendas'
+      preLoaderRoute: typeof AppVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/relatorios': {
       id: '/app/relatorios'
       path: '/relatorios'
       fullPath: '/app/relatorios'
       preLoaderRoute: typeof AppRelatoriosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/precificacao': {
+      id: '/app/precificacao'
+      path: '/precificacao'
+      fullPath: '/app/precificacao'
+      preLoaderRoute: typeof AppPrecificacaoRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/orcamento': {
@@ -281,10 +343,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClientesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/centro-custos': {
+      id: '/app/centro-custos'
+      path: '/centro-custos'
+      fullPath: '/app/centro-custos'
+      preLoaderRoute: typeof AppCentroCustosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/empresa/$id': {
+      id: '/app/empresa/$id'
+      path: '/empresa/$id'
+      fullPath: '/app/empresa/$id'
+      preLoaderRoute: typeof AppEmpresaIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppCentroCustosRoute: typeof AppCentroCustosRoute
   AppClientesRoute: typeof AppClientesRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppContasPagarRoute: typeof AppContasPagarRoute
@@ -292,11 +369,15 @@ interface AppRouteChildren {
   AppEstoqueRoute: typeof AppEstoqueRoute
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
   AppOrcamentoRoute: typeof AppOrcamentoRoute
+  AppPrecificacaoRoute: typeof AppPrecificacaoRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
+  AppVendasRoute: typeof AppVendasRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppEmpresaIdRoute: typeof AppEmpresaIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCentroCustosRoute: AppCentroCustosRoute,
   AppClientesRoute: AppClientesRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
   AppContasPagarRoute: AppContasPagarRoute,
@@ -304,8 +385,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppEstoqueRoute: AppEstoqueRoute,
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
   AppOrcamentoRoute: AppOrcamentoRoute,
+  AppPrecificacaoRoute: AppPrecificacaoRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,
+  AppVendasRoute: AppVendasRoute,
   AppIndexRoute: AppIndexRoute,
+  AppEmpresaIdRoute: AppEmpresaIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, redirect, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
+  Layers, ShoppingCart, Tag,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,16 +19,27 @@ export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
 
-const nav = [
-  { to: "/app", label: "Painel", icon: LayoutDashboard, exact: true },
-  { to: "/app/clientes", label: "Empresas", icon: Building2 },
-  { to: "/app/fluxo-caixa", label: "Fluxo de caixa", icon: ArrowLeftRight },
-  { to: "/app/contas-pagar", label: "Contas a pagar", icon: ArrowUpCircle },
-  { to: "/app/contas-receber", label: "Contas a receber", icon: ArrowDownCircle },
-  { to: "/app/orcamento", label: "Orçamento", icon: Target },
-  { to: "/app/estoque", label: "Estoque", icon: Package },
-  { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
+type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean };
+
+const consultantNav: NavItem[] = [
+  { to: "/app", label: "Painel do consultor", icon: LayoutDashboard, exact: true },
+  { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
+  { to: "/app/relatorios", label: "Relatórios consolidados", icon: FileBarChart },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
+];
+
+const clientNav: NavItem[] = [
+  { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
+  { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
+  { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
+  { to: "/app/orcamento", label: "Orçamento", icon: Target },
+  { to: "/app/centro-custos", label: "Centro de Custos", icon: Layers },
+  { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
+  { to: "/app/estoque", label: "Controle de Estoque", icon: Package },
+  { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
+  { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
+  { to: "/app/configuracoes", label: "Configurações da Empresa", icon: Settings },
 ];
 
 function AppLayout() {
@@ -38,8 +50,11 @@ function AppLayout() {
 
   useEffect(() => { setOpen(false); }, [path]);
 
+  const nav = useMemo<NavItem[]>(() => (isConsultant ? consultantNav : clientNav), [isConsultant]);
+
   const logout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem("sfp:selected_company");
     toast.success("Sessão encerrada");
     navigate({ to: "/login", replace: true });
   };
@@ -50,7 +65,6 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Sidebar desktop */}
       <aside className="hidden md:flex w-64 shrink-0 bg-sidebar text-sidebar-foreground flex-col">
         <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
           <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
@@ -58,7 +72,7 @@ function AppLayout() {
           </div>
           <div>
             <div className="font-display font-semibold leading-tight">SISTEMAFP PJ</div>
-            <div className="text-[11px] text-sidebar-foreground/60">Gestão financeira</div>
+            <div className="text-[11px] text-sidebar-foreground/60">{isConsultant ? "Painel do consultor" : "Gestão da empresa"}</div>
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -75,7 +89,9 @@ function AppLayout() {
         <div className="p-3 border-t border-sidebar-border">
           <div className="px-3 py-2 text-xs text-sidebar-foreground/60 truncate">
             {user?.email}
-            {isConsultant && <span className="ml-2 px-1.5 py-0.5 rounded bg-sidebar-primary/20 text-sidebar-primary text-[10px] font-medium">CONSULTOR</span>}
+            <span className="ml-2 px-1.5 py-0.5 rounded bg-sidebar-primary/20 text-sidebar-primary text-[10px] font-medium">
+              {isConsultant ? "CONSULTOR" : "CLIENTE"}
+            </span>
           </div>
           <Button onClick={logout} variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent">
             <LogOut className="size-4" /> Sair
@@ -83,7 +99,6 @@ function AppLayout() {
         </div>
       </aside>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
