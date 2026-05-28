@@ -11,7 +11,23 @@ import { PlusCircle, Building2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
-export const Route = createFileRoute("/app/clientes")({ component: ClientesPage });
+export const Route = createFileRoute("/app/clientes")({
+  component: ClientesGuard,
+});
+
+function ClientesGuard() {
+  const { isConsultant, loading } = useAuth();
+  if (loading) return <div className="text-muted-foreground">Carregando...</div>;
+  if (!isConsultant) {
+    return (
+      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
+        <h2 className="font-display font-semibold">Acesso restrito</h2>
+        <p className="text-sm text-muted-foreground mt-1">Esta área é exclusiva para consultores.</p>
+      </div>
+    );
+  }
+  return <ClientesPage />;
+}
 
 function ClientesPage() {
   const { isConsultant } = useAuth();
