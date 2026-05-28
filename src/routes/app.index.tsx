@@ -7,7 +7,7 @@ import { formatDate, formatMoney, monthRange } from "@/lib/format";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { Button } from "@/components/ui/button";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight, ShoppingCart, Percent, Box, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Clock, Calendar, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 
@@ -186,12 +186,18 @@ function ConsultantPanel() {
   );
 }
 
-function Kpi({ label, value, tone }: { label: string; value: string; tone?: "success" | "warning" | "danger" }) {
+function Kpi({ icon: Icon, label, value, tone, desc }: { icon?: React.ComponentType<{ className?: string }>; label: string; value: string | number; tone?: "success" | "warning" | "danger"; desc?: string; }) {
   const c = tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warning" ? "text-warning-foreground" : "";
   return (
     <div className="bg-card border rounded-2xl p-5 shadow-card">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`font-display font-bold text-2xl mt-2 ${c}`}>{value}</div>
+      <div className="flex items-start gap-3">
+        {Icon && <Icon className="size-6 text-muted-foreground" />}
+        <div className="flex-1">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+          <div className={`font-display font-bold text-2xl mt-2 ${c}`}>{value}</div>
+          {desc && <div className="text-xs text-muted-foreground mt-1">{desc}</div>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -212,20 +218,23 @@ function ClientDashboard() {
       const last14 = new Date(today);
       last14.setDate(last14.getDate() - 13);
       const range = monthRange(today);
-      const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }] = await Promise.all([
-        supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
-        supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado"),
+      const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }, { data: categories }, { data: budgets }] = await Promise.all([
+        supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
+        supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado"),
         supabase.from("transactions").select("tipo, valor, data").eq("company_id", selected).eq("status", "realizado").gte("data", last14.toISOString().slice(0, 10)).lte("data", formattedToday),
         supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }).limit(10),
         supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }).limit(10),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
-        supabase.from("products").select("quantidade, estoque_minimo").eq("company_id", selected),
+        supabase.from("products").select("quantidade, estoque_minimo, preco_venda, custo_unitario").eq("company_id", selected),
         supabase.from("transactions").select("id, descricao, tipo, valor, status, data").eq("company_id", selected).order("data", { ascending: false }).limit(5),
+        supabase.from("categories").select("id, nome").eq("company_id", selected),
+        supabase.from("budgets").select("mes, ano, categoria_id, valor_orcado").eq("company_id", selected).eq("mes", today.getMonth() + 1).eq("ano", today.getFullYear()),
       ]);
-      const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
-      const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
+
+      const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
+      const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
       const saldoInicial = (accs ?? []).reduce((s, a) => s + Number(a.saldo_inicial), 0);
-      const delta = (allTx ?? []).reduce((s, t) => s + (t.tipo === "entrada" ? 1 : -1) * Number(t.valor), 0);
+      const delta = (allTx ?? []).reduce((s, t) => s + (t.tipo === "entrada" ? 1 : -1) * Number((t as any).valor ?? 0), 0);
       const saldo = saldoInicial + delta;
       const aPagarAbertas = (pay ?? []).reduce((s, p) => s + Number(p.valor), 0);
       const aReceberAbertas = (rec ?? []).reduce((s, r) => s + Number(r.valor), 0);
@@ -242,6 +251,7 @@ function ClientDashboard() {
         status: item.status,
         data: item.data,
       }));
+
       const trendMap = new Map<string, { date: string; label: string; entradas: number; saidas: number }>();
       for (let i = 0; i < 14; i += 1) {
         const day = new Date(last14);
@@ -257,6 +267,30 @@ function ClientDashboard() {
         if (txItem.tipo === "saida") row.saidas += Number(txItem.valor);
       });
       const trend = Array.from(trendMap.values());
+
+      // Vendas do mês: transactions with category named like 'venda' and tipo 'entrada'
+      const salesCategoryIds = (categories ?? []).filter((c) => typeof c.nome === "string" && c.nome.toLowerCase().includes("venda")).map((c) => c.id);
+      const vendasTx = (allTx ?? []).filter((t) => t.tipo === "entrada" && salesCategoryIds.includes((t as any).categoria_id));
+      const vendasMes = vendasTx.reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
+      const vendasCount = vendasTx.length;
+
+      // Inventory value and estimated average margin from products
+      const valorEstoque = (prods ?? []).reduce((s, p) => s + Number(p.quantidade ?? 0) * Number(p.custo_unitario ?? 0), 0);
+      const margemMedia = (() => {
+        const items = (prods ?? []).filter((p) => Number(p.preco_venda) > 0);
+        if (!items.length) return null;
+        const avg = items.reduce((acc, p) => acc + ((Number(p.preco_venda) - Number(p.custo_unitario)) / Number(p.preco_venda || 1)), 0) / items.length;
+        return avg;
+      })();
+
+      // Budget utilization for current month
+      const totalOrcado = (budgets ?? []).reduce((s, b) => s + Number(b.valor_orcado ?? 0), 0);
+      let totalRealizado = 0;
+      if ((budgets ?? []).length) {
+        const budgetCategoryIds = (budgets ?? []).map((b) => b.categoria_id);
+        totalRealizado = (allTx ?? []).filter((t) => budgetCategoryIds.includes((t as any).categoria_id)).reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
+      }
+      const orcamentoUtilizado = totalOrcado > 0 ? (totalRealizado / totalOrcado) * 100 : null;
       return {
         company,
         entradas,
@@ -272,6 +306,11 @@ function ClientDashboard() {
         nextReceivables,
         latest,
         trend,
+        vendasMes,
+        vendasCount,
+        valorEstoque,
+        margemMedia,
+        orcamentoUtilizado,
       };
     },
   });
@@ -294,7 +333,7 @@ function ClientDashboard() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-display font-bold">Painel da empresa</h1>
-          <p className="text-muted-foreground text-sm mt-1">Resumo financeiro e operacional de {company.nome}.</p>
+          <p className="text-muted-foreground text-sm mt-1">Visão geral da saúde financeira e operacional da sua empresa.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <CompanySwitcher />
@@ -303,26 +342,94 @@ function ClientDashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Saldo atual" value={formatMoney(data.saldo)} tone={data.saldo < 0 ? "danger" : "success"} />
-        <Kpi label="Entradas do mês" value={formatMoney(data.entradas)} tone="success" />
-        <Kpi label="Saídas do mês" value={formatMoney(data.saidas)} tone="danger" />
-        <Kpi label="Resultado do mês" value={formatMoney(data.resultado)} tone={data.resultado < 0 ? "danger" : "success"} />
+        <Kpi icon={Box} label="Saldo atual" value={formatMoney(data.saldo)} tone={data.saldo < 0 ? "danger" : "success"} desc="Disponível em contas" />
+        <Kpi icon={TrendingUp} label="Entradas do mês" value={formatMoney(data.entradas)} tone="success" desc="Receitas realizadas" />
+        <Kpi icon={TrendingDown} label="Saídas do mês" value={formatMoney(data.saidas)} tone="danger" desc="Despesas realizadas" />
+        <Kpi icon={Percent} label="Resultado do mês" value={formatMoney(data.resultado)} tone={data.resultado < 0 ? "danger" : "success"} desc="Lucro / prejuízo no mês" />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="A pagar" value={formatMoney(data.aPagarAbertas)} tone={data.aPagarAbertas > 0 ? "warning" : undefined} />
-        <Kpi label="A receber" value={formatMoney(data.aReceberAbertas)} tone={data.aReceberAbertas > 0 ? "success" : undefined} />
-        <Kpi label="Vencidos" value={formatMoney(data.pagarVencidas + data.receberVencidas)} tone={data.pagarVencidas + data.receberVencidas > 0 ? "danger" : undefined} />
-        <Kpi label="Alerta de estoque" value={`${data.estoqueAlerta} produto(s)`} tone={data.estoqueAlerta > 0 ? "warning" : undefined} />
+        <Kpi icon={ArrowDownCircle} label="Contas a Pagar" value={formatMoney(data.aPagarAbertas)} tone={data.aPagarAbertas > 0 ? "warning" : undefined} desc="Em aberto" />
+        <Kpi icon={ArrowUpCircle} label="Contas a Receber" value={formatMoney(data.aReceberAbertas)} tone={data.aReceberAbertas > 0 ? "success" : undefined} desc="A receber" />
+        <Kpi icon={AlertCircle} label="Contas Vencidas" value={formatMoney(data.pagarVencidas)} tone={data.pagarVencidas > 0 ? "danger" : undefined} desc="Vencidas hoje" />
+        <Kpi icon={Sparkles} label="Recebimentos Vencidos" value={formatMoney(data.receberVencidas)} tone={data.receberVencidas > 0 ? "warning" : undefined} desc="Atrasos" />
       </div>
 
-      {(data.pagarVencidas > 0 || data.receberVencidas > 0 || data.estoqueAlerta > 0) && (
-        <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-4 text-sm text-destructive grid gap-3">
-          {data.pagarVencidas > 0 && <div>Existem {formatMoney(data.pagarVencidas)} em contas a pagar vencidas.</div>}
-          {data.receberVencidas > 0 && <div>Existem {formatMoney(data.receberVencidas)} em recebimentos vencidos.</div>}
-          {data.estoqueAlerta > 0 && <div>{data.estoqueAlerta} produto(s) com estoque no limite mínimo.</div>}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi icon={ShoppingCart} label="Vendas do mês" value={formatMoney(data.vendasMes ?? 0)} desc={`Pedidos: ${data.vendasCount ?? 0}`} />
+        <Kpi icon={Percent} label="Margem média" value={data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(1)}%`} desc="Margem estimada" />
+        <Kpi icon={Box} label="Valor em estoque" value={formatMoney(data.valorEstoque ?? 0)} desc="Custo dos itens em estoque" />
+        <Kpi icon={Sparkles} label="Orçamento utilizado" value={data.orcamentoUtilizado == null ? "—" : `${data.orcamentoUtilizado.toFixed(1)}%`} desc="Percentual do orçamento" />
+      </div>
+
+      {/* Alertas Inteligentes */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="bg-card border rounded-2xl p-4">
+          <h3 className="font-semibold">Alertas Inteligentes</h3>
+          <p className="text-sm text-muted-foreground">Principais alertas acionáveis para sua empresa.</p>
+          <div className="mt-3 space-y-2">
+            {data.pagarVencidas > 0 && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertTriangle className="size-4 text-destructive" /> Existem {formatMoney(data.pagarVencidas)} em contas a pagar vencidas. <Link to="/app/contas-pagar" className="text-primary ml-2">Ver</Link>
+              </div>
+            )}
+            {data.receberVencidas > 0 && (
+              <div className="flex items-center gap-2 text-sm text-warning">
+                <AlertTriangle className="size-4 text-warning-foreground" /> Existem {formatMoney(data.receberVencidas)} em recebimentos vencidos. <Link to="/app/contas-receber" className="text-primary ml-2">Ver</Link>
+              </div>
+            )}
+            {/* Próximos 7 dias */}
+            {(() => {
+              const today = new Date();
+              const limit = new Date();
+              limit.setDate(today.getDate() + 7);
+              const limitISO = limit.toISOString().slice(0, 10);
+              const paySoon = (data.nextPayables ?? []).filter((p: any) => p.vencimento <= limitISO).length;
+              const recSoon = (data.nextReceivables ?? []).filter((r: any) => r.vencimento <= limitISO).length;
+              return (paySoon > 0 || recSoon > 0) ? (
+                <div className="flex items-center gap-2 text-sm text-foreground">
+                  <Calendar className="size-4" /> Nos próximos 7 dias: {paySoon} contas a pagar, {recSoon} recebimentos. <Link to="/app/contas-pagar" className="text-primary ml-2">Abrir</Link>
+                </div>
+              ) : null;
+            })()}
+            {/* Orçamento */}
+            {data.orcamentoUtilizado != null && data.orcamentoUtilizado >= 90 && (
+              <div className="flex items-center gap-2 text-sm text-warning">
+                <DollarSign className="size-4 text-warning-foreground" /> Orçamento do mês em {data.orcamentoUtilizado.toFixed(1)}% — ver orçamentos. <Link to="/app/orcamento" className="text-primary ml-2">Abrir</Link>
+              </div>
+            )}
+            {/* Inatividade de vendas */}
+            {(() => {
+              const last3 = (data.trend ?? []).slice(-3).reduce((s: number, d: any) => s + (d.entradas ?? 0), 0);
+              const inactive = (data.vendasCount ?? 0) > 0 && last3 === 0;
+              return inactive ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="size-4" /> Sem vendas nos últimos 3 dias. <Link to="/app/vendas" className="text-primary ml-2">Ver vendas</Link>
+                </div>
+              ) : null;
+            })()}
+            {/* Resultado negativo */}
+            {data.resultado < 0 && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertTriangle className="size-4 text-destructive" /> Resultado do mês está negativo ({formatMoney(data.resultado)}). Revise despesas. <Link to="/app/fluxo-caixa" className="text-primary ml-2">Analisar</Link>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+
+        <div className="bg-card border rounded-2xl p-4">
+          <h3 className="font-semibold">Alertas de estoque</h3>
+          <div className="mt-3">
+            {data.estoqueAlerta > 0 ? (
+              <div className="flex items-center gap-2 text-sm text-warning">
+                <AlertCircle className="size-4 text-warning-foreground" /> {data.estoqueAlerta} produto(s) em alerta de estoque mínimo. <Link to="/app/estoque" className="text-primary ml-2">Ver estoque</Link>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Sem alertas de estoque.</div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <section className="bg-card border rounded-2xl p-5 shadow-card">
@@ -461,12 +568,7 @@ function ClientDashboard() {
         </div>
       </section>
 
-      {data.estoqueAlerta > 0 && (
-        <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 text-sm flex items-center gap-2">
-          <AlertCircle className="size-4 text-warning-foreground" />
-          {data.estoqueAlerta} produto(s) em alerta de estoque mínimo.
-        </div>
-      )}
+      
     </div>
   );
 }
