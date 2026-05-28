@@ -29,7 +29,7 @@ const consultantNav: NavItem[] = [
 ];
 
 const clientNav: NavItem[] = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/app", label: "Painel", icon: LayoutDashboard, exact: true },
   { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
   { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },

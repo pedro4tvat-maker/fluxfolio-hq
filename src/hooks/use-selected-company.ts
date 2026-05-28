@@ -1,28 +1,30 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./use-auth";
 
 const KEY = "sfp:selected_company";
 
 export type CompanyLite = { id: string; nome: string };
 
-export function useCompanies() {
-  return useQuery({
-    queryKey: ["companies-lite"],
+export function useSelectedCompany() {
+  const { user, loading: authLoading } = useAuth();
+  const { data: companies, isLoading: companiesLoading } = useQuery({
+    queryKey: ["companies-lite", user?.id],
+    enabled: !!user && !authLoading,
     queryFn: async (): Promise<CompanyLite[]> => {
       const { data, error } = await supabase
-        .from("companies")
-        .select("id, nome")
-        .eq("ativo", true)
-        .order("nome");
+        .from("company_members")
+        .select("company_id, companies(id, nome)")
+        .eq("user_id", user!.id);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((item) => ({
+        id: item.company_id,
+        nome: item.companies?.nome ?? item.company_id,
+      }));
     },
   });
-}
 
-export function useSelectedCompany() {
-  const { data: companies, isLoading } = useCompanies();
   const [selected, setSelected] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem(KEY);
@@ -42,5 +44,10 @@ export function useSelectedCompany() {
     localStorage.setItem(KEY, id);
   };
 
-  return { companies: companies ?? [], selected, select, isLoading };
+  return {
+    companies: companies ?? [],
+    selected,
+    select,
+    isLoading: companiesLoading || authLoading,
+  };
 }

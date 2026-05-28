@@ -2,11 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { formatMoney, monthRange } from "@/lib/format";
+import { useSelectedCompany } from "@/hooks/use-selected-company";
+import { formatDate, formatMoney, monthRange } from "@/lib/format";
+import { CompanySwitcher } from "@/components/company-switcher";
 import { Button } from "@/components/ui/button";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/app/")({
   component: AppIndex,
@@ -196,23 +199,28 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: "suc
 /* =============== CLIENT =============== */
 
 function ClientDashboard() {
-  const { user } = useAuth();
+  const { companies, selected, isLoading: companyLoading } = useSelectedCompany();
+  const company = useMemo(() => companies.find((c) => c.id === selected), [companies, selected]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["client-dashboard", user?.id],
+    queryKey: ["client-dashboard", selected],
+    enabled: !!selected,
     queryFn: async () => {
-      const { data: cos } = await supabase.from("companies").select("id, nome").eq("ativo", true).order("nome").limit(1);
-      const company = cos?.[0];
-      if (!company) return null;
-      localStorage.setItem("sfp:selected_company", company.id);
-      const range = monthRange();
-      const today = new Date().toISOString().slice(0, 10);
-      const [{ data: tx }, { data: allTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }] = await Promise.all([
-        supabase.from("transactions").select("tipo, valor").eq("company_id", company.id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
-        supabase.from("transactions").select("tipo, valor").eq("company_id", company.id).eq("status", "realizado"),
-        supabase.from("payables").select("valor, vencimento, status").eq("company_id", company.id).neq("status", "pago"),
-        supabase.from("receivables").select("valor, vencimento, status").eq("company_id", company.id).neq("status", "recebido"),
-        supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", company.id),
-        supabase.from("products").select("quantidade, estoque_minimo").eq("company_id", company.id),
+      if (!selected) return null;
+      const today = new Date();
+      const formattedToday = today.toISOString().slice(0, 10);
+      const last14 = new Date(today);
+      last14.setDate(last14.getDate() - 13);
+      const range = monthRange(today);
+      const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }] = await Promise.all([
+        supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
+        supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado"),
+        supabase.from("transactions").select("tipo, valor, data").eq("company_id", selected).eq("status", "realizado").gte("data", last14.toISOString().slice(0, 10)).lte("data", formattedToday),
+        supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }).limit(10),
+        supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }).limit(10),
+        supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
+        supabase.from("products").select("quantidade, estoque_minimo").eq("company_id", selected),
+        supabase.from("transactions").select("id, descricao, tipo, valor, status, data").eq("company_id", selected).order("data", { ascending: false }).limit(5),
       ]);
       const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
       const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
@@ -221,21 +229,61 @@ function ClientDashboard() {
       const saldo = saldoInicial + delta;
       const aPagarAbertas = (pay ?? []).reduce((s, p) => s + Number(p.valor), 0);
       const aReceberAbertas = (rec ?? []).reduce((s, r) => s + Number(r.valor), 0);
-      const pagarVencidas = (pay ?? []).filter((p) => p.vencimento < today).reduce((s, p) => s + Number(p.valor), 0);
-      const receberVencidas = (rec ?? []).filter((r) => r.vencimento < today).reduce((s, r) => s + Number(r.valor), 0);
+      const pagarVencidas = (pay ?? []).filter((p) => p.vencimento < formattedToday).reduce((s, p) => s + Number(p.valor), 0);
+      const receberVencidas = (rec ?? []).filter((r) => r.vencimento < formattedToday).reduce((s, r) => s + Number(r.valor), 0);
       const estoqueAlerta = (prods ?? []).filter((p) => Number(p.quantidade) <= Number(p.estoque_minimo)).length;
-      return { company, entradas, saidas, saldo, resultado: entradas - saidas, aPagarAbertas, aReceberAbertas, pagarVencidas, receberVencidas, estoqueAlerta };
+      const nextPayables = (pay ?? []).slice(0, 3);
+      const nextReceivables = (rec ?? []).slice(0, 3);
+      const latest = (latestTx ?? []).map((item) => ({
+        id: item.id,
+        descricao: item.descricao,
+        tipo: item.tipo,
+        valor: Number(item.valor),
+        status: item.status,
+        data: item.data,
+      }));
+      const trendMap = new Map<string, { date: string; label: string; entradas: number; saidas: number }>();
+      for (let i = 0; i < 14; i += 1) {
+        const day = new Date(last14);
+        day.setDate(last14.getDate() + i);
+        const date = day.toISOString().slice(0, 10);
+        const label = day.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+        trendMap.set(date, { date, label, entradas: 0, saidas: 0 });
+      }
+      (trendTx ?? []).forEach((txItem) => {
+        const row = trendMap.get(txItem.data);
+        if (!row) return;
+        if (txItem.tipo === "entrada") row.entradas += Number(txItem.valor);
+        if (txItem.tipo === "saida") row.saidas += Number(txItem.valor);
+      });
+      const trend = Array.from(trendMap.values());
+      return {
+        company,
+        entradas,
+        saidas,
+        saldo,
+        resultado: entradas - saidas,
+        aPagarAbertas,
+        aReceberAbertas,
+        pagarVencidas,
+        receberVencidas,
+        estoqueAlerta,
+        nextPayables,
+        nextReceivables,
+        latest,
+        trend,
+      };
     },
   });
 
-  if (isLoading) return <div className="text-muted-foreground">Carregando seu dashboard...</div>;
-  if (!data) {
+  if (companyLoading || isLoading) return <div className="text-muted-foreground">Carregando seu dashboard...</div>;
+  if (!company || !data) {
     return (
       <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
         <Building2 className="size-12 mx-auto text-muted-foreground/40" />
         <h3 className="font-display font-semibold mt-4">Empresa não encontrada</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Sua empresa ainda não foi criada. Faça logout e cadastre-se novamente informando o nome da empresa.
+          Sua empresa não foi encontrada ou você não tem acesso a ela. Faça logout e entre novamente.
         </p>
       </div>
     );
@@ -243,9 +291,15 @@ function ClientDashboard() {
 
   return (
     <div className="space-y-6 max-w-7xl">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold">{data.company.nome}</h1>
-        <p className="text-muted-foreground text-sm mt-1">Resumo financeiro da sua empresa.</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold">Painel da empresa</h1>
+          <p className="text-muted-foreground text-sm mt-1">Resumo financeiro e operacional de {company.nome}.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <CompanySwitcher />
+          <Button asChild><Link to="/app/fluxo-caixa">Lançar movimentação</Link></Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -253,11 +307,159 @@ function ClientDashboard() {
         <Kpi label="Entradas do mês" value={formatMoney(data.entradas)} tone="success" />
         <Kpi label="Saídas do mês" value={formatMoney(data.saidas)} tone="danger" />
         <Kpi label="Resultado do mês" value={formatMoney(data.resultado)} tone={data.resultado < 0 ? "danger" : "success"} />
-        <Kpi label="Contas a pagar em aberto" value={formatMoney(data.aPagarAbertas)} />
-        <Kpi label="Contas a receber em aberto" value={formatMoney(data.aReceberAbertas)} />
-        <Kpi label="Contas vencidas" value={formatMoney(data.pagarVencidas)} tone={data.pagarVencidas > 0 ? "danger" : undefined} />
-        <Kpi label="Recebimentos vencidos" value={formatMoney(data.receberVencidas)} tone={data.receberVencidas > 0 ? "warning" : undefined} />
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi label="A pagar" value={formatMoney(data.aPagarAbertas)} tone={data.aPagarAbertas > 0 ? "warning" : undefined} />
+        <Kpi label="A receber" value={formatMoney(data.aReceberAbertas)} tone={data.aReceberAbertas > 0 ? "success" : undefined} />
+        <Kpi label="Vencidos" value={formatMoney(data.pagarVencidas + data.receberVencidas)} tone={data.pagarVencidas + data.receberVencidas > 0 ? "danger" : undefined} />
+        <Kpi label="Alerta de estoque" value={`${data.estoqueAlerta} produto(s)`} tone={data.estoqueAlerta > 0 ? "warning" : undefined} />
+      </div>
+
+      {(data.pagarVencidas > 0 || data.receberVencidas > 0 || data.estoqueAlerta > 0) && (
+        <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-4 text-sm text-destructive grid gap-3">
+          {data.pagarVencidas > 0 && <div>Existem {formatMoney(data.pagarVencidas)} em contas a pagar vencidas.</div>}
+          {data.receberVencidas > 0 && <div>Existem {formatMoney(data.receberVencidas)} em recebimentos vencidos.</div>}
+          {data.estoqueAlerta > 0 && <div>{data.estoqueAlerta} produto(s) com estoque no limite mínimo.</div>}
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <section className="bg-card border rounded-2xl p-5 shadow-card">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Tendência de receitas e despesas</p>
+              <h2 className="font-semibold mt-2">Últimos 14 dias</h2>
+            </div>
+            <span className="text-xs text-muted-foreground">Análise rápida</span>
+          </div>
+          <div className="mt-5 h-[260px]">
+            <ResponsiveContainer>
+              <AreaChart data={data.trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="entriesGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="expensesGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="label" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} width={40} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <Tooltip contentStyle={{ borderRadius: 12, borderColor: "rgba(148,163,184,0.2)" }} formatter={(value: number) => formatMoney(value)} labelStyle={{ color: "#0f172a" }} />
+                <Area type="monotone" dataKey="entradas" stroke="#22c55e" fill="url(#entriesGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="saidas" stroke="#f97316" fill="url(#expensesGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <div className="bg-card border rounded-2xl p-5 shadow-card">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Próximas contas</p>
+                <h2 className="font-semibold mt-2">Contas a pagar</h2>
+              </div>
+              <span className="text-xs text-muted-foreground">Top 3 vencimentos</span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {data.nextPayables.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Sem contas a pagar próximas.</div>
+              ) : (
+                data.nextPayables.map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{item.descricao || "Conta a pagar"}</p>
+                        <p className="text-xs text-muted-foreground">Vencimento {formatDate(item.vencimento)}</p>
+                      </div>
+                      <span className="font-mono font-semibold text-destructive">{formatMoney(Number(item.valor))}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="bg-card border rounded-2xl p-5 shadow-card">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Próximos recebimentos</p>
+                <h2 className="font-semibold mt-2">Contas a receber</h2>
+              </div>
+              <span className="text-xs text-muted-foreground">Top 3 a vencer</span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {data.nextReceivables.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Sem recebimentos próximos.</div>
+              ) : (
+                data.nextReceivables.map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{item.descricao || "Recebimento"}</p>
+                        <p className="text-xs text-muted-foreground">Vencimento {formatDate(item.vencimento)}</p>
+                      </div>
+                      <span className="font-mono font-semibold text-success">{formatMoney(Number(item.valor))}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
+        <div className="bg-card border rounded-2xl p-5 shadow-card">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Últimas movimentações</p>
+              <h2 className="font-semibold mt-2">Lançamentos recentes</h2>
+            </div>
+            <Link to="/app/fluxo-caixa" className="text-sm text-primary hover:underline">Ver todos</Link>
+          </div>
+          <div className="mt-5 space-y-3">
+            {data.latest.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Nenhum lançamento recente.</div>
+            ) : (
+              data.latest.map((item) => (
+                <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-3">
+                  <div>
+                    <p className="font-medium">{item.descricao || (item.tipo === "entrada" ? "Receita" : "Despesa")}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(item.data)}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className={`font-display font-semibold ${item.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
+                      {item.tipo === "entrada" ? "+" : "−"} {formatMoney(item.valor)}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{item.status}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="bg-card border rounded-2xl p-5 shadow-card">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Ações rápidas</p>
+              <h2 className="font-semibold mt-2">Acessos rápidos</h2>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3">
+            <Button asChild variant="secondary"><Link to="/app/fluxo-caixa">Lançar movimentação</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/contas-pagar">Contas a pagar</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/contas-receber">Contas a receber</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/estoque">Estoque</Link></Button>
+          </div>
+        </div>
+      </section>
 
       {data.estoqueAlerta > 0 && (
         <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 text-sm flex items-center gap-2">
@@ -265,13 +467,6 @@ function ClientDashboard() {
           {data.estoqueAlerta} produto(s) em alerta de estoque mínimo.
         </div>
       )}
-
-      <div className="flex flex-wrap gap-2">
-        <Button asChild><Link to="/app/fluxo-caixa">Lançar movimentação</Link></Button>
-        <Button asChild variant="outline"><Link to="/app/contas-pagar">Contas a pagar</Link></Button>
-        <Button asChild variant="outline"><Link to="/app/contas-receber">Contas a receber</Link></Button>
-        <Button asChild variant="outline"><Link to="/app/relatorios">Relatórios</Link></Button>
-      </div>
     </div>
   );
 }

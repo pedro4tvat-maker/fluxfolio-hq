@@ -2,6 +2,7 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { formatMoney, monthRange } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,13 +26,31 @@ const modules = [
 
 function EmpresaResumo() {
   const { id } = useParams({ from: "/app/empresa/$id" });
+  const { user, isConsultant, loading: authLoading } = useAuth();
 
   useEffect(() => {
     localStorage.setItem("sfp:selected_company", id);
   }, [id]);
 
+  const { data: hasAccess, isLoading: accessLoading } = useQuery({
+    queryKey: ["company-access", id, user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      if (isConsultant) return true;
+      const { data, error } = await supabase
+        .from("company_members")
+        .select("id")
+        .eq("company_id", id)
+        .eq("user_id", user!.id)
+        .limit(1);
+      if (error) throw error;
+      return (data?.length ?? 0) > 0;
+    },
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: ["empresa-resumo", id],
+    enabled: !!user && !authLoading && !!hasAccess,
     queryFn: async () => {
       const { data: company } = await supabase.from("companies").select("*").eq("id", id).single();
       if (!company) return null;
@@ -58,6 +77,18 @@ function EmpresaResumo() {
       return { company, entradas, saidas, resultado: entradas - saidas, saldo, aPagar, aReceber, pagarVencidas, receberVencidas, estoqueAlerta };
     },
   });
+
+  if (authLoading || accessLoading) return <div className="text-muted-foreground">Verificando acesso...</div>;
+  if (!hasAccess) {
+    return (
+      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
+        <Building2 className="size-12 mx-auto text-muted-foreground/40" />
+        <h3 className="font-display font-semibold mt-4">Empresa não encontrada</h3>
+        <p className="text-sm text-muted-foreground mt-1">Você não tem acesso a esta empresa.</p>
+        <Button asChild className="mt-4"><Link to="/app">Voltar ao painel</Link></Button>
+      </div>
+    );
+  }
 
   if (isLoading) return <div className="text-muted-foreground">Carregando empresa...</div>;
   if (!data) {
