@@ -24,6 +24,7 @@ type NavItem = { to: string; label: string; icon: React.ComponentType<{ classNam
 const consultantNav: NavItem[] = [
   { to: "/app", label: "Painel do consultor", icon: LayoutDashboard, exact: true },
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
+  { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
   { to: "/app/relatorios", label: "Relatórios consolidados", icon: FileBarChart },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
