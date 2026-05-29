@@ -18,7 +18,6 @@ import { Route as AppVendasRouteImport } from './routes/app.vendas'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppPrecificacaoRouteImport } from './routes/app.precificacao'
 import { Route as AppPlanoAcaoRouteImport } from './routes/app.plano-acao'
-import { Route as AppPlanoAcaoRouteImport } from './routes/app.plano-acao'
 import { Route as AppOrcamentoRouteImport } from './routes/app.orcamento'
 import { Route as AppKpisRouteImport } from './routes/app.kpis'
 import { Route as AppImportacoesRouteImport } from './routes/app.importacoes'
@@ -76,6 +75,11 @@ const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
 const AppPrecificacaoRoute = AppPrecificacaoRouteImport.update({
   id: '/precificacao',
   path: '/precificacao',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlanoAcaoRoute = AppPlanoAcaoRouteImport.update({
+  id: '/plano-acao',
+  path: '/plano-acao',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPlanoAcaoRoute = AppPlanoAcaoRouteImport.update({
