@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Gauge, Upload, BadgeCheck, Copy, Users, FolderArchive,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
