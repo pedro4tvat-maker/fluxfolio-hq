@@ -396,7 +396,7 @@ function BibliotecaPage() {
 
       <TemplateEditor
         open={editorOpen}
-        onOpenChange={(o) => { setEditorOpen(o); if (!o) setEditing(null); }}
+        onOpenChange={(o: boolean) => { setEditorOpen(o); if (!o) setEditing(null); }}
         value={editing}
         onChange={setEditing}
         onSave={() => editing && saveMutation.mutate(editing)}
