@@ -59,9 +59,11 @@ function AppLayout() {
   const search = useRouterState({ select: (s) => s.location.search as { section?: string } });
   const [open, setOpen] = useState(false);
   const [consultoriaOpen, setConsultoriaOpen] = useState(path.startsWith("/app/consultoria"));
+  const [agendaOpen, setAgendaOpen] = useState(path.startsWith("/app/agenda"));
 
   useEffect(() => { setOpen(false); }, [path]);
   useEffect(() => { if (path.startsWith("/app/consultoria")) setConsultoriaOpen(true); }, [path]);
+  useEffect(() => { if (path.startsWith("/app/agenda")) setAgendaOpen(true); }, [path]);
 
   const nav = useMemo<NavItem[]>(() => (isConsultant ? consultantNav : clientNav), [isConsultant]);
 
