@@ -38,6 +38,7 @@ import { Route as AppCentroCustosRouteImport } from './routes/app.centro-custos'
 import { Route as AppBibliotecaRouteImport } from './routes/app.biblioteca'
 import { Route as AppAtasRouteImport } from './routes/app.atas'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
+import { Route as AppJornadaCompanyIdRouteImport } from './routes/app.jornada.$companyId'
 import { Route as AppEmpresaIdRouteImport } from './routes/app.empresa.$id'
 import { Route as AppCrmIdRouteImport } from './routes/app.crm.$id'
 
@@ -186,6 +187,11 @@ const AppAgendaRoute = AppAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
+const AppJornadaCompanyIdRoute = AppJornadaCompanyIdRouteImport.update({
+  id: '/$companyId',
+  path: '/$companyId',
+  getParentRoute: () => AppJornadaRoute,
+} as any)
 const AppEmpresaIdRoute = AppEmpresaIdRouteImport.update({
   id: '/empresa/$id',
   path: '/empresa/$id',
@@ -218,7 +224,7 @@ export interface FileRoutesByFullPath {
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
-  '/app/jornada': typeof AppJornadaRoute
+  '/app/jornada': typeof AppJornadaRouteWithChildren
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/pendencias': typeof AppPendenciasRoute
@@ -229,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
+  '/app/jornada/$companyId': typeof AppJornadaCompanyIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -250,7 +257,7 @@ export interface FileRoutesByTo {
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
-  '/app/jornada': typeof AppJornadaRoute
+  '/app/jornada': typeof AppJornadaRouteWithChildren
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/pendencias': typeof AppPendenciasRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
+  '/app/jornada/$companyId': typeof AppJornadaCompanyIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -284,7 +292,7 @@ export interface FileRoutesById {
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
-  '/app/jornada': typeof AppJornadaRoute
+  '/app/jornada': typeof AppJornadaRouteWithChildren
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/pendencias': typeof AppPendenciasRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
+  '/app/jornada/$companyId': typeof AppJornadaCompanyIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/crm/$id'
     | '/app/empresa/$id'
+    | '/app/jornada/$companyId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/crm/$id'
     | '/app/empresa/$id'
+    | '/app/jornada/$companyId'
   id:
     | '__root__'
     | '/'
@@ -395,6 +406,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/crm/$id'
     | '/app/empresa/$id'
+    | '/app/jornada/$companyId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -609,6 +621,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/jornada/$companyId': {
+      id: '/app/jornada/$companyId'
+      path: '/$companyId'
+      fullPath: '/app/jornada/$companyId'
+      preLoaderRoute: typeof AppJornadaCompanyIdRouteImport
+      parentRoute: typeof AppJornadaRoute
+    }
     '/app/empresa/$id': {
       id: '/app/empresa/$id'
       path: '/empresa/$id'
@@ -637,6 +656,18 @@ const AppCrmRouteChildren: AppCrmRouteChildren = {
 const AppCrmRouteWithChildren =
   AppCrmRoute._addFileChildren(AppCrmRouteChildren)
 
+interface AppJornadaRouteChildren {
+  AppJornadaCompanyIdRoute: typeof AppJornadaCompanyIdRoute
+}
+
+const AppJornadaRouteChildren: AppJornadaRouteChildren = {
+  AppJornadaCompanyIdRoute: AppJornadaCompanyIdRoute,
+}
+
+const AppJornadaRouteWithChildren = AppJornadaRoute._addFileChildren(
+  AppJornadaRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
   AppAtasRoute: typeof AppAtasRoute
@@ -654,7 +685,7 @@ interface AppRouteChildren {
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
   AppImportacoesRoute: typeof AppImportacoesRoute
-  AppJornadaRoute: typeof AppJornadaRoute
+  AppJornadaRoute: typeof AppJornadaRouteWithChildren
   AppKpisRoute: typeof AppKpisRoute
   AppOrcamentoRoute: typeof AppOrcamentoRoute
   AppPendenciasRoute: typeof AppPendenciasRoute
@@ -683,7 +714,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppExecutivoRoute: AppExecutivoRoute,
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
   AppImportacoesRoute: AppImportacoesRoute,
-  AppJornadaRoute: AppJornadaRoute,
+  AppJornadaRoute: AppJornadaRouteWithChildren,
   AppKpisRoute: AppKpisRoute,
   AppOrcamentoRoute: AppOrcamentoRoute,
   AppPendenciasRoute: AppPendenciasRoute,

@@ -513,6 +513,225 @@ export type Database = {
         }
         Relationships: []
       }
+      company_journey_checklist: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          journey_phase_id: string
+          position: number
+          related_module: string | null
+          related_record_id: string | null
+          responsible_type: string
+          responsible_user_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          journey_phase_id: string
+          position?: number
+          related_module?: string | null
+          related_record_id?: string | null
+          responsible_type?: string
+          responsible_user_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          journey_phase_id?: string
+          position?: number
+          related_module?: string | null
+          related_record_id?: string | null
+          responsible_type?: string
+          responsible_user_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_journey_checklist_journey_phase_id_fkey"
+            columns: ["journey_phase_id"]
+            isOneToOne: false
+            referencedRelation: "company_journey_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_journey_deliverables: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          file_url: string | null
+          id: string
+          journey_phase_id: string
+          notes: string | null
+          responsible_type: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          file_url?: string | null
+          id?: string
+          journey_phase_id: string
+          notes?: string | null
+          responsible_type?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          file_url?: string | null
+          id?: string
+          journey_phase_id?: string
+          notes?: string | null
+          responsible_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_journey_deliverables_journey_phase_id_fkey"
+            columns: ["journey_phase_id"]
+            isOneToOne: false
+            referencedRelation: "company_journey_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_journey_phases: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          journey_id: string
+          notes: string | null
+          objective: string | null
+          phase_key: string
+          phase_name: string
+          phase_order: number
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          journey_id: string
+          notes?: string | null
+          objective?: string | null
+          phase_key: string
+          phase_name: string
+          phase_order?: number
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          journey_id?: string
+          notes?: string | null
+          objective?: string | null
+          phase_key?: string
+          phase_name?: string
+          phase_order?: number
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_journey_phases_journey_id_fkey"
+            columns: ["journey_id"]
+            isOneToOne: false
+            referencedRelation: "company_journeys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_journeys: {
+        Row: {
+          allow_client_view: boolean
+          branch_id: string | null
+          company_id: string
+          consultant_id: string
+          created_at: string
+          current_phase_id: string | null
+          id: string
+          notes: string | null
+          overall_progress: number
+          start_date: string
+          status: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_client_view?: boolean
+          branch_id?: string | null
+          company_id: string
+          consultant_id: string
+          created_at?: string
+          current_phase_id?: string | null
+          id?: string
+          notes?: string | null
+          overall_progress?: number
+          start_date?: string
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_client_view?: boolean
+          branch_id?: string | null
+          company_id?: string
+          consultant_id?: string
+          created_at?: string
+          current_phase_id?: string | null
+          id?: string
+          notes?: string | null
+          overall_progress?: number
+          start_date?: string
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       company_members: {
         Row: {
           company_id: string
@@ -733,6 +952,127 @@ export type Database = {
           label?: string
           position?: number
           stage_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      consultancy_journey_template_checklist: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          position: number
+          responsible_type: string
+          suggested_due_days: number | null
+          template_phase_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          responsible_type?: string
+          suggested_due_days?: number | null
+          template_phase_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          responsible_type?: string
+          suggested_due_days?: number | null
+          template_phase_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultancy_journey_template_checklist_template_phase_id_fkey"
+            columns: ["template_phase_id"]
+            isOneToOne: false
+            referencedRelation: "consultancy_journey_template_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultancy_journey_template_phases: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          objective: string | null
+          phase_key: string
+          phase_name: string
+          phase_order: number
+          suggested_duration_days: number | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          objective?: string | null
+          phase_key: string
+          phase_name: string
+          phase_order?: number
+          suggested_duration_days?: number | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          objective?: string | null
+          phase_key?: string
+          phase_name?: string
+          phase_order?: number
+          suggested_duration_days?: number | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultancy_journey_template_phases_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "consultancy_journey_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultancy_journey_templates: {
+        Row: {
+          consultant_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          consultant_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          consultant_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
           updated_at?: string
         }
         Relationships: []
