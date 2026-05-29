@@ -35,6 +35,28 @@ export function isValidCNPJ(input: string): boolean {
   return cnpj.endsWith(`${d1}${d2}`);
 }
 
+export function maskCPF(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+}
+
+export function isValidCPF(input: string): boolean {
+  const cpf = input.replace(/\D/g, "");
+  if (cpf.length !== 11) return false;
+  if (/^(\d)\1+$/.test(cpf)) return false;
+  const calc = (base: string, factor: number) =>
+    base.split("").reduce((s, n, i) => s + Number(n) * (factor - i), 0);
+  let r = (calc(cpf.slice(0, 9), 10) * 10) % 11;
+  if (r === 10) r = 0;
+  if (r !== Number(cpf[9])) return false;
+  r = (calc(cpf.slice(0, 10), 11) * 10) % 11;
+  if (r === 10) r = 0;
+  return r === Number(cpf[10]);
+}
+
 export const BR_STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
 ] as const;
