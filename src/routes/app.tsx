@@ -151,11 +151,7 @@ function AppLayout() {
           <aside className="relative w-64 bg-sidebar text-sidebar-foreground flex flex-col">
             <div className="p-5 border-b border-sidebar-border font-display font-semibold">SISTEMAFP PJ</div>
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-              {nav.map((n) => (
-                <Link key={n.to} to={n.to} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-sidebar-accent">
-                  <n.icon className="size-4" /> {n.label}
-                </Link>
-              ))}
+              {nav.map((n) => renderNavItem(n))}
             </nav>
             <div className="p-3 border-t border-sidebar-border">
               <Button onClick={logout} variant="ghost" className="w-full justify-start"><LogOut className="size-4" /> Sair</Button>
