@@ -1,405 +1,536 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
-import { Button } from "@/components/ui/button";
-import { downloadCSV, formatDate, formatMoney, monthRange } from "@/lib/format";
-import { Download, FileBarChart } from "lucide-react";
+import { useSelectedBranch } from "@/hooks/use-selected-branch";
+import { BranchSwitcher } from "@/components/branch-switcher";
+import { downloadCSV, formatMoney, monthRange } from "@/lib/format";
+import {
+  fetchReportData, buildDRE, buildFluxoRealizado, buildFluxoProjetado,
+  buildLucroOperacional, buildMargemContribuicao, buildPontoEquilibrio,
+  buildContasPagar, buildContasReceber, buildOrcadoRealizado, buildCapitalGiro,
+  buildEstoqueFinanceiro, buildVendasMargem, buildIndicadores, buildComparativo,
+  buildCentroCustos, buildComparativoFiliais,
+} from "@/lib/reports";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  FileBarChart, TrendingUp, ShieldCheck, Target as TargetIcon,
+  Wallet, AlertTriangle, Download, Sparkles, ArrowRight, FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/relatorios")({ component: Relatorios });
 
-type RelTipo =
-  | "fluxo_caixa"
-  | "contas_pagar"
-  | "contas_receber"
-  | "orcamento"
-  | "centro_custos"
-  | "vendas"
-  | "estoque"
-  | "precificacao"
-  | "geral_mensal";
+type ReportKey =
+  | "dre" | "fluxo_realizado" | "fluxo_projetado" | "contas_pagar" | "contas_receber" | "capital_giro"
+  | "lucro_operacional" | "margem_contribuicao" | "ponto_equilibrio" | "vendas_margem"
+  | "orcado_realizado" | "centro_custos" | "estoque_financeiro"
+  | "indicadores" | "comparativo_periodos" | "comparativo_filiais";
 
-const TIPOS: { value: RelTipo; label: string }[] = [
-  { value: "fluxo_caixa", label: "Fluxo de Caixa" },
-  { value: "contas_pagar", label: "Contas a Pagar" },
-  { value: "contas_receber", label: "Contas a Receber" },
-  { value: "orcamento", label: "Orçamento" },
-  { value: "centro_custos", label: "Centro de Custos" },
-  { value: "vendas", label: "Fluxo de Vendas" },
-  { value: "estoque", label: "Controle de Estoque" },
-  { value: "precificacao", label: "Precificação e Margem" },
-  { value: "geral_mensal", label: "Relatório Geral Mensal" },
+type Group = { title: string; icon: any; tone: string; reports: { key: ReportKey; label: string; desc: string }[] };
+
+const GROUPS: Group[] = [
+  {
+    title: "Sobrevivência",
+    icon: ShieldCheck,
+    tone: "from-blue-500/10 to-blue-500/0 border-blue-500/20",
+    reports: [
+      { key: "fluxo_realizado", label: "Fluxo de Caixa Realizado", desc: "Entradas e saídas efetivadas no período." },
+      { key: "fluxo_projetado", label: "Fluxo de Caixa Projetado", desc: "Projeção dos próximos 60 dias com base em contas." },
+      { key: "contas_pagar", label: "Contas a Pagar", desc: "Total a pagar, vencido, a vencer e quitado." },
+      { key: "contas_receber", label: "Contas a Receber", desc: "Total a receber, inadimplência e próximos." },
+      { key: "capital_giro", label: "Capital de Giro", desc: "Saldo, recebíveis, estoque e necessidade de giro." },
+    ],
+  },
+  {
+    title: "Lucro",
+    icon: TrendingUp,
+    tone: "from-emerald-500/10 to-emerald-500/0 border-emerald-500/20",
+    reports: [
+      { key: "dre", label: "DRE Gerencial", desc: "Demonstração do Resultado do Exercício." },
+      { key: "lucro_operacional", label: "Lucro Operacional", desc: "Resultado da operação e margem operacional." },
+      { key: "margem_contribuicao", label: "Margem de Contribuição", desc: "MC total e por produto/serviço." },
+      { key: "ponto_equilibrio", label: "Ponto de Equilíbrio", desc: "Receita mínima necessária para cobrir custos." },
+      { key: "vendas_margem", label: "Vendas e Margem", desc: "Total vendido, ticket médio e produtos rentáveis." },
+    ],
+  },
+  {
+    title: "Controle",
+    icon: TargetIcon,
+    tone: "from-amber-500/10 to-amber-500/0 border-amber-500/20",
+    reports: [
+      { key: "orcado_realizado", label: "Orçado x Realizado", desc: "Comparação entre orçamento e execução." },
+      { key: "centro_custos", label: "Centro de Custos", desc: "Resultado por centro de custo." },
+      { key: "estoque_financeiro", label: "Estoque Financeiro", desc: "Valor parado, alertas e produtos zerados." },
+    ],
+  },
+  {
+    title: "Estratégicos",
+    icon: Sparkles,
+    tone: "from-violet-500/10 to-violet-500/0 border-violet-500/20",
+    reports: [
+      { key: "indicadores", label: "Indicadores Financeiros", desc: "Margens, EBITDA, liquidez, PMR/PMP e mais." },
+      { key: "comparativo_periodos", label: "Comparativo de Períodos", desc: "Compare períodos lado a lado." },
+      { key: "comparativo_filiais", label: "Comparativo de Filiais", desc: "Resultados por unidade." },
+    ],
+  },
 ];
 
 function Relatorios() {
   const { isConsultant } = useAuth();
-  const { companies, selected } = useSelectedCompany();
+  const { companies, selected, select } = useSelectedCompany();
+  const { branchId } = useSelectedBranch();
   const company = useMemo(() => companies.find((c) => c.id === selected), [companies, selected]);
-  const range = monthRange();
-  const [tipo, setTipo] = useState<RelTipo>("fluxo_caixa");
-  const [inicio, setInicio] = useState(range.start);
-  const [fim, setFim] = useState(range.end);
-  const [status, setStatus] = useState<string>("todos");
 
-  const { data: preview, isFetching, refetch } = useQuery({
-    queryKey: ["report-preview", selected, tipo, inicio, fim, status],
-    enabled: !!selected,
+  // Para consultor: carrega também empresas que ele possui (não só member)
+  const { data: ownedCompanies } = useQuery({
+    queryKey: ["owned-companies-consultant"],
+    enabled: isConsultant,
     queryFn: async () => {
-      if (!selected) return { rows: [] as Record<string, unknown>[], total: 0 };
-
-      switch (tipo) {
-        case "fluxo_caixa": {
-          let q = supabase
-            .from("transactions")
-            .select("data, tipo, descricao, valor, status, forma_pagamento, categories(nome), cost_centers(nome)")
-            .eq("company_id", selected)
-            .gte("data", inicio)
-            .lte("data", fim)
-            .order("data", { ascending: false });
-          if (status !== "todos") q = q.eq("status", status as any);
-          const { data, error } = await q;
-          if (error) throw error;
-          const rows = (data ?? []).map((r: any) => ({
-            Data: formatDate(r.data),
-            Tipo: r.tipo,
-            Descrição: r.descricao,
-            Categoria: r.categories?.nome ?? "",
-            "Centro de custo": r.cost_centers?.nome ?? "",
-            "Forma pagamento": r.forma_pagamento ?? "",
-            Status: r.status,
-            Valor: Number(r.valor).toFixed(2),
-          }));
-          return { rows, total: rows.length };
-        }
-
-        case "contas_pagar": {
-          let q = supabase
-            .from("payables")
-            .select("descricao, fornecedor, valor, vencimento, data_pagamento, status, forma_pagamento, categories(nome)")
-            .eq("company_id", selected)
-            .gte("vencimento", inicio)
-            .lte("vencimento", fim)
-            .order("vencimento", { ascending: true });
-          if (status !== "todos") q = q.eq("status", status as any);
-          const { data, error } = await q;
-          if (error) throw error;
-          const rows = (data ?? []).map((r: any) => ({
-            Descrição: r.descricao,
-            Fornecedor: r.fornecedor ?? "",
-            Categoria: r.categories?.nome ?? "",
-            Vencimento: formatDate(r.vencimento),
-            Pagamento: formatDate(r.data_pagamento),
-            "Forma pagamento": r.forma_pagamento ?? "",
-            Status: r.status,
-            Valor: Number(r.valor).toFixed(2),
-          }));
-          return { rows, total: rows.length };
-        }
-
-        case "contas_receber": {
-          let q = supabase
-            .from("receivables")
-            .select("descricao, cliente, valor, vencimento, data_recebimento, status, forma_recebimento, categories(nome)")
-            .eq("company_id", selected)
-            .gte("vencimento", inicio)
-            .lte("vencimento", fim)
-            .order("vencimento", { ascending: true });
-          if (status !== "todos") q = q.eq("status", status as any);
-          const { data, error } = await q;
-          if (error) throw error;
-          const rows = (data ?? []).map((r: any) => ({
-            Descrição: r.descricao,
-            Cliente: r.cliente ?? "",
-            Categoria: r.categories?.nome ?? "",
-            Vencimento: formatDate(r.vencimento),
-            Recebimento: formatDate(r.data_recebimento),
-            "Forma recebimento": r.forma_recebimento ?? "",
-            Status: r.status,
-            Valor: Number(r.valor).toFixed(2),
-          }));
-          return { rows, total: rows.length };
-        }
-
-        case "orcamento": {
-          const [{ data: budgets, error }, { data: tx }] = await Promise.all([
-            supabase.from("budgets").select("mes, ano, valor_orcado, categories(nome, id)").eq("company_id", selected),
-            supabase.from("transactions").select("valor, categoria_id, tipo").eq("company_id", selected).eq("status", "realizado").gte("data", inicio).lte("data", fim),
-          ]);
-          if (error) throw error;
-          const realizadoPorCat = new Map<string, number>();
-          (tx ?? []).forEach((t: any) => {
-            const k = t.categoria_id;
-            if (!k) return;
-            realizadoPorCat.set(k, (realizadoPorCat.get(k) ?? 0) + Number(t.valor));
-          });
-          const rows = (budgets ?? []).map((b: any) => {
-            const real = realizadoPorCat.get(b.categories?.id) ?? 0;
-            const pct = Number(b.valor_orcado) > 0 ? (real / Number(b.valor_orcado)) * 100 : 0;
-            return {
-              Mês: `${b.mes}/${b.ano}`,
-              Categoria: b.categories?.nome ?? "",
-              Orçado: Number(b.valor_orcado).toFixed(2),
-              Realizado: real.toFixed(2),
-              Restante: (Number(b.valor_orcado) - real).toFixed(2),
-              "% utilizado": pct.toFixed(1) + "%",
-            };
-          });
-          return { rows, total: rows.length };
-        }
-
-        case "centro_custos": {
-          const [{ data: ccs, error }, { data: tx }] = await Promise.all([
-            supabase.from("cost_centers").select("id, nome").eq("company_id", selected),
-            supabase.from("transactions").select("tipo, valor, centro_custo_id").eq("company_id", selected).eq("status", "realizado").gte("data", inicio).lte("data", fim),
-          ]);
-          if (error) throw error;
-          const rows = (ccs ?? []).map((cc: any) => {
-            const txs = (tx ?? []).filter((t: any) => t.centro_custo_id === cc.id);
-            const entradas = txs.filter((t: any) => t.tipo === "entrada").reduce((s: number, t: any) => s + Number(t.valor), 0);
-            const saidas = txs.filter((t: any) => t.tipo === "saida").reduce((s: number, t: any) => s + Number(t.valor), 0);
-            return {
-              "Centro de custo": cc.nome,
-              Entradas: entradas.toFixed(2),
-              Saídas: saidas.toFixed(2),
-              Resultado: (entradas - saidas).toFixed(2),
-              Movimentações: txs.length,
-            };
-          });
-          return { rows, total: rows.length };
-        }
-
-        case "vendas": {
-          const { data: cats } = await supabase.from("categories").select("id, nome").eq("company_id", selected);
-          const salesIds = (cats ?? []).filter((c: any) => typeof c.nome === "string" && c.nome.toLowerCase().includes("venda")).map((c: any) => c.id);
-          if (!salesIds.length) return { rows: [], total: 0 };
-          const { data, error } = await supabase
-            .from("transactions")
-            .select("data, descricao, valor, status, forma_pagamento, categories(nome)")
-            .eq("company_id", selected)
-            .eq("tipo", "entrada")
-            .in("categoria_id", salesIds)
-            .gte("data", inicio)
-            .lte("data", fim)
-            .order("data", { ascending: false });
-          if (error) throw error;
-          const rows = (data ?? []).map((r: any) => ({
-            Data: formatDate(r.data),
-            Descrição: r.descricao,
-            Categoria: r.categories?.nome ?? "",
-            "Forma pagamento": r.forma_pagamento ?? "",
-            Status: r.status,
-            Valor: Number(r.valor).toFixed(2),
-          }));
-          return { rows, total: rows.length };
-        }
-
-        case "estoque": {
-          const { data, error } = await supabase
-            .from("products")
-            .select("nome, categoria, fornecedor, quantidade, custo_unitario, preco_venda, estoque_minimo")
-            .eq("company_id", selected)
-            .order("nome");
-          if (error) throw error;
-          const rows = (data ?? []).map((p: any) => {
-            const valor = Number(p.quantidade) * Number(p.custo_unitario);
-            const margem = Number(p.preco_venda) > 0 ? ((Number(p.preco_venda) - Number(p.custo_unitario)) / Number(p.preco_venda)) * 100 : 0;
-            const st = Number(p.quantidade) <= 0 ? "zerado" : Number(p.quantidade) <= Number(p.estoque_minimo) ? "baixo" : "normal";
-            return {
-              Produto: p.nome,
-              Categoria: p.categoria ?? "",
-              Fornecedor: p.fornecedor ?? "",
-              Quantidade: Number(p.quantidade).toFixed(2),
-              "Custo unit.": Number(p.custo_unitario).toFixed(2),
-              "Preço venda": Number(p.preco_venda).toFixed(2),
-              "Estoque mínimo": Number(p.estoque_minimo).toFixed(2),
-              "Valor total": valor.toFixed(2),
-              "Margem %": margem.toFixed(1),
-              Status: st,
-            };
-          });
-          return { rows, total: rows.length };
-        }
-
-        case "precificacao": {
-          const { data, error } = await supabase
-            .from("products")
-            .select("nome, custo_unitario, preco_venda")
-            .eq("company_id", selected)
-            .order("nome");
-          if (error) throw error;
-          const rows = (data ?? []).map((p: any) => {
-            const custo = Number(p.custo_unitario);
-            const preco = Number(p.preco_venda);
-            const lucro = preco - custo;
-            const margem = preco > 0 ? (lucro / preco) * 100 : 0;
-            const precoSugerido40 = custo > 0 ? custo / (1 - 0.4) : 0;
-            return {
-              Produto: p.nome,
-              Custo: custo.toFixed(2),
-              "Preço atual": preco.toFixed(2),
-              "Lucro R$": lucro.toFixed(2),
-              "Margem %": margem.toFixed(1),
-              "Preço sugerido (40%)": precoSugerido40.toFixed(2),
-            };
-          });
-          return { rows, total: rows.length };
-        }
-
-        case "geral_mensal": {
-          const [{ data: tx }, { data: pay }, { data: rec }, { data: prods }] = await Promise.all([
-            supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", inicio).lte("data", fim),
-            supabase.from("payables").select("valor, status").eq("company_id", selected).gte("vencimento", inicio).lte("vencimento", fim),
-            supabase.from("receivables").select("valor, status").eq("company_id", selected).gte("vencimento", inicio).lte("vencimento", fim),
-            supabase.from("products").select("quantidade, custo_unitario, estoque_minimo").eq("company_id", selected),
-          ]);
-          const entradas = (tx ?? []).filter((t: any) => t.tipo === "entrada").reduce((s: number, t: any) => s + Number(t.valor), 0);
-          const saidas = (tx ?? []).filter((t: any) => t.tipo === "saida").reduce((s: number, t: any) => s + Number(t.valor), 0);
-          const aPagar = (pay ?? []).filter((p: any) => p.status !== "pago").reduce((s: number, p: any) => s + Number(p.valor), 0);
-          const aReceber = (rec ?? []).filter((r: any) => r.status !== "recebido").reduce((s: number, r: any) => s + Number(r.valor), 0);
-          const valorEstoque = (prods ?? []).reduce((s: number, p: any) => s + Number(p.quantidade) * Number(p.custo_unitario), 0);
-          const alertaEstoque = (prods ?? []).filter((p: any) => Number(p.quantidade) <= Number(p.estoque_minimo)).length;
-          const rows = [
-            { Indicador: "Período", Valor: `${formatDate(inicio)} a ${formatDate(fim)}` },
-            { Indicador: "Entradas realizadas", Valor: entradas.toFixed(2) },
-            { Indicador: "Saídas realizadas", Valor: saidas.toFixed(2) },
-            { Indicador: "Resultado", Valor: (entradas - saidas).toFixed(2) },
-            { Indicador: "Contas a pagar em aberto", Valor: aPagar.toFixed(2) },
-            { Indicador: "Contas a receber em aberto", Valor: aReceber.toFixed(2) },
-            { Indicador: "Valor em estoque", Valor: valorEstoque.toFixed(2) },
-            { Indicador: "Produtos em alerta", Valor: alertaEstoque },
-          ];
-          return { rows, total: rows.length };
-        }
-      }
+      const { data } = await supabase.from("companies").select("id, nome").order("nome");
+      return data ?? [];
     },
   });
 
-  const exportCSV = () => {
-    if (!preview?.rows.length) {
-      toast.error("Nada para exportar — gere o relatório primeiro.");
+  const allCompanies = isConsultant ? (ownedCompanies ?? []) : companies;
+  const currentCompanyId = selected ?? (isConsultant ? allCompanies[0]?.id : null);
+
+  const range = monthRange();
+  const [inicio, setInicio] = useState(range.start);
+  const [fim, setFim] = useState(range.end);
+  const [active, setActive] = useState<ReportKey | null>(null);
+
+  // período anterior automático
+  const prevPeriod = useMemo(() => {
+    const d = new Date(inicio);
+    const days = Math.round((new Date(fim).getTime() - d.getTime()) / 86400000) + 1;
+    const prevEnd = new Date(d);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate() - days + 1);
+    return { start: prevStart.toISOString().slice(0, 10), end: prevEnd.toISOString().slice(0, 10) };
+  }, [inicio, fim]);
+
+  const { data, isFetching } = useQuery({
+    queryKey: ["report-data", currentCompanyId, branchId, inicio, fim],
+    enabled: !!currentCompanyId,
+    queryFn: () => fetchReportData(currentCompanyId!, branchId, { start: inicio, end: fim }),
+  });
+
+  const { data: dataPrev } = useQuery({
+    queryKey: ["report-data-prev", currentCompanyId, branchId, prevPeriod.start, prevPeriod.end],
+    enabled: !!currentCompanyId && active === "comparativo_periodos",
+    queryFn: () => fetchReportData(currentCompanyId!, branchId, prevPeriod),
+  });
+
+  const { data: filiaisData } = useQuery({
+    queryKey: ["report-filiais", currentCompanyId, inicio, fim],
+    enabled: !!currentCompanyId && active === "comparativo_filiais",
+    queryFn: () => buildComparativoFiliais(currentCompanyId!, { start: inicio, end: fim }),
+  });
+
+  const period = { start: inicio, end: fim };
+
+  const exportCSV = (rows: Record<string, unknown>[], name: string) => {
+    if (!rows?.length) {
+      toast.error("Nada para exportar.");
       return;
     }
-    const tipoLabel = TIPOS.find((t) => t.value === tipo)?.label ?? tipo;
-    const empresa = company?.nome.replace(/[^a-z0-9]+/gi, "_") ?? "empresa";
-    downloadCSV(`${empresa}_${tipoLabel.replace(/\s+/g, "_")}_${inicio}_${fim}.csv`, preview.rows);
-    toast.success("Relatório exportado.");
+    const empresa = (company?.nome ?? "empresa").replace(/[^a-z0-9]+/gi, "_");
+    downloadCSV(`${empresa}_${name}_${inicio}_${fim}.csv`, rows);
+    toast.success("Exportado.");
   };
 
-  const exportPDF = () => {
-    toast.info("Exportação PDF estará disponível em breve. Use CSV ou imprima a tela.");
-  };
-
-  if (isConsultant) {
+  if (!currentCompanyId) {
     return (
       <div className="space-y-6 max-w-5xl">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Relatórios consolidados</h1>
-          <p className="text-muted-foreground text-sm mt-1">Selecione uma empresa no painel para acessar seus relatórios.</p>
-        </div>
+        <h1 className="text-2xl md:text-3xl font-display font-bold">Relatórios</h1>
         <div className="bg-card border rounded-2xl p-8 text-center text-muted-foreground">
           <FileBarChart className="size-10 mx-auto opacity-40" />
-          <p className="mt-3">Acesse uma empresa pelo painel de consultor para gerar relatórios.</p>
+          <p className="mt-3">Selecione uma empresa para visualizar relatórios.</p>
         </div>
       </div>
     );
-  }
-
-  if (!selected) {
-    return <div className="text-muted-foreground">Carregando empresa...</div>;
   }
 
   return (
     <div className="space-y-6 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Relatórios</h1>
-          <p className="text-muted-foreground text-sm mt-1">Centro de relatórios da {company?.nome ?? "sua empresa"}.</p>
+          <h1 className="text-2xl md:text-3xl font-display font-bold">
+            {isConsultant ? "Central de Relatórios" : "Relatórios"}
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {isConsultant ? "Acesse relatórios de todas as empresas vinculadas." : `Relatórios da ${company?.nome ?? "sua empresa"}.`}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={exportCSV} variant="outline"><Download className="size-4" /> Exportar CSV</Button>
-          <Button onClick={exportPDF} variant="ghost">Exportar PDF</Button>
-        </div>
+        <Link to="/app/executivo">
+          <Button><FileText className="size-4" /> Relatório Executivo Mensal</Button>
+        </Link>
       </div>
 
-      <div className="bg-card border rounded-2xl p-5 shadow-card grid gap-4 md:grid-cols-[1.5fr_1fr_1fr_1fr_auto] items-end">
-        <Field label="Tipo de relatório">
-          <select value={tipo} onChange={(e) => setTipo(e.target.value as RelTipo)} className="w-full rounded-lg border px-3 py-2 text-sm bg-background">
-            {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </Field>
+      {/* Filter bar */}
+      <div className="bg-card border rounded-2xl p-4 shadow-card flex flex-wrap gap-3 items-end">
+        {isConsultant && (
+          <Field label="Empresa">
+            <select
+              value={currentCompanyId ?? ""}
+              onChange={(e) => select(e.target.value)}
+              className="rounded-lg border px-3 py-2 text-sm bg-background min-w-[220px]"
+            >
+              {allCompanies.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label="Data inicial">
-          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm bg-background" />
+          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background" />
         </Field>
         <Field label="Data final">
-          <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm bg-background" />
+          <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background" />
         </Field>
-        <Field label="Status">
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm bg-background">
-            <option value="todos">Todos</option>
-            <option value="realizado">Realizado</option>
-            <option value="pendente">Pendente</option>
-            <option value="em_aberto">Em aberto</option>
-            <option value="pago">Pago</option>
-            <option value="recebido">Recebido</option>
-            <option value="vencido">Vencido</option>
-          </select>
-        </Field>
-        <Button onClick={() => refetch()}>Gerar</Button>
+        <div className="ml-auto"><BranchSwitcher /></div>
       </div>
 
-      <div className="bg-card border rounded-2xl p-5 shadow-card">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold">Pré-visualização</h2>
-          <span className="text-xs text-muted-foreground">{isFetching ? "Carregando..." : `${preview?.total ?? 0} registro(s)`}</span>
-        </div>
-        {!preview || preview.rows.length === 0 ? (
-          <div className="text-sm text-muted-foreground py-10 text-center">Sem dados para os filtros selecionados.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase text-muted-foreground border-b">
-                  {Object.keys(preview.rows[0]).map((h) => (
-                    <th key={h} className="py-2 pr-4 font-medium">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {preview.rows.slice(0, 50).map((r, i) => (
-
-                  <tr key={i} className="border-b last:border-0">
-                    {Object.keys(preview.rows[0]).map((h) => {
-                      const v = (r as Record<string, unknown>)[h];
-                      const isMoney = ["Valor", "Orçado", "Realizado", "Restante", "Entradas", "Saídas", "Resultado", "Custo", "Preço atual", "Preço sugerido (40%)", "Lucro R$", "Valor total", "Custo unit.", "Preço venda"].includes(h);
-                      return (
-                        <td key={h} className={`py-2 pr-4 ${isMoney ? "font-mono" : ""}`}>
-                          {isMoney && typeof v === "string" && !isNaN(Number(v)) ? formatMoney(Number(v)) : String(v ?? "")}
-                        </td>
-                      );
-                    })}
-                  </tr>
+      {/* Group cards */}
+      {!active && (
+        <div className="space-y-6">
+          {GROUPS.map((g) => (
+            <section key={g.title}>
+              <div className="flex items-center gap-2 mb-3">
+                <g.icon className="size-4 text-muted-foreground" />
+                <h2 className="font-semibold">{g.title}</h2>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {g.reports.map((r) => (
+                  <button
+                    key={r.key}
+                    onClick={() => setActive(r.key)}
+                    className={`text-left bg-gradient-to-br ${g.tone} border rounded-2xl p-5 hover:shadow-md transition-shadow group`}
+                  >
+                    <div className="font-semibold">{r.label}</div>
+                    <p className="text-sm text-muted-foreground mt-1">{r.desc}</p>
+                    <div className="mt-4 text-xs text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                      Gerar relatório <ArrowRight className="size-3" />
+                    </div>
+                  </button>
                 ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
 
-              </tbody>
-            </table>
-            {preview.rows.length > 50 && (
-              <p className="text-xs text-muted-foreground mt-3">Exibindo 50 de {preview.rows.length}. Exporte o CSV para o relatório completo.</p>
-            )}
+      {/* Active report view */}
+      {active && (
+        <div className="bg-card border rounded-2xl p-5 shadow-card space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <Button variant="ghost" size="sm" onClick={() => setActive(null)}>← Voltar aos relatórios</Button>
+            <span className="text-xs text-muted-foreground">{isFetching ? "Carregando..." : "Período: " + inicio + " → " + fim}</span>
           </div>
-        )}
-      </div>
+
+          {!data ? <Loading /> : (
+            <RenderReport
+              type={active}
+              data={data}
+              dataPrev={dataPrev}
+              filiais={filiaisData}
+              period={period}
+              prevPeriod={prevPeriod}
+              onExport={exportCSV}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+function Loading() {
+  return <div className="text-sm text-muted-foreground py-8 text-center">Carregando dados...</div>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-xs uppercase tracking-wide text-muted-foreground mb-1">{label}</span>
+      <span className="block text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</span>
       {children}
     </label>
+  );
+}
+
+function Money({ v }: { v: number | string }) {
+  const n = typeof v === "string" ? Number(v) : v;
+  return <span className={n < 0 ? "text-destructive" : ""}>{formatMoney(n)}</span>;
+}
+
+function Table({ rows, moneyCols = [] as string[] }: { rows: Record<string, unknown>[]; moneyCols?: string[] }) {
+  if (!rows.length) return <p className="text-sm text-muted-foreground">Sem dados.</p>;
+  const headers = Object.keys(rows[0]);
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs uppercase text-muted-foreground border-b">
+            {headers.map((h) => <th key={h} className="py-2 pr-4 font-medium">{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-b last:border-0">
+              {headers.map((h) => {
+                const v = r[h];
+                const isMoney = moneyCols.includes(h) || (typeof v === "number" && /valor|saldo|total|orçado|realizado|diferença|atual|anterior|preço|custo|margem|ebitda|receita|lucro|entradas|saídas|resultado|a pagar|a receber/i.test(h));
+                return (
+                  <td key={h} className={`py-2 pr-4 ${isMoney ? "font-mono text-right" : ""}`}>
+                    {typeof v === "number" && isMoney ? <Money v={v} /> : typeof v === "number" ? v.toLocaleString("pt-BR") : String(v ?? "")}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function KpiGrid({ items }: { items: { label: string; value: number; money?: boolean; suffix?: string }[] }) {
+  return (
+    <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+      {items.map((it) => (
+        <div key={it.label} className="rounded-xl border p-4">
+          <div className="text-xs text-muted-foreground">{it.label}</div>
+          <div className="text-xl font-semibold mt-1">
+            {it.money ? formatMoney(it.value) : `${it.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}${it.suffix ?? ""}`}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ExportBtn({ rows, name, onExport }: { rows: Record<string, unknown>[]; name: string; onExport: (r: any[], n: string) => void }) {
+  return (
+    <div className="flex gap-2">
+      <Button variant="outline" size="sm" onClick={() => onExport(rows, name)}>
+        <Download className="size-4" /> Exportar CSV
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => toast.info("Exportação PDF estará disponível em breve.")}>
+        Exportar PDF
+      </Button>
+    </div>
+  );
+}
+
+function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExport }: any) {
+  switch (type) {
+    case "dre": {
+      const r = buildDRE(data, period);
+      return (
+        <>
+          <Header title="DRE Gerencial" onExport={onExport} rows={r.rows} name="dre" />
+          {r.semClassificacao > 0 && (
+            <div className="rounded-xl border-amber-500/30 bg-amber-500/10 border p-3 text-sm flex gap-2 items-start">
+              <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>Existem <strong>{r.semClassificacao}</strong> categorias sem classificação financeira. Isso pode afetar a precisão da DRE. Configure em <Link to="/app/kpis" className="underline">KPIs → Configuração</Link>.</span>
+            </div>
+          )}
+          <Table rows={r.rows} moneyCols={["Valor"]} />
+        </>
+      );
+    }
+    case "fluxo_realizado": {
+      const r = buildFluxoRealizado(data, period);
+      return (
+        <>
+          <Header title="Fluxo de Caixa Realizado" onExport={onExport} rows={r.lancamentos} name="fluxo_realizado" />
+          <KpiGrid items={[
+            { label: "Saldo Inicial", value: r.summary.saldoInicial, money: true },
+            { label: "Entradas", value: r.summary.entradas, money: true },
+            { label: "Saídas", value: r.summary.saidas, money: true },
+            { label: "Saldo Final", value: r.summary.saldoFinal, money: true },
+          ]} />
+          <Section title="Entradas por categoria"><Table rows={r.entradasPorCategoria} /></Section>
+          <Section title="Saídas por categoria"><Table rows={r.saidasPorCategoria} /></Section>
+          <Section title="Lançamentos do período"><Table rows={r.lancamentos.slice(0, 100)} /></Section>
+        </>
+      );
+    }
+    case "fluxo_projetado": {
+      const r = buildFluxoProjetado(data);
+      return (
+        <>
+          <Header title="Fluxo de Caixa Projetado" onExport={onExport} rows={r.projecao} name="fluxo_projetado" />
+          {r.summary.riscoNegativo && (
+            <div className="rounded-xl border-destructive/30 bg-destructive/10 border p-3 text-sm flex gap-2 items-start">
+              <AlertTriangle className="size-4 text-destructive shrink-0 mt-0.5" />
+              <span>Atenção: a projeção indica saldo negativo em algum dia dos próximos 60 dias.</span>
+            </div>
+          )}
+          <KpiGrid items={[
+            { label: "Saldo Atual", value: r.summary.saldoAtual, money: true },
+            { label: "A Pagar (futuro)", value: r.summary.totalPagar, money: true },
+            { label: "A Receber (futuro)", value: r.summary.totalReceber, money: true },
+            { label: "Saldo Projetado", value: r.summary.saldoProjetado, money: true },
+          ]} />
+          <Table rows={r.projecao} />
+        </>
+      );
+    }
+    case "lucro_operacional": {
+      const r = buildLucroOperacional(data, period);
+      return <><Header title="Lucro Operacional" onExport={onExport} rows={r.rows} name="lucro_operacional" /><Table rows={r.rows} /></>;
+    }
+    case "margem_contribuicao": {
+      const r = buildMargemContribuicao(data, period);
+      return (
+        <>
+          <Header title="Margem de Contribuição" onExport={onExport} rows={r.produtos} name="margem_contribuicao" />
+          <KpiGrid items={[
+            { label: "Receita", value: r.summary.receita, money: true },
+            { label: "Custos Variáveis", value: r.summary.custosVariaveis, money: true },
+            { label: "MC R$", value: r.summary.mc, money: true },
+            { label: "MC %", value: r.summary.mcPct, suffix: "%" },
+          ]} />
+          <Section title="Margem por produto"><Table rows={r.produtos} /></Section>
+        </>
+      );
+    }
+    case "ponto_equilibrio": {
+      const r = buildPontoEquilibrio(data, period);
+      return (
+        <>
+          <Header title="Ponto de Equilíbrio" onExport={onExport} rows={r.rows} name="ponto_equilibrio" />
+          <div className={`rounded-xl border p-3 text-sm font-medium ${r.status === "acima" ? "border-emerald-500/30 bg-emerald-500/10" : r.status === "abaixo" ? "border-destructive/30 bg-destructive/10" : "border-amber-500/30 bg-amber-500/10"}`}>
+            Status: {r.status === "acima" ? "Acima do PE" : r.status === "abaixo" ? "Abaixo do PE" : r.status === "proximo" ? "Próximo do PE" : "Indefinido"}
+          </div>
+          <Table rows={r.rows} />
+        </>
+      );
+    }
+    case "contas_pagar": {
+      const r = buildContasPagar(data, period);
+      return (
+        <>
+          <Header title="Contas a Pagar" onExport={onExport} rows={r.lista} name="contas_pagar" />
+          <KpiGrid items={[
+            { label: "Total a Pagar", value: r.summary.totalPagar, money: true },
+            { label: "Vencido", value: r.summary.vencido, money: true },
+            { label: "A Vencer", value: r.summary.aVencer, money: true },
+            { label: "Pago", value: r.summary.pago, money: true },
+          ]} />
+          <Section title="Por fornecedor"><Table rows={r.porFornecedor} /></Section>
+          <Section title="Por categoria"><Table rows={r.porCategoria} /></Section>
+          <Section title="Lista"><Table rows={r.lista.slice(0, 100)} /></Section>
+        </>
+      );
+    }
+    case "contas_receber": {
+      const r = buildContasReceber(data, period);
+      return (
+        <>
+          <Header title="Contas a Receber" onExport={onExport} rows={r.proximos} name="contas_receber" />
+          <KpiGrid items={[
+            { label: "Total a Receber", value: r.summary.totalReceber, money: true },
+            { label: "Vencido", value: r.summary.vencido, money: true },
+            { label: "A Vencer", value: r.summary.aVencer, money: true },
+            { label: "Inadimplência", value: r.summary.inadimplencia, suffix: "%" },
+          ]} />
+          <Section title="Por cliente"><Table rows={r.porCliente} /></Section>
+          <Section title="Próximos recebimentos"><Table rows={r.proximos} /></Section>
+        </>
+      );
+    }
+    case "orcado_realizado": {
+      const r = buildOrcadoRealizado(data, period);
+      return <><Header title="Orçado x Realizado" onExport={onExport} rows={r.rows} name="orcado_realizado" /><Table rows={r.rows} /></>;
+    }
+    case "capital_giro": {
+      const r = buildCapitalGiro(data);
+      return (
+        <>
+          <Header title="Capital de Giro" onExport={onExport} rows={r.rows} name="capital_giro" />
+          <div className="rounded-xl border p-3 text-sm">Situação: <strong>{r.situacao}</strong></div>
+          <Table rows={r.rows} />
+        </>
+      );
+    }
+    case "estoque_financeiro": {
+      const r = buildEstoqueFinanceiro(data);
+      return (
+        <>
+          <Header title="Estoque Financeiro" onExport={onExport} rows={r.maiorValor} name="estoque_financeiro" />
+          <KpiGrid items={[
+            { label: "Valor total", value: r.summary.total, money: true },
+            { label: "Produtos", value: r.summary.totalProdutos },
+            { label: "Abaixo do mínimo", value: r.summary.abaixoMin },
+            { label: "Zerados", value: r.summary.zerados },
+          ]} />
+          <Section title="Maior valor parado"><Table rows={r.maiorValor} /></Section>
+          <Section title="Por categoria"><Table rows={r.porCategoria} /></Section>
+        </>
+      );
+    }
+    case "vendas_margem": {
+      const r = buildVendasMargem(data, period);
+      return (
+        <>
+          <Header title="Vendas e Margem" onExport={onExport} rows={r.produtos} name="vendas_margem" />
+          <KpiGrid items={[
+            { label: "Total vendido", value: r.summary.totalVendido, money: true },
+            { label: "Qtd. vendas", value: r.summary.qtd },
+            { label: "Ticket médio", value: r.summary.ticket, money: true },
+          ]} />
+          <Section title="Produtos mais rentáveis"><Table rows={r.produtos} /></Section>
+        </>
+      );
+    }
+    case "centro_custos": {
+      const r = buildCentroCustos(data, period);
+      return <><Header title="Centro de Custos" onExport={onExport} rows={r.rows} name="centro_custos" /><Table rows={r.rows} /></>;
+    }
+    case "indicadores": {
+      const r = buildIndicadores(data, period);
+      return <><Header title="Indicadores Financeiros" onExport={onExport} rows={r.rows} name="indicadores" /><Table rows={r.rows} /></>;
+    }
+    case "comparativo_periodos": {
+      if (!dataPrev) return <Loading />;
+      const r = buildComparativo(data, dataPrev, period, prevPeriod);
+      return (
+        <>
+          <Header title={`Comparativo: ${period.start}→${period.end} vs ${prevPeriod.start}→${prevPeriod.end}`} onExport={onExport} rows={r.rows} name="comparativo" />
+          <Table rows={r.rows} />
+        </>
+      );
+    }
+    case "comparativo_filiais": {
+      if (!filiais) return <Loading />;
+      if (!filiais.rows.length) return <p className="text-sm text-muted-foreground py-6">Cadastre filiais para usar este relatório.</p>;
+      return <><Header title="Comparativo de Filiais" onExport={onExport} rows={filiais.rows} name="comparativo_filiais" /><Table rows={filiais.rows} /></>;
+    }
+    default:
+      return null;
+  }
+}
+
+function Header({ title, rows, name, onExport }: { title: string; rows: any[]; name: string; onExport: (r: any[], n: string) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-2 flex-wrap">
+      <h2 className="text-lg font-display font-semibold">{title}</h2>
+      <ExportBtn rows={rows} name={name} onExport={onExport} />
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{title}</h3>
+      {children}
+    </div>
   );
 }
