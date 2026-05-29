@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Plus, Pencil, Trash2, Power, Check } from "lucide-react";
+import { Building2, Plus, Pencil, Trash2, Power, Check, BadgeCheck, Copy, Link2, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,141 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { maskCNPJ, maskCEP, maskPhone, isValidCNPJ, BR_STATES } from "@/lib/cnpj";
 import { CompanySwitcher } from "@/components/company-switcher";
 
-export const Route = createFileRoute("/app/configuracoes")({ component: ConfiguracoesPage });
+export const Route = createFileRoute("/app/configuracoes")({ component: ConfiguracoesRouter });
+
+function ConfiguracoesRouter() {
+  const { isConsultant, loading } = useAuth();
+  if (loading) return <div className="text-muted-foreground text-sm">Carregando...</div>;
+  if (isConsultant) return <ConsultantSettingsPage />;
+  return <ConfiguracoesPage />;
+}
+
+function ConsultantSettingsPage() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const { data, isLoading } = useQuery({
+    queryKey: ["my-consultancy"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("consultants").select("*").maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const [form, setForm] = useState<any>(null);
+  useEffect(() => {
+    if (data && !form) setForm({
+      ...data,
+      consultancy_cnpj: data.consultancy_cnpj ? maskCNPJ(data.consultancy_cnpj) : "",
+      phone: data.phone ? maskPhone(data.phone) : "",
+    });
+  }, [data, form]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (form.consultancy_cnpj && !isValidCNPJ(form.consultancy_cnpj)) throw new Error("CNPJ inválido");
+      const { error } = await supabase.from("consultants").update({
+        consultancy_name: form.consultancy_name,
+        consultancy_cnpj: form.consultancy_cnpj ? form.consultancy_cnpj.replace(/\D/g, "") : null,
+        responsible_name: form.responsible_name || null,
+        email: form.email || null,
+        phone: form.phone || null,
+        city: form.city || null,
+        state: form.state || null,
+      }).eq("id", data!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Dados atualizados"); qc.invalidateQueries({ queryKey: ["my-consultancy"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const regenerate = useMutation({
+    mutationFn: async () => {
+      const code = `FP-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+      const { error } = await supabase.from("consultants").update({ invite_code: code }).eq("id", data!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Novo código gerado"); qc.invalidateQueries({ queryKey: ["my-consultancy"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
+
+  if (isLoading || !form) return <div className="text-muted-foreground text-sm">Carregando...</div>;
+  if (!data) return <div className="text-muted-foreground text-sm">Perfil de consultoria não encontrado.</div>;
+
+  const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/signup?invite=${data.invite_code}` : "";
+  const copy = (text: string, label: string) => { navigator.clipboard.writeText(text); toast.success(`${label} copiado!`); };
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-display font-bold">Configurações</h1>
+        <p className="text-muted-foreground text-sm">Dados da sua consultoria, código de convite e acesso.</p>
+      </div>
+
+      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="font-display font-semibold flex items-center gap-2"><BadgeCheck className="size-4 text-primary" /> Código de convite</h3>
+          <Button variant="outline" size="sm" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>Gerar novo código</Button>
+        </div>
+        <p className="text-sm text-muted-foreground">Compartilhe este código ou link com seus clientes para que eles se vinculem à sua consultoria.</p>
+        <div className="grid md:grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Código</Label>
+            <div className="flex gap-2 mt-1">
+              <Input readOnly value={data.invite_code} className="font-mono font-semibold" />
+              <Button variant="outline" onClick={() => copy(data.invite_code, "Código")}><Copy className="size-4" /></Button>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Link de convite</Label>
+            <div className="flex gap-2 mt-1">
+              <Input readOnly value={inviteUrl} className="text-xs" />
+              <Button variant="outline" onClick={() => copy(inviteUrl, "Link")}><Link2 className="size-4" /></Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+        <h3 className="font-display font-semibold">Dados da consultoria</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          <FormField label="Nome da consultoria" required value={form.consultancy_name ?? ""} onChange={(v) => setForm({ ...form, consultancy_name: v })} />
+          <FormField label="CNPJ" value={form.consultancy_cnpj ?? ""} onChange={(v) => setForm({ ...form, consultancy_cnpj: maskCNPJ(v) })} placeholder="00.000.000/0000-00" />
+          <FormField label="Responsável" value={form.responsible_name ?? ""} onChange={(v) => setForm({ ...form, responsible_name: v })} />
+          <FormField label="E-mail" type="email" value={form.email ?? ""} onChange={(v) => setForm({ ...form, email: v })} />
+          <FormField label="Telefone" value={form.phone ?? ""} onChange={(v) => setForm({ ...form, phone: maskPhone(v) })} />
+          <FormField label="Cidade" value={form.city ?? ""} onChange={(v) => setForm({ ...form, city: v })} />
+          <div>
+            <Label className="text-sm">UF</Label>
+            <Select value={form.state ?? ""} onValueChange={(v) => setForm({ ...form, state: v })}>
+              <SelectTrigger className="mt-2"><SelectValue placeholder="UF" /></SelectTrigger>
+              <SelectContent>{BR_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex justify-end"><Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar alterações"}</Button></div>
+      </div>
+
+      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-3">
+        <h3 className="font-display font-semibold">Acesso da conta</h3>
+        <div className="grid md:grid-cols-2 gap-3 text-sm">
+          <div><span className="text-muted-foreground">E-mail de login:</span> <strong>{user?.email}</strong></div>
+          <div><span className="text-muted-foreground">ID da consultoria:</span> <span className="font-mono text-xs">{data.id}</span></div>
+          <div><span className="text-muted-foreground">Status:</span> <span className={data.is_active ? "text-emerald-600 font-medium" : "text-rose-600 font-medium"}>{data.is_active ? "Ativa" : "Inativa"}</span></div>
+          <div><span className="text-muted-foreground">Criada em:</span> {new Date(data.created_at).toLocaleDateString("pt-BR")}</div>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Button variant="outline" onClick={() => supabase.auth.resetPasswordForEmail(user?.email ?? "").then(() => toast.success("E-mail de redefinição enviado"))}>Redefinir senha</Button>
+          <Button variant="outline" className="text-destructive" onClick={logout}><LogOut className="size-4" /> Encerrar sessão</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ConfiguracoesPage() {
   const { selected: companyId } = useSelectedCompany();
