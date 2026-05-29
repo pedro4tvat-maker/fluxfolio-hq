@@ -79,38 +79,30 @@ function useConsultancy() {
 
 function Inner() {
   const { data: consultancy, isLoading } = useConsultancy();
+  const { section } = Route.useSearch();
+  const navigate = Route.useNavigate();
   if (isLoading) return <div className="text-muted-foreground text-sm">Carregando...</div>;
   if (!consultancy) return <div className="text-muted-foreground text-sm">Perfil de consultoria não encontrado.</div>;
+
+  const currentLabel = CONSULTORIA_SECTIONS.find((s) => s.id === section)?.label ?? "Dashboard";
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl md:text-3xl font-display font-bold">Minha Consultoria</h1>
-        <p className="text-muted-foreground text-sm">Visão geral dos ganhos, custos e resultados da sua consultoria.</p>
+        <p className="text-muted-foreground text-sm">{currentLabel}</p>
       </div>
-      <Tabs defaultValue="dashboard">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="receitas">Receitas</TabsTrigger>
-          <TabsTrigger value="despesas">Despesas e Custos</TabsTrigger>
-          <TabsTrigger value="contratos">Contratos</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes Contratantes</TabsTrigger>
-          <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
-          <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
-          <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
-          <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
-          <TabsTrigger value="config">Configurações</TabsTrigger>
-        </TabsList>
-        <TabsContent value="dashboard" className="mt-6"><DashboardTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="receitas" className="mt-6"><ReceitasTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="despesas" className="mt-6"><DespesasTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="contratos" className="mt-6"><ContratosTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="clientes" className="mt-6"><ClientesContratantesTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="receber" className="mt-6"><ReceberTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="pagar" className="mt-6"><PagarTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="relatorios" className="mt-6"><RelatoriosTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="solicitacoes" className="mt-6"><SolicitacoesTab /></TabsContent>
-        <TabsContent value="config" className="mt-6"><PerfilTab /></TabsContent>
+      <Tabs value={section} onValueChange={(v) => navigate({ search: { section: v as Section }, replace: true })}>
+        <TabsContent value="dashboard" className="mt-0"><DashboardTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="receitas" className="mt-0"><ReceitasTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="despesas" className="mt-0"><DespesasTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="contratos" className="mt-0"><ContratosTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="clientes" className="mt-0"><ClientesContratantesTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="receber" className="mt-0"><ReceberTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="pagar" className="mt-0"><PagarTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="relatorios" className="mt-0"><RelatoriosTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="solicitacoes" className="mt-0"><SolicitacoesTab /></TabsContent>
+        <TabsContent value="config" className="mt-0"><PerfilTab /></TabsContent>
       </Tabs>
     </div>
   );
