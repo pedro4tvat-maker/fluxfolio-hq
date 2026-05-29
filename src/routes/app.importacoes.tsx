@@ -47,14 +47,14 @@ type ImportType = {
 
 const IMPORT_TYPES: ImportType[] = [
   { key: "extrato", title: "Extrato Bancário", description: "Importe transações do banco com classificação e conciliação automática.", formats: "CSV, XLSX, OFX", icon: Banknote, implemented: true },
-  { key: "fluxo", title: "Fluxo de Caixa", description: "Lançamentos manuais consolidados.", formats: "CSV, XLSX", icon: Wallet, implemented: false },
-  { key: "vendas", title: "Vendas", description: "Histórico de vendas com clientes e produtos.", formats: "CSV, XLSX", icon: ShoppingCart, implemented: false },
-  { key: "produtos", title: "Produtos", description: "Cadastro e atualização de estoque.", formats: "CSV, XLSX", icon: Package, implemented: false },
-  { key: "pagar", title: "Contas a Pagar", description: "Compromissos e fornecedores.", formats: "CSV, XLSX", icon: ArrowUpCircle, implemented: false },
-  { key: "receber", title: "Contas a Receber", description: "Recebimentos previstos e clientes.", formats: "CSV, XLSX", icon: ArrowDownCircle, implemented: false },
-  { key: "estoque", title: "Estoque", description: "Movimentações: entradas, saídas e ajustes.", formats: "CSV, XLSX", icon: Package, implemented: false },
-  { key: "precificacao", title: "Precificação", description: "Custos, margens e preços sugeridos.", formats: "CSV, XLSX", icon: Tag, implemented: false },
-  { key: "dividas", title: "Dívidas e Parcelamentos", description: "Empréstimos e financiamentos.", formats: "CSV, XLSX", icon: FileText, implemented: false },
+  { key: "fluxo", title: "Fluxo de Caixa", description: "Lançamentos manuais consolidados de entradas e saídas.", formats: "CSV, XLSX", icon: Wallet, implemented: true },
+  { key: "vendas", title: "Vendas", description: "Histórico de vendas com clientes e produtos.", formats: "CSV, XLSX", icon: ShoppingCart, implemented: true },
+  { key: "produtos", title: "Produtos", description: "Cadastro e atualização de estoque (upsert por nome).", formats: "CSV, XLSX", icon: Package, implemented: true },
+  { key: "pagar", title: "Contas a Pagar", description: "Compromissos e fornecedores.", formats: "CSV, XLSX", icon: ArrowUpCircle, implemented: true },
+  { key: "receber", title: "Contas a Receber", description: "Recebimentos previstos e clientes.", formats: "CSV, XLSX", icon: ArrowDownCircle, implemented: true },
+  { key: "estoque", title: "Estoque", description: "Movimentações: entradas, saídas e ajustes por produto.", formats: "CSV, XLSX", icon: Package, implemented: true },
+  { key: "precificacao", title: "Precificação", description: "Atualiza custos e preços de venda dos produtos.", formats: "CSV, XLSX", icon: Tag, implemented: true },
+  { key: "dividas", title: "Dívidas e Parcelamentos", description: "Empréstimos e financiamentos como contas a pagar.", formats: "CSV, XLSX", icon: FileText, implemented: true },
 ];
 
 function ImportacoesPage() {
