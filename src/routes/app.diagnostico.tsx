@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, ClipboardCheck, Plus, Eye, Trash2, FileText, CheckCircle2, Copy,
 } from "lucide-react";
+import { maybeAdvanceStage } from "@/lib/journey-stages";
 
 export const Route = createFileRoute("/app/diagnostico")({ component: DiagnosticoPage });
 
