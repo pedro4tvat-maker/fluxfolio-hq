@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeftRight, ArrowDownCircle, ArrowUpCircle, Target, Package, FileBarChart,
   Layers, ShoppingCart, Tag, ArrowLeft, AlertCircle, Building2, Users, FolderArchive,
-  ClipboardCheck,
+  ClipboardCheck, ListChecks,
 } from "lucide-react";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 

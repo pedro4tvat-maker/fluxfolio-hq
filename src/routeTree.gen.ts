@@ -17,6 +17,7 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppVendasRouteImport } from './routes/app.vendas'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppPrecificacaoRouteImport } from './routes/app.precificacao'
+import { Route as AppPlanoAcaoRouteImport } from './routes/app.plano-acao'
 import { Route as AppOrcamentoRouteImport } from './routes/app.orcamento'
 import { Route as AppKpisRouteImport } from './routes/app.kpis'
 import { Route as AppImportacoesRouteImport } from './routes/app.importacoes'
@@ -74,6 +75,11 @@ const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
 const AppPrecificacaoRoute = AppPrecificacaoRouteImport.update({
   id: '/precificacao',
   path: '/precificacao',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlanoAcaoRoute = AppPlanoAcaoRouteImport.update({
+  id: '/plano-acao',
+  path: '/plano-acao',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOrcamentoRoute = AppOrcamentoRouteImport.update({
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/app/importacoes'
     | '/app/kpis'
     | '/app/orcamento'
+    | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
     | '/app/vendas'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/app/importacoes'
     | '/app/kpis'
     | '/app/orcamento'
+    | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
     | '/app/vendas'
@@ -329,6 +340,7 @@ export interface FileRouteTypes {
     | '/app/importacoes'
     | '/app/kpis'
     | '/app/orcamento'
+    | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
     | '/app/vendas'
@@ -400,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: '/precificacao'
       fullPath: '/app/precificacao'
       preLoaderRoute: typeof AppPrecificacaoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/plano-acao': {
+      id: '/app/plano-acao'
+      path: '/plano-acao'
+      fullPath: '/app/plano-acao'
+      preLoaderRoute: typeof AppPlanoAcaoRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/orcamento': {
@@ -559,6 +578,7 @@ interface AppRouteChildren {
   AppImportacoesRoute: typeof AppImportacoesRoute
   AppKpisRoute: typeof AppKpisRoute
   AppOrcamentoRoute: typeof AppOrcamentoRoute
+  AppPlanoAcaoRoute: typeof AppPlanoAcaoRoute
   AppPrecificacaoRoute: typeof AppPrecificacaoRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
   AppVendasRoute: typeof AppVendasRoute
@@ -583,6 +603,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppImportacoesRoute: AppImportacoesRoute,
   AppKpisRoute: AppKpisRoute,
   AppOrcamentoRoute: AppOrcamentoRoute,
+  AppPlanoAcaoRoute: AppPlanoAcaoRoute,
   AppPrecificacaoRoute: AppPrecificacaoRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,
   AppVendasRoute: AppVendasRoute,
