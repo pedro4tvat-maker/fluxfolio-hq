@@ -14,6 +14,134 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_plan_comments: {
+        Row: {
+          action_plan_id: string
+          attachment_url: string | null
+          author_name: string | null
+          author_user_id: string
+          comment: string
+          comment_type: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          action_plan_id: string
+          attachment_url?: string | null
+          author_name?: string | null
+          author_user_id: string
+          comment: string
+          comment_type?: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          action_plan_id?: string
+          attachment_url?: string | null
+          author_name?: string | null
+          author_user_id?: string
+          comment?: string
+          comment_type?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_comments_action_plan_id_fkey"
+            columns: ["action_plan_id"]
+            isOneToOne: false
+            referencedRelation: "action_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      action_plans: {
+        Row: {
+          activity_id: string | null
+          allow_client_complete: boolean
+          allow_client_view: boolean
+          branch_id: string | null
+          company_id: string
+          completed_at: string | null
+          completion_notes: string | null
+          consultant_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          diagnostic_id: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          origin: string
+          priority: string
+          related_area: string
+          related_module: string | null
+          related_record_id: string | null
+          responsible_name: string | null
+          responsible_type: string
+          responsible_user_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_id?: string | null
+          allow_client_complete?: boolean
+          allow_client_view?: boolean
+          branch_id?: string | null
+          company_id: string
+          completed_at?: string | null
+          completion_notes?: string | null
+          consultant_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          diagnostic_id?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string
+          priority?: string
+          related_area?: string
+          related_module?: string | null
+          related_record_id?: string | null
+          responsible_name?: string | null
+          responsible_type?: string
+          responsible_user_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string | null
+          allow_client_complete?: boolean
+          allow_client_view?: boolean
+          branch_id?: string | null
+          company_id?: string
+          completed_at?: string | null
+          completion_notes?: string | null
+          consultant_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          diagnostic_id?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string
+          priority?: string
+          related_area?: string
+          related_module?: string | null
+          related_record_id?: string | null
+          responsible_name?: string | null
+          responsible_type?: string
+          responsible_user_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attachments: {
         Row: {
           branch_id: string | null
