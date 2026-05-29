@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      attachments: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          document_type: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          related_module: string
+          related_record_id: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          document_type?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          related_module: string
+          related_record_id?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          document_type?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          related_module?: string
+          related_record_id?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           ativa: boolean
@@ -392,6 +440,72 @@ export type Database = {
           },
         ]
       }
+      crm_contacts: {
+        Row: {
+          address: string | null
+          branch_id: string | null
+          city: string | null
+          company_id: string
+          cpf_cnpj: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          lead_source: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          responsible: string | null
+          state: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          branch_id?: string | null
+          city?: string | null
+          company_id: string
+          cpf_cnpj?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          lead_source?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          responsible?: string | null
+          state?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          branch_id?: string | null
+          city?: string | null
+          company_id?: string
+          cpf_cnpj?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          lead_source?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          responsible?: string | null
+          state?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       executive_reports: {
         Row: {
           ano: number
@@ -744,6 +858,111 @@ export type Database = {
           },
         ]
       }
+      pricing_records: {
+        Row: {
+          branch_id: string | null
+          categoria: string | null
+          comissao: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          custo_compra: number
+          custo_embalagem: number
+          custo_frete: number
+          custo_mao_obra: number
+          custo_materia_prima: number
+          desconto_medio: number
+          id: string
+          impostos: number
+          margem_atual: number
+          margem_desejada: number
+          marketplace: number
+          markup: number
+          nome: string
+          observacoes: string | null
+          outras_despesas_variaveis: number
+          outros_custos_diretos: number
+          preco_atual: number
+          preco_minimo: number
+          preco_sugerido: number
+          product_id: string | null
+          rateio_administrativo: number
+          rateio_comercial: number
+          rateio_fixo: number
+          taxa_cartao: number
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          categoria?: string | null
+          comissao?: number
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          custo_compra?: number
+          custo_embalagem?: number
+          custo_frete?: number
+          custo_mao_obra?: number
+          custo_materia_prima?: number
+          desconto_medio?: number
+          id?: string
+          impostos?: number
+          margem_atual?: number
+          margem_desejada?: number
+          marketplace?: number
+          markup?: number
+          nome: string
+          observacoes?: string | null
+          outras_despesas_variaveis?: number
+          outros_custos_diretos?: number
+          preco_atual?: number
+          preco_minimo?: number
+          preco_sugerido?: number
+          product_id?: string | null
+          rateio_administrativo?: number
+          rateio_comercial?: number
+          rateio_fixo?: number
+          taxa_cartao?: number
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          categoria?: string | null
+          comissao?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          custo_compra?: number
+          custo_embalagem?: number
+          custo_frete?: number
+          custo_mao_obra?: number
+          custo_materia_prima?: number
+          desconto_medio?: number
+          id?: string
+          impostos?: number
+          margem_atual?: number
+          margem_desejada?: number
+          marketplace?: number
+          markup?: number
+          nome?: string
+          observacoes?: string | null
+          outras_despesas_variaveis?: number
+          outros_custos_diretos?: number
+          preco_atual?: number
+          preco_minimo?: number
+          preco_sugerido?: number
+          product_id?: string | null
+          rateio_administrativo?: number
+          rateio_comercial?: number
+          rateio_fixo?: number
+          taxa_cartao?: number
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           branch_id: string | null
@@ -830,6 +1049,7 @@ export type Database = {
           company_id: string
           conta_id: string | null
           created_at: string
+          crm_contact_id: string | null
           data_recebimento: string | null
           descricao: string
           forma_recebimento: string | null
@@ -851,6 +1071,7 @@ export type Database = {
           company_id: string
           conta_id?: string | null
           created_at?: string
+          crm_contact_id?: string | null
           data_recebimento?: string | null
           descricao: string
           forma_recebimento?: string | null
@@ -872,6 +1093,7 @@ export type Database = {
           company_id?: string
           conta_id?: string | null
           created_at?: string
+          crm_contact_id?: string | null
           data_recebimento?: string | null
           descricao?: string
           forma_recebimento?: string | null
@@ -984,6 +1206,7 @@ export type Database = {
           company_id: string
           conta_id: string | null
           created_at: string
+          crm_contact_id: string | null
           data: string
           descricao: string
           forma_pagamento: string | null
@@ -1007,6 +1230,7 @@ export type Database = {
           company_id: string
           conta_id?: string | null
           created_at?: string
+          crm_contact_id?: string | null
           data?: string
           descricao: string
           forma_pagamento?: string | null
@@ -1030,6 +1254,7 @@ export type Database = {
           company_id?: string
           conta_id?: string | null
           created_at?: string
+          crm_contact_id?: string | null
           data?: string
           descricao?: string
           forma_pagamento?: string | null
@@ -1114,6 +1339,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      attachment_company_from_path: { Args: { _name: string }; Returns: string }
       find_consultant_by_code: {
         Args: { _code: string }
         Returns: {
