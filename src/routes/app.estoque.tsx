@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Package, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { toast } from "sonner";
+import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
 export const Route = createFileRoute("/app/estoque")({ component: EstoquePage });
 
