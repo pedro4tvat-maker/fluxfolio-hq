@@ -183,6 +183,7 @@ function useActivities(consultantId: string | undefined) {
 }
 
 function Inner() {
+  const { section } = Route.useSearch();
   const { data: consultant } = useConsultant();
   const { data: companies = [] } = useCompanies();
   const { data: activities = [] } = useActivities(consultant?.id);
