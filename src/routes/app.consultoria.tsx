@@ -20,7 +20,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { maskCNPJ, maskPhone, BR_STATES } from "@/lib/cnpj";
 import { formatMoney, formatDate, monthRange, downloadCSV } from "@/lib/format";
 
+export const CONSULTORIA_SECTIONS = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "receitas", label: "Receitas" },
+  { id: "despesas", label: "Despesas e Custos" },
+  { id: "contratos", label: "Contratos" },
+  { id: "clientes", label: "Clientes Contratantes" },
+  { id: "receber", label: "Contas a Receber" },
+  { id: "pagar", label: "Contas a Pagar" },
+  { id: "relatorios", label: "Relatórios" },
+  { id: "solicitacoes", label: "Solicitações" },
+  { id: "config", label: "Configurações" },
+] as const;
+type Section = typeof CONSULTORIA_SECTIONS[number]["id"];
+const SECTION_IDS = CONSULTORIA_SECTIONS.map((s) => s.id) as readonly string[];
+
 export const Route = createFileRoute("/app/consultoria")({
+  validateSearch: (s: Record<string, unknown>): { section: Section } => {
+    const v = String(s.section ?? "");
+    return { section: (SECTION_IDS.includes(v) ? v : "dashboard") as Section };
+  },
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
