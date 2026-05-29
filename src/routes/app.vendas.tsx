@@ -43,7 +43,7 @@ function VendasPage() {
       <div className="bg-card border rounded-2xl p-4">
         {isLoading ? (
           <div className="text-muted-foreground">Carregando vendas...</div>
-        ) : (data.length === 0 ? (
+        ) : (!data || data.length === 0 ? (
           <div className="text-sm text-muted-foreground">Nenhuma venda registrada.</div>
         ) : (
           <div className="space-y-2">
