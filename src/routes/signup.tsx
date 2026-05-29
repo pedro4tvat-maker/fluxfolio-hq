@@ -61,6 +61,7 @@ function SignupPage() {
   const strength = useMemo(() => passwordStrength(password), [password]);
 
   // company (cliente)
+  const [personType, setPersonType] = useState<"pj" | "pf">("pj");
   const [c_nome, setCNome] = useState("");
   const [c_fantasia, setCFantasia] = useState("");
   const [c_cnpj, setCCnpj] = useState("");
