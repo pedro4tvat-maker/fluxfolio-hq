@@ -369,6 +369,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
           continue;
         }
 
+        if (!r.data || !r.tipo || r.valor === null) { errors++; continue; }
         const { error } = await supabase.from("transactions").insert({
           company_id: companyId,
           branch_id: branchFinal,
