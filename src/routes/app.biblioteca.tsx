@@ -551,7 +551,7 @@ function UseTemplateDialog({ template, companies, consultant, userId, onClose }:
   });
 
   return (
-    <Dialog open={!!template} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={!!template} onOpenChange={(o: boolean) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Usar modelo: {template?.title}</DialogTitle>
