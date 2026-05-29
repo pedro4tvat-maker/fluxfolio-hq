@@ -306,6 +306,293 @@ export type Database = {
           },
         ]
       }
+      consultancy_contracts: {
+        Row: {
+          client_name: string | null
+          company_id: string | null
+          consultant_id: string
+          created_at: string
+          due_day: number
+          end_date: string | null
+          id: string
+          monthly_amount: number
+          notes: string | null
+          payment_method: string | null
+          plan_name: string | null
+          service_type: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_name?: string | null
+          company_id?: string | null
+          consultant_id: string
+          created_at?: string
+          due_day?: number
+          end_date?: string | null
+          id?: string
+          monthly_amount?: number
+          notes?: string | null
+          payment_method?: string | null
+          plan_name?: string | null
+          service_type?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string | null
+          company_id?: string | null
+          consultant_id?: string
+          created_at?: string
+          due_day?: number
+          end_date?: string | null
+          id?: string
+          monthly_amount?: number
+          notes?: string | null
+          payment_method?: string | null
+          plan_name?: string | null
+          service_type?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultancy_contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultancy_contracts_consultant_id_fkey"
+            columns: ["consultant_id"]
+            isOneToOne: false
+            referencedRelation: "consultants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultancy_payables: {
+        Row: {
+          amount: number
+          attachment_path: string | null
+          category: string | null
+          consultant_id: string
+          created_at: string
+          description: string
+          due_date: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          attachment_path?: string | null
+          category?: string | null
+          consultant_id: string
+          created_at?: string
+          description: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attachment_path?: string | null
+          category?: string | null
+          consultant_id?: string
+          created_at?: string
+          description?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultancy_payables_consultant_id_fkey"
+            columns: ["consultant_id"]
+            isOneToOne: false
+            referencedRelation: "consultants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultancy_receivables: {
+        Row: {
+          amount: number
+          client_name: string | null
+          company_id: string | null
+          consultant_id: string
+          contract_id: string | null
+          created_at: string
+          description: string
+          due_date: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          received_date: string | null
+          revenue_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          client_name?: string | null
+          company_id?: string | null
+          consultant_id: string
+          contract_id?: string | null
+          created_at?: string
+          description: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          received_date?: string | null
+          revenue_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_name?: string | null
+          company_id?: string | null
+          consultant_id?: string
+          contract_id?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          received_date?: string | null
+          revenue_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultancy_receivables_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultancy_receivables_consultant_id_fkey"
+            columns: ["consultant_id"]
+            isOneToOne: false
+            referencedRelation: "consultants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultancy_receivables_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "consultancy_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultancy_transactions: {
+        Row: {
+          amount: number
+          category: string | null
+          consultant_id: string
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          payable_id: string | null
+          payment_date: string | null
+          payment_method: string | null
+          receivable_id: string | null
+          related_company_id: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          category?: string | null
+          consultant_id: string
+          created_at?: string
+          description: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          payable_id?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          receivable_id?: string | null
+          related_company_id?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          consultant_id?: string
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          payable_id?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          receivable_id?: string | null
+          related_company_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultancy_transactions_consultant_id_fkey"
+            columns: ["consultant_id"]
+            isOneToOne: false
+            referencedRelation: "consultants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultancy_transactions_payable_id_fkey"
+            columns: ["payable_id"]
+            isOneToOne: false
+            referencedRelation: "consultancy_payables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultancy_transactions_receivable_id_fkey"
+            columns: ["receivable_id"]
+            isOneToOne: false
+            referencedRelation: "consultancy_receivables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultancy_transactions_related_company_id_fkey"
+            columns: ["related_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultant_company_links: {
         Row: {
           company_id: string
