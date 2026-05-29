@@ -22,6 +22,8 @@ function OrcamentoPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ categoria_id: "", valor_orcado: "" });
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const { data: categories } = useQuery({
     queryKey: ["categories", selected],
