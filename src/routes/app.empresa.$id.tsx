@@ -7,7 +7,7 @@ import { formatMoney, monthRange } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeftRight, ArrowDownCircle, ArrowUpCircle, Target, Package, FileBarChart,
-  Layers, ShoppingCart, Tag, ArrowLeft, AlertCircle, Building2,
+  Layers, ShoppingCart, Tag, ArrowLeft, AlertCircle, Building2, Users, FolderArchive,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/empresa/$id")({ component: EmpresaResumo });
@@ -19,8 +19,10 @@ const modules = [
   { to: "/app/orcamento", label: "Orçamento", icon: Target },
   { to: "/app/centro-custos", label: "Centro de Custos", icon: Layers },
   { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
+  { to: "/app/crm", label: "CRM", icon: Users },
   { to: "/app/estoque", label: "Controle de Estoque", icon: Package },
   { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
+  { to: "/app/documentos", label: "Documentos e Anexos", icon: FolderArchive },
   { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
 ] as const;
 
