@@ -1555,6 +1555,143 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_minutes: {
+        Row: {
+          agenda_activity_id: string | null
+          agenda_text: string | null
+          ai_generated: boolean
+          branch_id: string | null
+          company_id: string
+          consultant_id: string
+          created_at: string
+          created_by: string | null
+          final_content: string | null
+          finalized_at: string | null
+          generated_content: string | null
+          id: string
+          meeting_date: string
+          meeting_time: string | null
+          meeting_type: string
+          participants: Json
+          raw_notes: string | null
+          related_module: string | null
+          related_record_id: string | null
+          shared_with_client: boolean
+          status: string
+          template_used: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agenda_activity_id?: string | null
+          agenda_text?: string | null
+          ai_generated?: boolean
+          branch_id?: string | null
+          company_id: string
+          consultant_id: string
+          created_at?: string
+          created_by?: string | null
+          final_content?: string | null
+          finalized_at?: string | null
+          generated_content?: string | null
+          id?: string
+          meeting_date?: string
+          meeting_time?: string | null
+          meeting_type?: string
+          participants?: Json
+          raw_notes?: string | null
+          related_module?: string | null
+          related_record_id?: string | null
+          shared_with_client?: boolean
+          status?: string
+          template_used?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agenda_activity_id?: string | null
+          agenda_text?: string | null
+          ai_generated?: boolean
+          branch_id?: string | null
+          company_id?: string
+          consultant_id?: string
+          created_at?: string
+          created_by?: string | null
+          final_content?: string | null
+          finalized_at?: string | null
+          generated_content?: string | null
+          id?: string
+          meeting_date?: string
+          meeting_time?: string | null
+          meeting_type?: string
+          participants?: Json
+          raw_notes?: string | null
+          related_module?: string | null
+          related_record_id?: string | null
+          shared_with_client?: boolean
+          status?: string
+          template_used?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meeting_minutes_tasks: {
+        Row: {
+          created_action_plan_id: string | null
+          created_activity_id: string | null
+          created_at: string
+          created_pending_item_id: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          meeting_minutes_id: string
+          responsible_name: string | null
+          responsible_type: string
+          responsible_user_id: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          created_action_plan_id?: string | null
+          created_activity_id?: string | null
+          created_at?: string
+          created_pending_item_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meeting_minutes_id: string
+          responsible_name?: string | null
+          responsible_type?: string
+          responsible_user_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          created_action_plan_id?: string | null
+          created_activity_id?: string | null
+          created_at?: string
+          created_pending_item_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meeting_minutes_id?: string
+          responsible_name?: string | null
+          responsible_type?: string
+          responsible_user_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_minutes_tasks_meeting_minutes_id_fkey"
+            columns: ["meeting_minutes_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_minutes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payables: {
         Row: {
           branch_id: string | null
