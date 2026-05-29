@@ -82,11 +82,6 @@ const AppPlanoAcaoRoute = AppPlanoAcaoRouteImport.update({
   path: '/plano-acao',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPlanoAcaoRoute = AppPlanoAcaoRouteImport.update({
-  id: '/plano-acao',
-  path: '/plano-acao',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppOrcamentoRoute = AppOrcamentoRouteImport.update({
   id: '/orcamento',
   path: '/orcamento',
