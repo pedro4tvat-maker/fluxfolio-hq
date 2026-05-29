@@ -41,7 +41,6 @@ import { Route as AppAgendaRouteImport } from './routes/app.agenda'
 import { Route as AppJornadaCompanyIdRouteImport } from './routes/app.jornada.$companyId'
 import { Route as AppEmpresaIdRouteImport } from './routes/app.empresa.$id'
 import { Route as AppCrmIdRouteImport } from './routes/app.crm.$id'
-import { Route as AppJornadaCompanyIdRouteImport } from './routes/app.jornada.$companyId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
