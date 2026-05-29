@@ -23,6 +23,8 @@ import { Route as AppImportacoesRouteImport } from './routes/app.importacoes'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
 import { Route as AppExecutivoRouteImport } from './routes/app.executivo'
 import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
+import { Route as AppDocumentosRouteImport } from './routes/app.documentos'
+import { Route as AppCrmRouteImport } from './routes/app.crm'
 import { Route as AppContasReceberRouteImport } from './routes/app.contas-receber'
 import { Route as AppContasPagarRouteImport } from './routes/app.contas-pagar'
 import { Route as AppConsultoriaRouteImport } from './routes/app.consultoria'
@@ -30,6 +32,7 @@ import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppCentroCustosRouteImport } from './routes/app.centro-custos'
 import { Route as AppEmpresaIdRouteImport } from './routes/app.empresa.$id'
+import { Route as AppCrmIdRouteImport } from './routes/app.crm.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -101,6 +104,16 @@ const AppEstoqueRoute = AppEstoqueRouteImport.update({
   path: '/estoque',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDocumentosRoute = AppDocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCrmRoute = AppCrmRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContasReceberRoute = AppContasReceberRouteImport.update({
   id: '/contas-receber',
   path: '/contas-receber',
@@ -136,6 +149,11 @@ const AppEmpresaIdRoute = AppEmpresaIdRouteImport.update({
   path: '/empresa/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCrmIdRoute = AppCrmIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppCrmRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -148,6 +166,8 @@ export interface FileRoutesByFullPath {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/crm': typeof AppCrmRouteWithChildren
+  '/app/documentos': typeof AppDocumentosRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
@@ -158,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
   '/app/': typeof AppIndexRoute
+  '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
 }
 export interface FileRoutesByTo {
@@ -170,6 +191,8 @@ export interface FileRoutesByTo {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/crm': typeof AppCrmRouteWithChildren
+  '/app/documentos': typeof AppDocumentosRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
@@ -180,6 +203,7 @@ export interface FileRoutesByTo {
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
   '/app': typeof AppIndexRoute
+  '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
 }
 export interface FileRoutesById {
@@ -194,6 +218,8 @@ export interface FileRoutesById {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/crm': typeof AppCrmRouteWithChildren
+  '/app/documentos': typeof AppDocumentosRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
@@ -204,6 +230,7 @@ export interface FileRoutesById {
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
   '/app/': typeof AppIndexRoute
+  '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
 }
 export interface FileRouteTypes {
@@ -219,6 +246,8 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/crm'
+    | '/app/documentos'
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
@@ -229,6 +258,7 @@ export interface FileRouteTypes {
     | '/app/relatorios'
     | '/app/vendas'
     | '/app/'
+    | '/app/crm/$id'
     | '/app/empresa/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -241,6 +271,8 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/crm'
+    | '/app/documentos'
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
@@ -251,6 +283,7 @@ export interface FileRouteTypes {
     | '/app/relatorios'
     | '/app/vendas'
     | '/app'
+    | '/app/crm/$id'
     | '/app/empresa/$id'
   id:
     | '__root__'
@@ -264,6 +297,8 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/crm'
+    | '/app/documentos'
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
@@ -274,6 +309,7 @@ export interface FileRouteTypes {
     | '/app/relatorios'
     | '/app/vendas'
     | '/app/'
+    | '/app/crm/$id'
     | '/app/empresa/$id'
   fileRoutesById: FileRoutesById
 }
@@ -384,6 +420,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEstoqueRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/documentos': {
+      id: '/app/documentos'
+      path: '/documentos'
+      fullPath: '/app/documentos'
+      preLoaderRoute: typeof AppDocumentosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/crm': {
+      id: '/app/crm'
+      path: '/crm'
+      fullPath: '/app/crm'
+      preLoaderRoute: typeof AppCrmRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/contas-receber': {
       id: '/app/contas-receber'
       path: '/contas-receber'
@@ -433,8 +483,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEmpresaIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/crm/$id': {
+      id: '/app/crm/$id'
+      path: '/$id'
+      fullPath: '/app/crm/$id'
+      preLoaderRoute: typeof AppCrmIdRouteImport
+      parentRoute: typeof AppCrmRoute
+    }
   }
 }
+
+interface AppCrmRouteChildren {
+  AppCrmIdRoute: typeof AppCrmIdRoute
+}
+
+const AppCrmRouteChildren: AppCrmRouteChildren = {
+  AppCrmIdRoute: AppCrmIdRoute,
+}
+
+const AppCrmRouteWithChildren =
+  AppCrmRoute._addFileChildren(AppCrmRouteChildren)
 
 interface AppRouteChildren {
   AppCentroCustosRoute: typeof AppCentroCustosRoute
@@ -443,6 +511,8 @@ interface AppRouteChildren {
   AppConsultoriaRoute: typeof AppConsultoriaRoute
   AppContasPagarRoute: typeof AppContasPagarRoute
   AppContasReceberRoute: typeof AppContasReceberRoute
+  AppCrmRoute: typeof AppCrmRouteWithChildren
+  AppDocumentosRoute: typeof AppDocumentosRoute
   AppEstoqueRoute: typeof AppEstoqueRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
@@ -463,6 +533,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppConsultoriaRoute: AppConsultoriaRoute,
   AppContasPagarRoute: AppContasPagarRoute,
   AppContasReceberRoute: AppContasReceberRoute,
+  AppCrmRoute: AppCrmRouteWithChildren,
+  AppDocumentosRoute: AppDocumentosRoute,
   AppEstoqueRoute: AppEstoqueRoute,
   AppExecutivoRoute: AppExecutivoRoute,
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
@@ -487,13 +559,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
