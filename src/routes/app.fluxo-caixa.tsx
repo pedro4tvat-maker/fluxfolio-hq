@@ -316,6 +316,15 @@ function FluxoCaixa() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {selected && (
+        <section className="space-y-2">
+          <h2 className="font-display font-semibold">Documentos do fluxo de caixa</h2>
+          <div className="bg-card border rounded-2xl p-4 shadow-card">
+            <AttachmentsPanel companyId={selected} module="cash_flow" />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
