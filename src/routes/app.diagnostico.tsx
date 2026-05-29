@@ -288,6 +288,7 @@ function DeleteBtn({ id, onDone }: { id: string; onDone: () => void }) {
 }
 
 function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => void; canEdit: boolean }) {
+  const { user } = useAuth();
   const qc = useQueryClient();
   const { data: diag, refetch } = useQuery({
     queryKey: ["diagnostic", id],
