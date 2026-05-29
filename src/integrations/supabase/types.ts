@@ -258,6 +258,111 @@ export type Database = {
           },
         ]
       }
+      consultant_company_links: {
+        Row: {
+          company_id: string
+          consultant_id: string
+          created_at: string
+          id: string
+          linked_at: string | null
+          notes: string | null
+          requested_by: string | null
+          responded_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          consultant_id: string
+          created_at?: string
+          id?: string
+          linked_at?: string | null
+          notes?: string | null
+          requested_by?: string | null
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          consultant_id?: string
+          created_at?: string
+          id?: string
+          linked_at?: string | null
+          notes?: string | null
+          requested_by?: string | null
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_company_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_company_links_consultant_id_fkey"
+            columns: ["consultant_id"]
+            isOneToOne: false
+            referencedRelation: "consultants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultants: {
+        Row: {
+          city: string | null
+          consultancy_cnpj: string | null
+          consultancy_name: string
+          created_at: string
+          email: string | null
+          id: string
+          invite_code: string
+          is_active: boolean
+          logo_url: string | null
+          phone: string | null
+          responsible_name: string | null
+          state: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          consultancy_cnpj?: string | null
+          consultancy_name: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          invite_code: string
+          is_active?: boolean
+          logo_url?: string | null
+          phone?: string | null
+          responsible_name?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          consultancy_cnpj?: string | null
+          consultancy_name?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          invite_code?: string
+          is_active?: boolean
+          logo_url?: string | null
+          phone?: string | null
+          responsible_name?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cost_centers: {
         Row: {
           company_id: string
@@ -1009,6 +1114,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_consultant_by_code: {
+        Args: { _code: string }
+        Returns: {
+          city: string
+          consultancy_name: string
+          id: string
+          responsible_name: string
+          state: string
+        }[]
+      }
+      gen_invite_code: { Args: { _seed: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1017,6 +1133,18 @@ export type Database = {
         Returns: boolean
       }
       is_consultant: { Args: { _user_id: string }; Returns: boolean }
+      search_consultants: {
+        Args: { _q: string }
+        Returns: {
+          city: string
+          consultancy_name: string
+          email: string
+          id: string
+          invite_code: string
+          responsible_name: string
+          state: string
+        }[]
+      }
       seed_demo_data: { Args: { _owner: string }; Returns: undefined }
       user_has_company_access: {
         Args: { _company_id: string; _user_id: string }
