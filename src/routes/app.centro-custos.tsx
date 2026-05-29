@@ -65,6 +65,20 @@ function CentroCustosPage() {
     else { toast.success("Centro de custo criado"); setNome(""); refetch(); }
   }
 
+  async function salvarEdicao(id: string) {
+    if (!editValue.trim()) return;
+    const { error } = await supabase.from("cost_centers").update({ nome: editValue.trim() }).eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Centro atualizado"); setEditingId(null); refetch(); }
+  }
+
+  async function excluir(id: string, nome: string) {
+    if (!confirm(`Excluir o centro "${nome}"? Lançamentos vinculados ficarão sem centro.`)) return;
+    const { error } = await supabase.from("cost_centers").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Centro excluído"); refetch(); }
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
