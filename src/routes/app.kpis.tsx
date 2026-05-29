@@ -522,6 +522,7 @@ function computeKpis(data: any, start: string, end: string) {
 
 // ----- CSV export -----
 function exportCsv(k: any, start: string, end: string) {
+  const sl = (s: Status) => statusLabel[s];
   const rows: [string, string, string][] = [
     ["Indicador", "Valor", "Status"],
     ["Período", `${start} a ${end}`, ""],
