@@ -23,6 +23,7 @@ import {
   ArrowLeft, Plus, Filter, Trash2, CheckCircle2, MessageSquare,
   LayoutList, Columns, Wand2, AlertTriangle, Clock, CalendarPlus,
 } from "lucide-react";
+import { maybeAdvanceStage } from "@/lib/journey-stages";
 
 export const Route = createFileRoute("/app/plano-acao")({ component: PlanoAcaoPage });
 
