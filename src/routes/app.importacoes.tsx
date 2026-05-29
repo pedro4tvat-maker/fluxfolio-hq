@@ -77,8 +77,11 @@ function ImportacoesPage() {
       {view === "home" && (
         <TypesGrid onSelect={(t) => { setType(t); setView("wizard"); }} />
       )}
-      {view === "wizard" && type && (
+      {view === "wizard" && type && type.key === "extrato" && (
         <ImportWizard type={type} onBack={() => setView("home")} onDone={() => { setView("history"); }} />
+      )}
+      {view === "wizard" && type && type.key !== "extrato" && SCHEMAS[type.key] && (
+        <GenericImportWizard schema={SCHEMAS[type.key]} onBack={() => setView("home")} onDone={() => setView("history")} />
       )}
       {view === "history" && (
         <HistoryView onBack={() => setView("home")} />
