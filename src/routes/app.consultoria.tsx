@@ -69,7 +69,7 @@ function PerfilTab() {
     },
   });
   const [form, setForm] = useState<any>(null);
-  useMemo(() => { if (data && !form) setForm({ ...data, consultancy_cnpj: data.consultancy_cnpj ? maskCNPJ(data.consultancy_cnpj) : "", phone: data.phone ? maskPhone(data.phone) : "" }); }, [data]);
+  useEffect(() => { if (data && !form) setForm({ ...data, consultancy_cnpj: data.consultancy_cnpj ? maskCNPJ(data.consultancy_cnpj) : "", phone: data.phone ? maskPhone(data.phone) : "" }); }, [data, form]);
 
   const save = useMutation({
     mutationFn: async () => {
