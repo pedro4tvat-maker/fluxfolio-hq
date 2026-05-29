@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
-  Layers, ShoppingCart, Tag, Gauge, Upload,
+  Layers, ShoppingCart, Tag, Gauge, Upload, BadgeCheck, Copy,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
