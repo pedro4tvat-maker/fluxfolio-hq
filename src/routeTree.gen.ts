@@ -174,16 +174,6 @@ const AppAgendaRoute = AppAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPendenciasRoute = AppPendenciasRouteImport.update({
-  id: '/pendencias',
-  path: '/pendencias',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppJornadaRoute = AppJornadaRouteImport.update({
-  id: '/jornada',
-  path: '/jornada',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppEmpresaIdRoute = AppEmpresaIdRouteImport.update({
   id: '/empresa/$id',
   path: '/empresa/$id',
