@@ -30,19 +30,20 @@ const consultantNav: NavItem[] = [
 
 const clientNav: NavItem[] = [
   { to: "/app", label: "Painel", icon: LayoutDashboard, exact: true },
+const clientNav: NavItem[] = [
+  { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
   { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
   { to: "/app/orcamento", label: "Orçamento", icon: Target },
   { to: "/app/centro-custos", label: "Centro de Custos", icon: Layers },
   { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
-  { to: "/app/estoque", label: "Controle de Estoque", icon: Package },
-  { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
+  { to: "/app/estoque", label: "Estoque", icon: Package },
+  { to: "/app/precificacao", label: "Precificação", icon: Tag },
   { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
-  { to: "/app/configuracoes", label: "Configurações da Empresa", icon: Settings },
+  { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-function AppLayout() {
   const navigate = useNavigate();
   const { user, isConsultant, loading } = useAuth();
   const path = useRouterState({ select: (s) => s.location.pathname });
