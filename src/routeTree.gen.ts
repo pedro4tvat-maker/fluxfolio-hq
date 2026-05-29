@@ -35,6 +35,7 @@ import { Route as AppConsultoriaRouteImport } from './routes/app.consultoria'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppCentroCustosRouteImport } from './routes/app.centro-custos'
+import { Route as AppAtasRouteImport } from './routes/app.atas'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
 import { Route as AppEmpresaIdRouteImport } from './routes/app.empresa.$id'
 import { Route as AppCrmIdRouteImport } from './routes/app.crm.$id'
@@ -169,6 +170,11 @@ const AppCentroCustosRoute = AppCentroCustosRouteImport.update({
   path: '/centro-custos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAtasRoute = AppAtasRouteImport.update({
+  id: '/atas',
+  path: '/atas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAgendaRoute = AppAgendaRouteImport.update({
   id: '/agenda',
   path: '/agenda',
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/atas': typeof AppAtasRoute
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -221,6 +228,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/atas': typeof AppAtasRoute
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -253,6 +261,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/atas': typeof AppAtasRoute
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/atas'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/atas'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/atas'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -564,6 +576,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCentroCustosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/atas': {
+      id: '/app/atas'
+      path: '/atas'
+      fullPath: '/app/atas'
+      preLoaderRoute: typeof AppAtasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/agenda': {
       id: '/app/agenda'
       path: '/agenda'
@@ -601,6 +620,7 @@ const AppCrmRouteWithChildren =
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
+  AppAtasRoute: typeof AppAtasRoute
   AppCentroCustosRoute: typeof AppCentroCustosRoute
   AppClientesRoute: typeof AppClientesRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
@@ -628,6 +648,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
+  AppAtasRoute: AppAtasRoute,
   AppCentroCustosRoute: AppCentroCustosRoute,
   AppClientesRoute: AppClientesRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
