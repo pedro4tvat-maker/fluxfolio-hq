@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, BadgeCheck, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { maskCNPJ, maskCEP, maskPhone, isValidCNPJ, BR_STATES } from "@/lib/cnpj";
 
 export const Route = createFileRoute("/signup")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    invite: typeof s.invite === "string" ? s.invite : undefined,
+  }),
   head: () => ({ meta: [{ title: "Criar conta — SISTEMAFP PJ" }] }),
   component: SignupPage,
 });
@@ -32,8 +35,19 @@ function passwordStrength(p: string) {
 
 type AccountKind = "client_manager" | "consultant";
 
+type ConsultantHit = {
+  id: string;
+  consultancy_name: string;
+  responsible_name: string | null;
+  email: string | null;
+  city: string | null;
+  state: string | null;
+  invite_code: string;
+};
+
 function SignupPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/signup" });
   const [kind, setKind] = useState<AccountKind>("client_manager");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -46,7 +60,7 @@ function SignupPage() {
   const [confirm, setConfirm] = useState("");
   const strength = useMemo(() => passwordStrength(password), [password]);
 
-  // company
+  // company (cliente)
   const [c_nome, setCNome] = useState("");
   const [c_fantasia, setCFantasia] = useState("");
   const [c_cnpj, setCCnpj] = useState("");
@@ -60,7 +74,32 @@ function SignupPage() {
   const [c_telefone, setCTelefone] = useState("");
   const [c_email, setCEmail] = useState("");
 
-  const totalSteps = kind === "client_manager" ? 3 : 1;
+  // consultoria (consultor)
+  const [consultancyName, setConsultancyName] = useState("");
+  const [consultancyCnpj, setConsultancyCnpj] = useState("");
+  const [consultancyCity, setConsultancyCity] = useState("");
+  const [consultancyState, setConsultancyState] = useState("");
+
+  // vínculo (cliente)
+  const [linkMode, setLinkMode] = useState<"code" | "search" | "none">("code");
+  const [inviteCode, setInviteCode] = useState(search.invite ?? "");
+  const [foundByCode, setFoundByCode] = useState<ConsultantHit | null>(null);
+  const [searchQ, setSearchQ] = useState("");
+  const [searchHits, setSearchHits] = useState<ConsultantHit[]>([]);
+  const [selectedConsultant, setSelectedConsultant] = useState<ConsultantHit | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  // Pré-validar invite vindo da URL
+  useEffect(() => {
+    if (!search.invite) return;
+    setLinkMode("code");
+    (async () => {
+      const { data } = await supabase.rpc("find_consultant_by_code", { _code: search.invite!.trim() });
+      if (data && data.length > 0) setFoundByCode({ ...(data[0] as any), email: null, invite_code: search.invite!.trim().toUpperCase() });
+    })();
+  }, [search.invite]);
+
+  const totalSteps = kind === "client_manager" ? 4 : 2;
 
   const validateStep1 = () => {
     if (!name.trim()) return "Informe o nome do responsável";
@@ -69,6 +108,10 @@ function SignupPage() {
     return null;
   };
   const validateStep2 = () => {
+    if (kind === "consultant") {
+      if (!consultancyName.trim()) return "Informe o nome da consultoria";
+      return null;
+    }
     if (!c_nome.trim()) return "Informe a razão social/nome da empresa";
     if (!c_fantasia.trim()) return "Informe o nome fantasia";
     if (!isValidCNPJ(c_cnpj)) return "CNPJ inválido. Use o formato 00.000.000/0000-00";
@@ -78,25 +121,68 @@ function SignupPage() {
     return null;
   };
   const validateStep3 = () => {
+    // Etapa de vínculo só existe para client_manager
+    if (linkMode === "code" && inviteCode.trim() && !foundByCode) {
+      return "Verifique o código informado ou escolha 'Não tenho consultor agora'";
+    }
+    if (linkMode === "search" && !selectedConsultant) {
+      return "Selecione um consultor ou escolha 'Não tenho consultor agora'";
+    }
+    return null;
+  };
+  const validatePwd = () => {
     if (strength.score < 2) return "Use uma senha mais forte (mínimo 8 caracteres, com letras e números)";
     if (password !== confirm) return "As senhas não coincidem";
     return null;
   };
 
+  const verifyCode = async () => {
+    const code = inviteCode.trim();
+    if (!code) { setFoundByCode(null); return; }
+    const { data, error } = await supabase.rpc("find_consultant_by_code", { _code: code });
+    if (error || !data || data.length === 0) {
+      setFoundByCode(null);
+      toast.error("Código de convite não encontrado");
+      return;
+    }
+    const c = data[0] as any;
+    setFoundByCode({ id: c.id, consultancy_name: c.consultancy_name, responsible_name: c.responsible_name, email: null, city: c.city, state: c.state, invite_code: code.toUpperCase() });
+    toast.success(`Consultor encontrado: ${c.consultancy_name}`);
+  };
+
+  const runSearch = async () => {
+    if (!searchQ.trim()) return;
+    setSearching(true);
+    const { data, error } = await supabase.rpc("search_consultants", { _q: searchQ.trim() });
+    setSearching(false);
+    if (error) { toast.error("Erro ao pesquisar"); return; }
+    setSearchHits((data ?? []) as ConsultantHit[]);
+  };
+
   const next = () => {
-    const err = step === 1 ? validateStep1() : step === 2 ? validateStep2() : validateStep3();
+    let err: string | null = null;
+    if (step === 1) err = validateStep1();
+    else if (step === 2) err = validateStep2();
+    else if (step === 3 && kind === "client_manager") err = validateStep3();
     if (err) { toast.error(err); return; }
     if (step < totalSteps) setStep(step + 1);
   };
 
   const submit = async () => {
     const e1 = validateStep1(); if (e1) { setStep(1); toast.error(e1); return; }
+    const e2 = validateStep2(); if (e2) { setStep(2); toast.error(e2); return; }
     if (kind === "client_manager") {
-      const e2 = validateStep2(); if (e2) { setStep(2); toast.error(e2); return; }
+      const e3 = validateStep3(); if (e3) { setStep(3); toast.error(e3); return; }
     }
-    const e3 = validateStep3(); if (e3) { setStep(totalSteps); toast.error(e3); return; }
+    const ep = validatePwd(); if (ep) { setStep(totalSteps); toast.error(ep); return; }
 
     setLoading(true);
+    const linkPayload: Record<string, string> = {};
+    if (kind === "client_manager") {
+      if (linkMode === "code" && foundByCode) linkPayload.consultant_invite_code = inviteCode.trim().toUpperCase();
+      else if (linkMode === "search" && selectedConsultant) linkPayload.consultant_id = selectedConsultant.id;
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -106,6 +192,7 @@ function SignupPage() {
           full_name: name,
           role: kind,
           user_phone: phone,
+          // empresa (cliente)
           company_name: kind === "client_manager" ? c_nome.trim() : null,
           company_trade_name: c_fantasia.trim(),
           company_cnpj: c_cnpj.replace(/\D/g, ""),
@@ -118,6 +205,13 @@ function SignupPage() {
           company_zip: c_cep.replace(/\D/g, ""),
           company_phone: c_telefone.trim() || phone,
           company_email: c_email.trim() || email,
+          // consultoria
+          consultancy_name: kind === "consultant" ? consultancyName.trim() : null,
+          consultancy_cnpj: consultancyCnpj.replace(/\D/g, ""),
+          consultancy_city: consultancyCity.trim(),
+          consultancy_state: consultancyState,
+          // vínculo
+          ...linkPayload,
         },
       },
     });
@@ -126,7 +220,12 @@ function SignupPage() {
       toast.error("Erro ao criar conta", { description: error.message });
       return;
     }
-    toast.success("Empresa cadastrada com sucesso! Faça login para começar.");
+    const linkedMsg = kind === "client_manager" && linkMode === "code" && foundByCode
+      ? " Você já foi vinculado ao consultor."
+      : kind === "client_manager" && linkMode === "search" && selectedConsultant
+      ? " Solicitação de vínculo enviada ao consultor."
+      : "";
+    toast.success(`Conta criada com sucesso!${linkedMsg} Faça login para começar.`);
     navigate({ to: "/login" });
   };
 
@@ -142,9 +241,7 @@ function SignupPage() {
 
         <div>
           <h2 className="text-2xl font-display font-bold">Criar conta</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {kind === "client_manager" ? `Etapa ${step} de ${totalSteps}` : "Cadastro de consultor"}
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Etapa {step} de {totalSteps}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -168,18 +265,19 @@ function SignupPage() {
           </button>
         </div>
 
-        {kind === "client_manager" && (
-          <div className="flex items-center gap-2">
-            {[1, 2, 3].map((s) => (
+        <div className="flex items-center gap-2">
+          {Array.from({ length: totalSteps }).map((_, i) => {
+            const s = i + 1;
+            return (
               <div key={s} className="flex-1 flex items-center gap-2">
                 <div className={`size-7 rounded-full grid place-items-center text-xs font-medium ${s < step ? "bg-success text-success-foreground" : s === step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                   {s < step ? <Check className="size-3" /> : s}
                 </div>
-                {s < 3 && <div className={`h-0.5 flex-1 ${s < step ? "bg-success" : "bg-muted"}`} />}
+                {s < totalSteps && <div className={`h-0.5 flex-1 ${s < step ? "bg-success" : "bg-muted"}`} />}
               </div>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
 
         {step === 1 && (
           <div className="space-y-3">
@@ -188,6 +286,9 @@ function SignupPage() {
             <Field label="E-mail" type="email" required value={email} onChange={setEmail} />
             {kind === "client_manager" && (
               <Field label="Telefone" required value={phone} onChange={(v) => setPhone(maskPhone(v))} placeholder="(11) 99999-9999" />
+            )}
+            {kind === "consultant" && (
+              <Field label="Telefone" value={phone} onChange={(v) => setPhone(maskPhone(v))} placeholder="(11) 99999-9999" />
             )}
           </div>
         )}
@@ -224,6 +325,111 @@ function SignupPage() {
                 </div>
               </div>
             </details>
+          </div>
+        )}
+
+        {step === 2 && kind === "consultant" && (
+          <div className="space-y-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dados da sua consultoria</div>
+            <Field label="Nome da consultoria" required value={consultancyName} onChange={setConsultancyName} placeholder="Ex.: PJ Pro Consultoria" />
+            <Field label="CNPJ da consultoria (opcional)" value={consultancyCnpj} onChange={(v) => setConsultancyCnpj(maskCNPJ(v))} placeholder="00.000.000/0000-00" />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2"><Field label="Cidade" value={consultancyCity} onChange={setConsultancyCity} /></div>
+              <div>
+                <Label className="text-sm">UF</Label>
+                <Select value={consultancyState} onValueChange={setConsultancyState}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="UF" /></SelectTrigger>
+                  <SelectContent>{BR_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="rounded-lg border bg-primary/5 p-3 text-xs">
+              <BadgeCheck className="size-4 inline mr-1 text-primary" />
+              Você receberá um <strong>código único de convite</strong> assim que entrar — basta compartilhá-lo com seus clientes.
+            </div>
+          </div>
+        )}
+
+        {step === 3 && kind === "client_manager" && (
+          <div className="space-y-4">
+            <div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Vincular a um consultor</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Se seu consultor já tem cadastro no SISTEMAFP, vincule-se agora para que ele acompanhe seus dados.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <ModeBtn active={linkMode === "code"} label="Código de convite" onClick={() => setLinkMode("code")} />
+              <ModeBtn active={linkMode === "search"} label="Buscar consultor" onClick={() => setLinkMode("search")} />
+              <ModeBtn active={linkMode === "none"} label="Não tenho consultor" onClick={() => setLinkMode("none")} />
+            </div>
+
+            {linkMode === "code" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Código (ex.: FP-PEDRO-A1B2C)</Label>
+                  <div className="flex gap-2">
+                    <Input value={inviteCode} onChange={(e) => { setInviteCode(e.target.value.toUpperCase()); setFoundByCode(null); }} placeholder="FP-XXXX-YYYYY" />
+                    <Button type="button" variant="outline" onClick={verifyCode}><Search className="size-4" /> Verificar</Button>
+                  </div>
+                </div>
+                {foundByCode && (
+                  <div className="rounded-lg border bg-success/5 border-success/30 p-3 flex items-center gap-3">
+                    <UserCheck className="size-5 text-success" />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{foundByCode.consultancy_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {foundByCode.responsible_name}{foundByCode.city ? ` · ${foundByCode.city}/${foundByCode.state}` : ""}
+                      </div>
+                      <div className="text-[10px] text-success mt-1">Vínculo será aprovado automaticamente ao criar a conta.</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {linkMode === "search" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Buscar por nome, e-mail ou empresa de consultoria</Label>
+                  <div className="flex gap-2">
+                    <Input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && runSearch()} placeholder="Ex.: Pedro Silva ou pedro@..." />
+                    <Button type="button" variant="outline" onClick={runSearch} disabled={searching}><Search className="size-4" /> Buscar</Button>
+                  </div>
+                </div>
+                {selectedConsultant && (
+                  <div className="rounded-lg border bg-primary/5 border-primary/30 p-3 flex items-center gap-3">
+                    <UserCheck className="size-5 text-primary" />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{selectedConsultant.consultancy_name}</div>
+                      <div className="text-xs text-muted-foreground">{selectedConsultant.responsible_name}</div>
+                      <div className="text-[10px] text-primary mt-1">Solicitação de vínculo será enviada ao consultor para aprovação.</div>
+                    </div>
+                    <Button type="button" size="icon" variant="ghost" onClick={() => setSelectedConsultant(null)}><X className="size-4" /></Button>
+                  </div>
+                )}
+                {!selectedConsultant && searchHits.length > 0 && (
+                  <div className="rounded-lg border divide-y max-h-60 overflow-y-auto">
+                    {searchHits.map((h) => (
+                      <button key={h.id} type="button" onClick={() => setSelectedConsultant(h)} className="w-full text-left p-3 hover:bg-muted/40 transition">
+                        <div className="font-medium text-sm">{h.consultancy_name}</div>
+                        <div className="text-xs text-muted-foreground">{h.responsible_name}{h.city ? ` · ${h.city}/${h.state}` : ""}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!selectedConsultant && searchHits.length === 0 && searchQ && !searching && (
+                  <p className="text-xs text-muted-foreground">Nenhum resultado. Tente outro termo ou use o código de convite.</p>
+                )}
+              </div>
+            )}
+
+            {linkMode === "none" && (
+              <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+                Você poderá vincular um consultor a qualquer momento em <strong>Configurações da Empresa → Consultor</strong>.
+              </div>
+            )}
           </div>
         )}
 
@@ -269,6 +475,18 @@ function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ModeBtn({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-3 py-2 rounded-lg border text-xs font-medium transition ${active ? "border-primary bg-primary/5 text-primary" : "border-border hover:bg-muted/40"}`}
+    >
+      {label}
+    </button>
   );
 }
 
