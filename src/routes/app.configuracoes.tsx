@@ -37,6 +37,7 @@ function ConfiguracoesPage() {
         <TabsList>
           <TabsTrigger value="empresa">Dados da empresa</TabsTrigger>
           <TabsTrigger value="filiais">Filiais</TabsTrigger>
+          <TabsTrigger value="consultor">Consultor</TabsTrigger>
           <TabsTrigger value="extras">Estruturas auxiliares</TabsTrigger>
         </TabsList>
 
@@ -48,6 +49,10 @@ function ConfiguracoesPage() {
           <BranchesSection companyId={companyId} />
         </TabsContent>
 
+        <TabsContent value="consultor" className="mt-6">
+          <ConsultantLinkSection companyId={companyId} />
+        </TabsContent>
+
         <TabsContent value="extras" className="mt-6">
           <div className="bg-card border rounded-2xl p-6 shadow-card text-sm text-muted-foreground space-y-2">
             <p><strong className="text-foreground">Categorias</strong>, <strong className="text-foreground">Centros de custo</strong> e <strong className="text-foreground">Contas financeiras</strong> são gerenciadas dentro dos próprios módulos onde são utilizadas (Fluxo de Caixa, Centro de Custos, etc.).</p>
@@ -55,6 +60,146 @@ function ConfiguracoesPage() {
           </div>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ConsultantLinkSection({ companyId }: { companyId: string }) {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [code, setCode] = useState("");
+  const { data: link, isLoading } = useQuery({
+    queryKey: ["company-consultant-link", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("consultant_company_links")
+        .select("id, status, consultant_id, created_at, consultants(consultancy_name, responsible_name, email, city, state, invite_code)")
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: results, refetch: doSearch, isFetching } = useQuery({
+    queryKey: ["search-consultants", search],
+    enabled: false,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("search_consultants", { _q: search });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const requestByCode = async () => {
+    if (!code.trim()) return;
+    const { data, error } = await supabase.rpc("find_consultant_by_code", { _code: code.trim() });
+    if (error) { toast.error(error.message); return; }
+    const c = (data ?? [])[0];
+    if (!c) { toast.error("Código inválido ou consultor inativo"); return; }
+    await createLink(c.id, "approved");
+  };
+
+  const createLink = async (consultantId: string, status: "pending" | "approved" = "pending") => {
+    const { data: u } = await supabase.auth.getUser();
+    const payload: any = { consultant_id: consultantId, company_id: companyId, status, requested_by: u.user?.id };
+    if (status === "approved") { payload.linked_at = new Date().toISOString(); payload.responded_at = new Date().toISOString(); }
+    const { error } = await supabase.from("consultant_company_links").insert(payload);
+    if (error) { toast.error(error.message); return; }
+    toast.success(status === "approved" ? "Consultor vinculado!" : "Solicitação enviada");
+    qc.invalidateQueries({ queryKey: ["company-consultant-link", companyId] });
+  };
+
+  const removeLink = async () => {
+    if (!link) return;
+    if (!confirm("Remover o vínculo com o consultor atual?")) return;
+    const { error } = await supabase.from("consultant_company_links").delete().eq("id", link.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Vínculo removido");
+    qc.invalidateQueries({ queryKey: ["company-consultant-link", companyId] });
+  };
+
+  if (isLoading) return <div className="text-muted-foreground text-sm">Carregando...</div>;
+
+  if (link && link.status === "approved") {
+    const c: any = link.consultants;
+    return (
+      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="font-display font-semibold">Consultor vinculado</h3>
+            <p className="text-sm text-muted-foreground">Esta empresa é acompanhada pela consultoria abaixo.</p>
+          </div>
+          <Button variant="outline" className="text-destructive" onClick={removeLink}>Remover vínculo</Button>
+        </div>
+        <div className="border-t pt-4 grid sm:grid-cols-2 gap-3 text-sm">
+          <div><span className="text-muted-foreground">Consultoria:</span> <strong>{c?.consultancy_name}</strong></div>
+          <div><span className="text-muted-foreground">Responsável:</span> {c?.responsible_name ?? "—"}</div>
+          <div><span className="text-muted-foreground">E-mail:</span> {c?.email ?? "—"}</div>
+          <div><span className="text-muted-foreground">Cidade/UF:</span> {[c?.city, c?.state].filter(Boolean).join(" / ") || "—"}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (link && link.status === "pending") {
+    const c: any = link.consultants;
+    return (
+      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-medium px-2 py-1 rounded-full bg-warning/10 text-warning-foreground border border-warning/30">Aguardando aprovação</span>
+        </div>
+        <p className="text-sm">Você solicitou vínculo com <strong>{c?.consultancy_name}</strong>. Aguarde a aprovação do consultor.</p>
+        <Button variant="outline" className="text-destructive w-fit" onClick={removeLink}>Cancelar solicitação</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+        <div>
+          <h3 className="font-display font-semibold">Vincular consultor</h3>
+          <p className="text-sm text-muted-foreground">Sua empresa ainda não está vinculada a um consultor. Use o código de convite ou busque pelo nome.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Código de convite</Label>
+          <div className="flex gap-2">
+            <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="FP-XXXX-YYYYY" className="font-mono" />
+            <Button onClick={requestByCode} disabled={!code.trim()}>Vincular</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Vínculo automático ao usar um código válido.</p>
+        </div>
+
+        <div className="border-t pt-4 space-y-2">
+          <Label>Buscar consultor</Label>
+          <div className="flex gap-2">
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nome da consultoria, responsável ou e-mail" />
+            <Button variant="outline" onClick={() => doSearch()} disabled={!search.trim() || isFetching}>Buscar</Button>
+          </div>
+          {results && results.length > 0 && (
+            <div className="border rounded-lg divide-y mt-2">
+              {results.map((r: any) => (
+                <div key={r.id} className="p-3 flex items-center justify-between gap-3 hover:bg-muted/30">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{r.consultancy_name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {r.responsible_name} {r.city && `· ${r.city}/${r.state}`}
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={() => createLink(r.id, "pending")}>Solicitar vínculo</Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {results && results.length === 0 && search && (
+            <p className="text-xs text-muted-foreground">Nenhum consultor encontrado.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
