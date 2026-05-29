@@ -395,10 +395,21 @@ function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => v
         if (e2) throw e2;
       }
     },
-    onSuccess: (_d, finalize) => {
+    onSuccess: async (_d, finalize) => {
       toast.success(finalize ? "Diagnóstico finalizado" : "Rascunho salvo");
+      if (finalize && diag?.company_id && diag?.consultant_id && user?.id) {
+        const moved = await maybeAdvanceStage({
+          companyId: diag.company_id,
+          consultantId: diag.consultant_id,
+          targetStage: "organizacao_financeira",
+          userId: user.id,
+          note: "Diagnóstico inicial finalizado",
+        });
+        if (moved) toast.info("Fase da empresa avançada para 'Organização financeira'.");
+      }
       qc.invalidateQueries({ queryKey: ["diagnostic", id] });
       qc.invalidateQueries({ queryKey: ["diagnostic-answers", id] });
+      qc.invalidateQueries({ queryKey: ["jornada-companies"] });
       refetch();
     },
     onError: (e: any) => toast.error(e.message),
