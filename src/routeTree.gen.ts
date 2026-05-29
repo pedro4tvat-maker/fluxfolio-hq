@@ -18,6 +18,7 @@ import { Route as AppVendasRouteImport } from './routes/app.vendas'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppPrecificacaoRouteImport } from './routes/app.precificacao'
 import { Route as AppOrcamentoRouteImport } from './routes/app.orcamento'
+import { Route as AppKpisRouteImport } from './routes/app.kpis'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
 import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
 import { Route as AppContasReceberRouteImport } from './routes/app.contas-receber'
@@ -70,6 +71,11 @@ const AppPrecificacaoRoute = AppPrecificacaoRouteImport.update({
 const AppOrcamentoRoute = AppOrcamentoRouteImport.update({
   id: '/orcamento',
   path: '/orcamento',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKpisRoute = AppKpisRouteImport.update({
+  id: '/kpis',
+  path: '/kpis',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFluxoCaixaRoute = AppFluxoCaixaRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/app/contas-receber'
     | '/app/estoque'
     | '/app/fluxo-caixa'
+    | '/app/kpis'
     | '/app/orcamento'
     | '/app/precificacao'
     | '/app/relatorios'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/app/contas-receber'
     | '/app/estoque'
     | '/app/fluxo-caixa'
+    | '/app/kpis'
     | '/app/orcamento'
     | '/app/precificacao'
     | '/app/relatorios'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/app/contas-receber'
     | '/app/estoque'
     | '/app/fluxo-caixa'
+    | '/app/kpis'
     | '/app/orcamento'
     | '/app/precificacao'
     | '/app/relatorios'
@@ -301,6 +313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOrcamentoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/kpis': {
+      id: '/app/kpis'
+      path: '/kpis'
+      fullPath: '/app/kpis'
+      preLoaderRoute: typeof AppKpisRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/fluxo-caixa': {
       id: '/app/fluxo-caixa'
       path: '/fluxo-caixa'
@@ -368,6 +387,7 @@ interface AppRouteChildren {
   AppContasReceberRoute: typeof AppContasReceberRoute
   AppEstoqueRoute: typeof AppEstoqueRoute
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
+  AppKpisRoute: typeof AppKpisRoute
   AppOrcamentoRoute: typeof AppOrcamentoRoute
   AppPrecificacaoRoute: typeof AppPrecificacaoRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
@@ -384,6 +404,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppContasReceberRoute: AppContasReceberRoute,
   AppEstoqueRoute: AppEstoqueRoute,
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
+  AppKpisRoute: AppKpisRoute,
   AppOrcamentoRoute: AppOrcamentoRoute,
   AppPrecificacaoRoute: AppPrecificacaoRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,

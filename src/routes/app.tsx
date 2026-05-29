@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
-  Layers, ShoppingCart, Tag,
+  Layers, ShoppingCart, Tag, Gauge,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -38,8 +38,10 @@ const clientNav: NavItem[] = [
   { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
   { to: "/app/estoque", label: "Estoque", icon: Package },
   { to: "/app/precificacao", label: "Precificação", icon: Tag },
+  { to: "/app/precificacao", label: "Precificação", icon: Tag },
+  { to: "/app/kpis", label: "KPIs", icon: Gauge },
   { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
-  { to: "/app/configuracoes", label: "Configurações", icon: Settings },
+  { to: "/app/configuracoes", label: "Configurações da Empresa", icon: Settings },
 ];
 
 function AppLayout() {

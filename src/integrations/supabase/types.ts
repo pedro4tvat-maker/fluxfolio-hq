@@ -124,6 +124,7 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          kpi_classification: string | null
           nome: string
           tipo: Database["public"]["Enums"]["transaction_type"]
         }
@@ -131,6 +132,7 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          kpi_classification?: string | null
           nome: string
           tipo: Database["public"]["Enums"]["transaction_type"]
         }
@@ -138,6 +140,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          kpi_classification?: string | null
           nome?: string
           tipo?: Database["public"]["Enums"]["transaction_type"]
         }
@@ -321,6 +324,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kpi_actions: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          data_fim: string | null
+          data_inicio: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          retorno_obtido: number
+          tipo: string | null
+          updated_at: string
+          valor_investido: number
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          retorno_obtido?: number
+          tipo?: string | null
+          updated_at?: string
+          valor_investido?: number
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          retorno_obtido?: number
+          tipo?: string | null
+          updated_at?: string
+          valor_investido?: number
+        }
+        Relationships: []
+      }
+      kpi_assumptions: {
+        Row: {
+          amortizacao: number
+          company_id: string
+          compras_medias_cliente: number
+          depreciacao: number
+          novos_clientes: number
+          tempo_medio_meses: number
+          updated_at: string
+        }
+        Insert: {
+          amortizacao?: number
+          company_id: string
+          compras_medias_cliente?: number
+          depreciacao?: number
+          novos_clientes?: number
+          tempo_medio_meses?: number
+          updated_at?: string
+        }
+        Update: {
+          amortizacao?: number
+          company_id?: string
+          compras_medias_cliente?: number
+          depreciacao?: number
+          novos_clientes?: number
+          tempo_medio_meses?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       payables: {
         Row: {
