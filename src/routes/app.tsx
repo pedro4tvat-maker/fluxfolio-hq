@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
-  Layers, ShoppingCart, Tag, Gauge, Upload,
+  Layers, ShoppingCart, Tag, Gauge, Upload, BadgeCheck, Copy,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,6 +24,7 @@ type NavItem = { to: string; label: string; icon: React.ComponentType<{ classNam
 const consultantNav: NavItem[] = [
   { to: "/app", label: "Painel do consultor", icon: LayoutDashboard, exact: true },
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
+  { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
   { to: "/app/relatorios", label: "Relatórios consolidados", icon: FileBarChart },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];

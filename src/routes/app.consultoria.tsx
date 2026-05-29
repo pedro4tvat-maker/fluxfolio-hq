@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Link2, Check, X, BadgeCheck, Building2, Mail, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -69,7 +69,7 @@ function PerfilTab() {
     },
   });
   const [form, setForm] = useState<any>(null);
-  useMemo(() => { if (data && !form) setForm({ ...data, consultancy_cnpj: data.consultancy_cnpj ? maskCNPJ(data.consultancy_cnpj) : "", phone: data.phone ? maskPhone(data.phone) : "" }); }, [data]);
+  useEffect(() => { if (data && !form) setForm({ ...data, consultancy_cnpj: data.consultancy_cnpj ? maskCNPJ(data.consultancy_cnpj) : "", phone: data.phone ? maskPhone(data.phone) : "" }); }, [data, form]);
 
   const save = useMutation({
     mutationFn: async () => {

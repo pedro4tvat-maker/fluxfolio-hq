@@ -39,26 +39,32 @@ interface CompanyKpi {
   resultado: number;
   saldo: number;
   vencidos: number;
+  coletasAtraso: number;
+  pagamentosAtraso: number;
+  semLancamento: boolean;
+  ultimoLancamento: string | null;
   status: "saudavel" | "atencao" | "critico";
   unidades: number;
   matrizCidade: string | null;
+  ativo: boolean;
 }
 
 async function loadCompanies(): Promise<CompanyKpi[]> {
   const { data: companies, error } = await supabase
     .from("companies").select("id, nome, responsavel, ativo")
-    .eq("ativo", true).order("nome");
+    .order("nome");
   if (error) throw error;
   const range = monthRange();
 
   return Promise.all((companies ?? []).map(async (c) => {
-    const [{ data: tx }, { data: pay }, { data: rec }, { data: accs }, { data: allTx }, { data: brs }] = await Promise.all([
+    const [{ data: tx }, { data: pay }, { data: rec }, { data: accs }, { data: allTx }, { data: brs }, { data: lastTx }] = await Promise.all([
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
       supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "pago"),
       supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "recebido"),
       supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", c.id),
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado"),
       supabase.from("branches").select("id, cidade, is_main_branch, ativa").eq("company_id", c.id),
+      supabase.from("transactions").select("data").eq("company_id", c.id).order("data", { ascending: false }).limit(1),
     ]);
     const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
     const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
@@ -66,14 +72,18 @@ async function loadCompanies(): Promise<CompanyKpi[]> {
     const delta = (allTx ?? []).reduce((s, t) => s + (t.tipo === "entrada" ? 1 : -1) * Number(t.valor), 0);
     const saldo = saldoInicial + delta;
     const today = new Date().toISOString().slice(0, 10);
-    const vencidos = (pay ?? []).filter((p) => p.vencimento < today).length + (rec ?? []).filter((r) => r.vencimento < today).length;
+    const pagamentosAtraso = (pay ?? []).filter((p) => p.vencimento < today).length;
+    const coletasAtraso = (rec ?? []).filter((r) => r.vencimento < today).length;
+    const vencidos = pagamentosAtraso + coletasAtraso;
     const resultado = entradas - saidas;
     const unidades = (brs ?? []).filter((b: any) => b.ativa).length;
     const matrizCidade = (brs ?? []).find((b: any) => b.is_main_branch)?.cidade ?? null;
+    const semLancamento = (tx ?? []).length === 0;
+    const ultimoLancamento = (lastTx ?? [])[0]?.data ?? null;
     let status: CompanyKpi["status"] = "saudavel";
     if (saldo < 0 || resultado < 0 || vencidos > 2) status = "critico";
     else if (vencidos > 0 || resultado < entradas * 0.1) status = "atencao";
-    return { id: c.id, nome: c.nome, responsavel: c.responsavel, entradas, saidas, resultado, saldo, vencidos, status, unidades, matrizCidade };
+    return { id: c.id, nome: c.nome, responsavel: c.responsavel, entradas, saidas, resultado, saldo, vencidos, coletasAtraso, pagamentosAtraso, semLancamento, ultimoLancamento, status, unidades, matrizCidade, ativo: c.ativo };
   }));
 }
 
@@ -87,6 +97,14 @@ const statusLabel = { saudavel: "Saudável", atencao: "Atenção", critico: "Cr�
 function ConsultantPanel() {
   const [seeding, setSeeding] = useState(false);
   const { data, isLoading, refetch } = useQuery({ queryKey: ["dashboard-companies"], queryFn: loadCompanies });
+  const { data: consultancy } = useQuery({
+    queryKey: ["my-consultancy-header"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("consultants").select("consultancy_name, invite_code").maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -98,19 +116,51 @@ function ConsultantPanel() {
     else { toast.success("Dados de demonstração criados!"); refetch(); }
   };
 
-  const total = data?.length ?? 0;
-  const saudaveis = data?.filter((c) => c.status === "saudavel").length ?? 0;
-  const atencao = data?.filter((c) => c.status === "atencao").length ?? 0;
-  const critico = data?.filter((c) => c.status === "critico").length ?? 0;
-  const resultadoConsolidado = data?.reduce((s, c) => s + c.resultado, 0) ?? 0;
-  const vencidasConsolidadas = data?.reduce((s, c) => s + c.vencidos, 0) ?? 0;
+  const inativar = async (id: string, nome: string) => {
+    if (!confirm(`Inativar a empresa "${nome}"? Ela deixará de aparecer como ativa.`)) return;
+    const { error } = await supabase.from("companies").update({ ativo: false }).eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Empresa inativada"); refetch(); }
+  };
+  const reativar = async (id: string) => {
+    const { error } = await supabase.from("companies").update({ ativo: true }).eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Empresa reativada"); refetch(); }
+  };
+  const excluir = async (id: string, nome: string) => {
+    if (!confirm(`EXCLUIR permanentemente "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Tem certeza? Todos os lançamentos serão removidos junto com a empresa "${nome}".`)) return;
+    const { error } = await supabase.from("companies").delete().eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Empresa excluída"); refetch(); }
+  };
+  const copyCode = () => {
+    if (!consultancy?.invite_code) return;
+    navigator.clipboard.writeText(consultancy.invite_code);
+    toast.success("Código copiado!");
+  };
+
+  const ativas = data?.filter((c) => c.ativo).length ?? 0;
+  const atencao = data?.filter((c) => c.ativo && c.status === "atencao").length ?? 0;
+  const critico = data?.filter((c) => c.ativo && c.status === "critico").length ?? 0;
+  const semLancamento = data?.filter((c) => c.ativo && c.semLancamento).length ?? 0;
+  const coletasAtraso = data?.reduce((s, c) => s + (c.ativo ? c.coletasAtraso : 0), 0) ?? 0;
 
   return (
     <div className="space-y-6 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Painel do consultor</h1>
-          <p className="text-muted-foreground text-sm mt-1">Visão geral de todas as empresas acompanhadas.</p>
+          <h1 className="text-2xl md:text-3xl font-display font-bold">
+            {consultancy?.consultancy_name ?? "Painel do consultor"}
+          </h1>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p className="text-muted-foreground text-sm">Visão geral das empresas acompanhadas.</p>
+            {consultancy?.invite_code && (
+              <div className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-md font-mono">
+                <span>{consultancy.invite_code}</span>
+                <button onClick={copyCode} className="hover:bg-primary/20 rounded p-0.5" title="Copiar código">
+                  <FileText className="size-3" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           {data && data.length === 0 && (
@@ -122,18 +172,13 @@ function ConsultantPanel() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Empresas ativas" value={String(total)} />
-        <Kpi label="Saudáveis" value={String(saudaveis)} tone="success" />
-        <Kpi label="Em atenção / críticas" value={`${atencao} / ${critico}`} tone="warning" />
-        <Kpi label="Resultado consolidado (mês)" value={formatMoney(resultadoConsolidado)} tone={resultadoConsolidado < 0 ? "danger" : "success"} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Kpi icon={Building2} label="Empresas ativas" value={String(ativas)} />
+        <Kpi icon={AlertCircle} label="Em atenção" value={String(atencao)} tone="warning" />
+        <Kpi icon={AlertTriangle} label="Críticas" value={String(critico)} tone="danger" />
+        <Kpi icon={Clock} label="Sem lançamento (mês)" value={String(semLancamento)} tone={semLancamento > 0 ? "warning" : undefined} />
+        <Kpi icon={ArrowDownCircle} label="Coletas em atraso" value={String(coletasAtraso)} tone={coletasAtraso > 0 ? "danger" : undefined} />
       </div>
-
-      {vencidasConsolidadas > 0 && (
-        <div className="bg-destructive/5 border border-destructive/20 text-destructive rounded-2xl p-4 flex items-center gap-2 text-sm">
-          <AlertCircle className="size-4" /> {vencidasConsolidadas} conta(s) vencida(s) somando todas as empresas.
-        </div>
-      )}
 
       {isLoading ? (
         <div className="text-muted-foreground">Carregando empresas...</div>
@@ -146,55 +191,66 @@ function ConsultantPanel() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {data.map((c) => (
-            <Link
-              key={c.id}
-              to="/app/empresa/$id"
-              params={{ id: c.id }}
-              onClick={() => localStorage.setItem("sfp:selected_company", c.id)}
-              className="bg-card border rounded-2xl p-5 shadow-card hover:shadow-elevated transition-shadow space-y-4 block"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-display font-semibold leading-tight">{c.nome}</h3>
-                  {c.responsavel && <p className="text-xs text-muted-foreground mt-0.5">{c.responsavel}</p>}
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {c.unidades > 1 ? `${c.unidades} unidades` : "Apenas matriz"}{c.matrizCidade ? ` · Matriz: ${c.matrizCidade}` : ""}
-                  </p>
-                </div>
-                <span className={`text-[11px] font-medium px-2 py-1 rounded-full border ${statusColors[c.status]}`}>
-                  {statusLabel[c.status]}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Saldo atual</div>
-                  <div className={`font-display font-bold text-lg ${c.saldo < 0 ? "text-destructive" : ""}`}>{formatMoney(c.saldo)}</div>
-                </div>
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Resultado do mês</div>
-                  <div className={`font-display font-bold text-lg ${c.resultado < 0 ? "text-destructive" : "text-success"}`}>{formatMoney(c.resultado)}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t text-sm">
-                <div className="flex items-center gap-2"><TrendingUp className="size-4 text-success" /><span className="text-muted-foreground">Entradas:</span><span className="font-medium ml-auto">{formatMoney(c.entradas)}</span></div>
-                <div className="flex items-center gap-2"><TrendingDown className="size-4 text-destructive" /><span className="text-muted-foreground">Saídas:</span><span className="font-medium ml-auto">{formatMoney(c.saidas)}</span></div>
-              </div>
-
-              {c.vencidos > 0 && (
-                <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/5 rounded-lg p-2">
-                  <AlertCircle className="size-4" /> {c.vencidos} {c.vencidos === 1 ? "conta vencida" : "contas vencidas"}
-                </div>
-              )}
-
-              <div className="flex items-center gap-1 text-xs text-primary font-medium">
-                Acessar resumo <ArrowRight className="size-3" />
-              </div>
-            </Link>
-          ))}
+        <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
+          <div className="px-5 py-3 border-b flex items-center justify-between">
+            <h3 className="font-display font-semibold">Empresas acompanhadas</h3>
+            <span className="text-xs text-muted-foreground">{data.length} no total</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="text-left px-4 py-2">Empresa</th>
+                  <th className="text-left px-4 py-2">Status</th>
+                  <th className="text-right px-4 py-2">Saldo</th>
+                  <th className="text-right px-4 py-2">Resultado mês</th>
+                  <th className="text-right px-4 py-2">Vencidos</th>
+                  <th className="text-left px-4 py-2">Último lanç.</th>
+                  <th className="text-right px-4 py-2">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((c) => (
+                  <tr key={c.id} className={`border-t hover:bg-muted/20 ${!c.ativo ? "opacity-50" : ""}`}>
+                    <td className="px-4 py-2">
+                      <Link
+                        to="/app/empresa/$id"
+                        params={{ id: c.id }}
+                        onClick={() => localStorage.setItem("sfp:selected_company", c.id)}
+                        className="font-medium hover:text-primary"
+                      >
+                        {c.nome}
+                      </Link>
+                      {c.responsavel && <div className="text-xs text-muted-foreground">{c.responsavel}</div>}
+                    </td>
+                    <td className="px-4 py-2">
+                      {!c.ativo ? (
+                        <span className="text-[11px] font-medium px-2 py-1 rounded-full border bg-muted text-muted-foreground">Inativa</span>
+                      ) : (
+                        <span className={`text-[11px] font-medium px-2 py-1 rounded-full border ${statusColors[c.status]}`}>
+                          {statusLabel[c.status]}
+                        </span>
+                      )}
+                    </td>
+                    <td className={`px-4 py-2 text-right font-medium ${c.saldo < 0 ? "text-destructive" : ""}`}>{formatMoney(c.saldo)}</td>
+                    <td className={`px-4 py-2 text-right font-medium ${c.resultado < 0 ? "text-destructive" : c.resultado > 0 ? "text-success" : ""}`}>{formatMoney(c.resultado)}</td>
+                    <td className="px-4 py-2 text-right">{c.vencidos > 0 ? <span className="text-destructive font-medium">{c.vencidos}</span> : <span className="text-muted-foreground">—</span>}</td>
+                    <td className="px-4 py-2 text-xs text-muted-foreground">{c.ultimoLancamento ? formatDate(c.ultimoLancamento) : <span className="text-warning-foreground">Sem lanç.</span>}</td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {c.ativo ? (
+                          <Button size="sm" variant="ghost" onClick={() => inativar(c.id, c.nome)} title="Inativar">Inativar</Button>
+                        ) : (
+                          <Button size="sm" variant="ghost" onClick={() => reativar(c.id)} title="Reativar">Reativar</Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => excluir(c.id, c.nome)} title="Excluir">Excluir</Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
