@@ -218,7 +218,7 @@ function ContasAPagar() {
           </Table>
         </div>
       </div>
-      </div>
+
 
       {selected && (
         <section className="space-y-2">
