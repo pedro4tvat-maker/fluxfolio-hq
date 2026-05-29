@@ -40,6 +40,8 @@ interface CompanyKpi {
   saldo: number;
   vencidos: number;
   status: "saudavel" | "atencao" | "critico";
+  unidades: number;
+  matrizCidade: string | null;
 }
 
 async function loadCompanies(): Promise<CompanyKpi[]> {
@@ -50,12 +52,13 @@ async function loadCompanies(): Promise<CompanyKpi[]> {
   const range = monthRange();
 
   return Promise.all((companies ?? []).map(async (c) => {
-    const [{ data: tx }, { data: pay }, { data: rec }, { data: accs }, { data: allTx }] = await Promise.all([
+    const [{ data: tx }, { data: pay }, { data: rec }, { data: accs }, { data: allTx }, { data: brs }] = await Promise.all([
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
       supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "pago"),
       supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "recebido"),
       supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", c.id),
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado"),
+      supabase.from("branches").select("id, cidade, is_main_branch, ativa").eq("company_id", c.id),
     ]);
     const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
     const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
@@ -65,10 +68,12 @@ async function loadCompanies(): Promise<CompanyKpi[]> {
     const today = new Date().toISOString().slice(0, 10);
     const vencidos = (pay ?? []).filter((p) => p.vencimento < today).length + (rec ?? []).filter((r) => r.vencimento < today).length;
     const resultado = entradas - saidas;
+    const unidades = (brs ?? []).filter((b: any) => b.ativa).length;
+    const matrizCidade = (brs ?? []).find((b: any) => b.is_main_branch)?.cidade ?? null;
     let status: CompanyKpi["status"] = "saudavel";
     if (saldo < 0 || resultado < 0 || vencidos > 2) status = "critico";
     else if (vencidos > 0 || resultado < entradas * 0.1) status = "atencao";
-    return { id: c.id, nome: c.nome, responsavel: c.responsavel, entradas, saidas, resultado, saldo, vencidos, status };
+    return { id: c.id, nome: c.nome, responsavel: c.responsavel, entradas, saidas, resultado, saldo, vencidos, status, unidades, matrizCidade };
   }));
 }
 
