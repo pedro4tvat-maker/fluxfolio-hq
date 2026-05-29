@@ -191,6 +191,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/pendencias': typeof AppPendenciasRoute
+  '/app/jornada': typeof AppJornadaRoute
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
