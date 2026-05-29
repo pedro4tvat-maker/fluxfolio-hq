@@ -36,6 +36,8 @@ import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppCentroCustosRouteImport } from './routes/app.centro-custos'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
+import { Route as AppPendenciasRouteImport } from './routes/app.pendencias'
+import { Route as AppJornadaRouteImport } from './routes/app.jornada'
 import { Route as AppEmpresaIdRouteImport } from './routes/app.empresa.$id'
 import { Route as AppCrmIdRouteImport } from './routes/app.crm.$id'
 
