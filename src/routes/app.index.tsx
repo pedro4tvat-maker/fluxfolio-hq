@@ -159,6 +159,9 @@ function ConsultantPanel() {
                 <div>
                   <h3 className="font-display font-semibold leading-tight">{c.nome}</h3>
                   {c.responsavel && <p className="text-xs text-muted-foreground mt-0.5">{c.responsavel}</p>}
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {c.unidades > 1 ? `${c.unidades} unidades` : "Apenas matriz"}{c.matrizCidade ? ` · Matriz: ${c.matrizCidade}` : ""}
+                  </p>
                 </div>
                 <span className={`text-[11px] font-medium px-2 py-1 rounded-full border ${statusColors[c.status]}`}>
                   {statusLabel[c.status]}
