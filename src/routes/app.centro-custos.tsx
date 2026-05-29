@@ -13,6 +13,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/app/centro-custos")({ component: CentroCustosPage });
 
 function CentroCustosPage() {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const { selected } = useSelectedCompany();
   const [nome, setNome] = useState("");
   const [saving, setSaving] = useState(false);
@@ -63,6 +65,20 @@ function CentroCustosPage() {
     else { toast.success("Centro de custo criado"); setNome(""); refetch(); }
   }
 
+  async function salvarEdicao(id: string) {
+    if (!editValue.trim()) return;
+    const { error } = await supabase.from("cost_centers").update({ nome: editValue.trim() }).eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Centro atualizado"); setEditingId(null); refetch(); }
+  }
+
+  async function excluir(id: string, nome: string) {
+    if (!confirm(`Excluir o centro "${nome}"? Lançamentos vinculados ficarão sem centro.`)) return;
+    const { error } = await supabase.from("cost_centers").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Centro excluído"); refetch(); }
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
@@ -86,17 +102,37 @@ function CentroCustosPage() {
               <th className="text-right p-3">Entradas</th>
               <th className="text-right p-3">Saídas</th>
               <th className="text-right p-3">Resultado</th>
+              <th className="text-right p-3 w-32">Ações</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
+              <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
             ) : rows.map((r) => (
               <tr key={r.id} className="border-t">
-                <td className="p-3 font-medium">{r.nome}</td>
+                <td className="p-3 font-medium">
+                  {editingId === r.id ? (
+                    <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus className="h-8" />
+                  ) : r.nome}
+                </td>
                 <td className="p-3 text-right text-success">{formatMoney(r.entradas)}</td>
                 <td className="p-3 text-right text-destructive">{formatMoney(r.saidas)}</td>
                 <td className={`p-3 text-right font-display font-semibold ${r.resultado >= 0 ? "text-success" : "text-destructive"}`}>{formatMoney(r.resultado)}</td>
+                <td className="p-3 text-right">
+                  <div className="flex justify-end gap-1">
+                    {editingId === r.id ? (
+                      <>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => salvarEdicao(r.id)} aria-label="Salvar"><Check className="size-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)} aria-label="Cancelar"><X className="size-4" /></Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditValue(r.nome); }} aria-label="Editar"><Pencil className="size-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => excluir(r.id, r.nome)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
+                      </>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
             {(semEntradas > 0 || semSaidas > 0) && (
@@ -105,6 +141,7 @@ function CentroCustosPage() {
                 <td className="p-3 text-right">{formatMoney(semEntradas)}</td>
                 <td className="p-3 text-right">{formatMoney(semSaidas)}</td>
                 <td className="p-3 text-right font-display font-semibold">{formatMoney(semEntradas - semSaidas)}</td>
+                <td className="p-3" />
               </tr>
             )}
           </tbody>
