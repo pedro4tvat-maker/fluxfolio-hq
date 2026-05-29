@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,31 +6,66 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowRight, History, Building2, Settings2, Trash2, Plus, ArrowUp, ArrowDown } from "lucide-react";
-import { DEFAULT_JOURNEY_STAGES, type JourneyStage } from "@/lib/journey-stages";
+import {
+  Building2, Calendar, AlertTriangle, CheckCircle2, Clock, Pause,
+  TrendingUp, Users, FileWarning, FileText, Settings2, Layers,
+  Search, Plus, ArrowRight, Download, Eye, ListChecks,
+} from "lucide-react";
+import {
+  DEFAULT_JOURNEY_STAGES, PROFESSIONAL_JOURNEY_PHASES,
+  applyJourneyToCompany, type JourneyStage,
+} from "@/lib/journey-stages";
 
 export const Route = createFileRoute("/app/jornada")({ component: JornadaPage });
 
 const sb = supabase as any;
-
-// kept for backward compatibility with other imports
 export const JOURNEY_STAGES = DEFAULT_JOURNEY_STAGES;
+
+type CompanyRow = {
+  id: string;
+  nome: string;
+  cnpj: string | null;
+  responsavel: string | null;
+  segmento: string | null;
+  consultancy_stage: string | null;
+  consultancy_progress: number | null;
+  consultancy_status: string | null;
+  data_inicio: string | null;
+  updated_at: string | null;
+};
+
+type HealthStatus = "em_dia" | "atencao" | "atrasado" | "critico" | "pausado" | "concluido";
+
+const STATUS_META: Record<HealthStatus, { label: string; cls: string; icon: any }> = {
+  em_dia:    { label: "Em dia",    cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
+  atencao:   { label: "Atenção",   cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",        icon: AlertTriangle },
+  atrasado:  { label: "Atrasado",  cls: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30",    icon: Clock },
+  critico:   { label: "Crítico",   cls: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",                icon: AlertTriangle },
+  pausado:   { label: "Pausado",   cls: "bg-muted text-muted-foreground border-border",                                   icon: Pause },
+  concluido: { label: "Concluído", cls: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",             icon: CheckCircle2 },
+};
 
 function JornadaPage() {
   const { user, isConsultant } = useAuth();
-  const qc = useQueryClient();
-  const [moving, setMoving] = useState<{ id: string; nome: string; current: string } | null>(null);
-  const [historyFor, setHistoryFor] = useState<string | null>(null);
-  const [editingStages, setEditingStages] = useState(false);
+  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  const [stageFilter, setStageFilter] = useState<string>("__all__");
+  const [statusFilter, setStatusFilter] = useState<string>("__all__");
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
 
   const { data: consultant } = useQuery({
     queryKey: ["consultant-me", user?.id],
@@ -59,8 +94,8 @@ function JornadaPage() {
     return customStages.map((r) => ({ v: r.stage_key, l: r.label }));
   }, [customStages]);
 
-  const stageLabel = (v: string) => stages.find((s) => s.v === v)?.l
-    ?? DEFAULT_JOURNEY_STAGES.find((s) => s.v === v)?.l ?? v;
+  const stageLabel = (v: string | null | undefined) =>
+    !v ? "—" : (stages.find((s) => s.v === v)?.l ?? DEFAULT_JOURNEY_STAGES.find((s) => s.v === v)?.l ?? v);
 
   const { data: companies = [] } = useQuery({
     queryKey: ["jornada-companies", consultant?.id],
@@ -68,69 +103,129 @@ function JornadaPage() {
     queryFn: async () => {
       const { data } = await sb
         .from("consultant_company_links")
-        .select("company:companies(id, nome, cnpj, responsavel, consultancy_stage, consultancy_progress, consultancy_status)")
+        .select("company:companies(id, nome, cnpj, responsavel, segmento, consultancy_stage, consultancy_progress, consultancy_status, data_inicio, updated_at)")
         .eq("consultant_id", consultant.id)
         .eq("status", "approved");
-      return (data ?? []).map((r: any) => r.company).filter(Boolean);
+      return ((data ?? []).map((r: any) => r.company).filter(Boolean)) as CompanyRow[];
     },
   });
 
-  const companyIds = useMemo(() => companies.map((c: any) => c.id), [companies]);
+  const companyIds = useMemo(() => companies.map((c) => c.id), [companies]);
 
   const { data: pendings = [] } = useQuery({
     queryKey: ["jornada-pendings", companyIds],
     enabled: companyIds.length > 0,
     queryFn: async () => {
       const { data } = await sb.from("client_pending_items")
-        .select("id, company_id, status")
+        .select("id, company_id, status, due_date, title")
         .in("company_id", companyIds);
       return data ?? [];
     },
   });
 
-  const { data: nextActs = [] } = useQuery({
+  const { data: acts = [] } = useQuery({
     queryKey: ["jornada-acts", consultant?.id],
     enabled: !!consultant?.id,
     queryFn: async () => {
       const { data } = await sb.from("consultancy_activities")
-        .select("id, company_id, title, activity_date, status")
+        .select("id, company_id, title, activity_date, status, activity_type")
         .eq("consultant_id", consultant.id)
-        .neq("status", "concluida")
         .order("activity_date", { ascending: true });
       return data ?? [];
     },
   });
 
-  const moveStage = useMutation({
-    mutationFn: async ({ id, newStage, notes, current }: { id: string; newStage: string; notes: string; current: string }) => {
-      if (!consultant?.id) throw new Error("Sem consultor");
-      const { error } = await sb.from("companies").update({ consultancy_stage: newStage }).eq("id", id);
-      if (error) throw error;
-      const { error: e2 } = await sb.from("consultancy_stage_history").insert({
-        consultant_id: consultant.id, company_id: id, previous_stage: current, new_stage: newStage,
-        changed_by: user!.id, notes: notes || null,
-      });
-      if (e2) throw e2;
+  const { data: actionPlans = [] } = useQuery({
+    queryKey: ["jornada-plans", consultant?.id],
+    enabled: !!consultant?.id,
+    queryFn: async () => {
+      const { data } = await sb.from("action_plans")
+        .select("id, company_id, status, due_date")
+        .eq("consultant_id", consultant.id);
+      return data ?? [];
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["jornada-companies"] });
-      toast.success("Fase atualizada");
-      setMoving(null);
-    },
-    onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
 
-  const byStage = useMemo(() => {
-    const map: Record<string, any[]> = {};
-    stages.forEach((s) => { map[s.v] = []; });
-    map["__other__"] = [];
-    companies.forEach((c: any) => {
-      const stage = c.consultancy_stage ?? stages[0]?.v ?? "novo_cliente";
-      if (map[stage]) map[stage].push(c);
-      else map["__other__"].push(c);
+  // Enrich each company with derived health, next action, pendings, deliverables
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  const enriched = useMemo(() => {
+    return companies.map((c) => {
+      const cPendings = pendings.filter((p: any) => p.company_id === c.id && !["resolvido", "cancelado"].includes(p.status));
+      const cActs = acts.filter((a: any) => a.company_id === c.id && a.status !== "concluida" && a.status !== "cancelada");
+      const cPlans = actionPlans.filter((p: any) => p.company_id === c.id && !["concluido", "cancelado"].includes(p.status));
+
+      const nextAct = cActs[0];
+      const hasOverdue =
+        cPendings.some((p: any) => p.due_date && new Date(p.due_date) < today) ||
+        cPlans.some((p: any) => p.due_date && new Date(p.due_date) < today) ||
+        cActs.some((a: any) => a.activity_date && new Date(a.activity_date) < today);
+
+      const updatedAgoDays = c.updated_at
+        ? Math.floor((today.getTime() - new Date(c.updated_at).getTime()) / 86400000) : 999;
+
+      let status: HealthStatus = "em_dia";
+      if (c.consultancy_status === "pausado") status = "pausado";
+      else if (c.consultancy_status === "encerrado" || c.consultancy_stage === "encerrado") status = "concluido";
+      else if (hasOverdue && updatedAgoDays > 21 && !nextAct) status = "critico";
+      else if (hasOverdue) status = "atrasado";
+      else if (cPendings.length > 0 || !nextAct) status = "atencao";
+
+      return {
+        ...c,
+        _pendings: cPendings.length,
+        _nextAct: nextAct,
+        _hasOverdue: hasOverdue,
+        _status: status,
+        _progress: c.consultancy_progress ?? 0,
+      };
     });
-    return map;
-  }, [companies, stages]);
+  }, [companies, pendings, acts, actionPlans]);
+
+  // KPI counters
+  const kpi = useMemo(() => {
+    const byStageCount = (key: string) => enriched.filter((c) => c.consultancy_stage === key).length;
+    return {
+      onboarding: byStageCount("novo_cliente") + byStageCount("onboarding"),
+      diagnostico: byStageCount("diagnostico_inicial"),
+      organizacao: byStageCount("organizacao_financeira"),
+      acompanhamento: byStageCount("acompanhamento_mensal"),
+      atrasados: enriched.filter((c) => c._hasOverdue).length,
+      semProxAcao: enriched.filter((c) => !c._nextAct).length,
+      comPendencias: enriched.filter((c) => c._pendings > 0).length,
+      emRisco: enriched.filter((c) => c._status === "critico" || c._status === "atrasado").length,
+    };
+  }, [enriched]);
+
+  // Filtered list
+  const filtered = useMemo(() => {
+    return enriched.filter((c) => {
+      if (search && !`${c.nome} ${c.cnpj ?? ""} ${c.responsavel ?? ""}`.toLowerCase().includes(search.toLowerCase())) return false;
+      if (stageFilter !== "__all__" && c.consultancy_stage !== stageFilter) return false;
+      if (statusFilter !== "__all__") {
+        if (statusFilter === "atrasados" && !c._hasOverdue) return false;
+        else if (statusFilter === "pendencias" && c._pendings === 0) return false;
+        else if (statusFilter === "sem_acao" && c._nextAct) return false;
+        else if (statusFilter in STATUS_META && c._status !== statusFilter) return false;
+      }
+      return true;
+    });
+  }, [enriched, search, stageFilter, statusFilter]);
+
+  function exportCsv() {
+    const headers = ["Empresa", "CNPJ", "Responsável", "Fase", "Progresso %", "Status", "Próxima ação", "Pendências"];
+    const rows = filtered.map((c) => [
+      c.nome, c.cnpj ?? "", c.responsavel ?? "", stageLabel(c.consultancy_stage),
+      String(c._progress), STATUS_META[c._status].label,
+      c._nextAct?.title ?? "—", String(c._pendings),
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `jornada-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }
 
   if (!isConsultant) {
     return (
@@ -142,197 +237,352 @@ function JornadaPage() {
 
   return (
     <div className="space-y-6">
+      {/* Cabeçalho executivo */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold">Jornada da Consultoria</h1>
-          <p className="text-sm text-muted-foreground">Acompanhe em qual fase cada empresa cliente está.</p>
+          <p className="text-sm text-muted-foreground">
+            Acompanhe o avanço de cada empresa cliente dentro do seu método de consultoria.
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setEditingStages(true)}>
-          <Settings2 className="size-4" /> Personalizar fases
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => navigate({ to: "/app/agenda" })}>
+            <Plus className="size-4" /> Novo procedimento
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setApplyOpen(true)}>
+            <Layers className="size-4" /> Aplicar modelo de jornada
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setCustomizeOpen(true)}>
+            <Settings2 className="size-4" /> Personalizar método
+          </Button>
+          <Button size="sm" variant="outline" onClick={exportCsv}>
+            <Download className="size-4" /> Exportar
+          </Button>
+        </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-4">
-        {stages.map((stage) => (
-          <div key={stage.v} className="min-w-[280px] flex-shrink-0">
-            <div className="bg-muted/40 rounded-t-lg p-3 border-b">
-              <div className="font-medium text-sm">{stage.l}</div>
-              <div className="text-xs text-muted-foreground">{(byStage[stage.v] ?? []).length} empresa(s)</div>
-            </div>
-            <div className="space-y-2 p-2 bg-muted/10 rounded-b-lg min-h-[200px]">
-              {(byStage[stage.v] ?? []).map((c: any) => {
-                const cPendings = pendings.filter((p: any) => p.company_id === c.id && !["resolvido", "cancelado"].includes(p.status));
-                const nextAct = nextActs.find((a: any) => a.company_id === c.id);
-                return (
-                  <Card key={c.id} className="hover:shadow-md transition">
-                    <CardContent className="p-3 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <Link to="/app/empresa/$id" params={{ id: c.id }} className="font-medium text-sm hover:underline block truncate">
-                            <Building2 className="size-3 inline mr-1" />{c.nome}
-                          </Link>
-                          {c.cnpj && <div className="text-[10px] text-muted-foreground truncate">{c.cnpj}</div>}
-                          {c.responsavel && <div className="text-[10px] text-muted-foreground truncate">{c.responsavel}</div>}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {cPendings.length > 0 && <Badge variant="destructive" className="text-[10px]">{cPendings.length} pend.</Badge>}
-                        {nextAct && <Badge variant="secondary" className="text-[10px] truncate max-w-full">{nextAct.title}</Badge>}
-                      </div>
-                      <div className="flex gap-1 pt-1">
-                        <Button size="sm" variant="outline" className="h-7 text-xs flex-1" onClick={() => setMoving({ id: c.id, nome: c.nome, current: c.consultancy_stage ?? stages[0]?.v ?? "novo_cliente" })}>
-                          <ArrowRight className="size-3" /> Mover
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setHistoryFor(c.id)}>
-                          <History className="size-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-        {(byStage["__other__"] ?? []).length > 0 && (
-          <div className="min-w-[280px] flex-shrink-0">
-            <div className="bg-muted/40 rounded-t-lg p-3 border-b">
-              <div className="font-medium text-sm">Outras fases</div>
-              <div className="text-xs text-muted-foreground">{byStage["__other__"].length} empresa(s) em fases desativadas</div>
-            </div>
-            <div className="space-y-2 p-2 bg-muted/10 rounded-b-lg min-h-[200px]">
-              {byStage["__other__"].map((c: any) => (
-                <Card key={c.id}>
-                  <CardContent className="p-3 space-y-1">
-                    <div className="font-medium text-sm truncate">{c.nome}</div>
-                    <div className="text-[10px] text-muted-foreground">Fase: {stageLabel(c.consultancy_stage)}</div>
-                    <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => setMoving({ id: c.id, nome: c.nome, current: c.consultancy_stage })}>
-                      <ArrowRight className="size-3" /> Mover
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard label="Em onboarding" value={kpi.onboarding} icon={Users} color="text-blue-600"
+          onClick={() => { setStageFilter("novo_cliente"); setStatusFilter("__all__"); }} />
+        <KpiCard label="Em diagnóstico" value={kpi.diagnostico} icon={FileText} color="text-violet-600"
+          onClick={() => { setStageFilter("diagnostico_inicial"); setStatusFilter("__all__"); }} />
+        <KpiCard label="Organização financeira" value={kpi.organizacao} icon={TrendingUp} color="text-emerald-600"
+          onClick={() => { setStageFilter("organizacao_financeira"); setStatusFilter("__all__"); }} />
+        <KpiCard label="Acompanhamento mensal" value={kpi.acompanhamento} icon={Calendar} color="text-cyan-600"
+          onClick={() => { setStageFilter("acompanhamento_mensal"); setStatusFilter("__all__"); }} />
+        <KpiCard label="Entregas atrasadas" value={kpi.atrasados} icon={Clock} color="text-orange-600"
+          onClick={() => { setStageFilter("__all__"); setStatusFilter("atrasados"); }} />
+        <KpiCard label="Sem próxima ação" value={kpi.semProxAcao} icon={AlertTriangle} color="text-amber-600"
+          onClick={() => { setStageFilter("__all__"); setStatusFilter("sem_acao"); }} />
+        <KpiCard label="Com pendências" value={kpi.comPendencias} icon={FileWarning} color="text-rose-600"
+          onClick={() => { setStageFilter("__all__"); setStatusFilter("pendencias"); }} />
+        <KpiCard label="Em risco" value={kpi.emRisco} icon={AlertTriangle} color="text-red-600"
+          onClick={() => { setStageFilter("__all__"); setStatusFilter("critico"); }} />
       </div>
 
-      {moving && (
-        <MoveStageDialog
-          stages={stages}
-          item={moving}
-          stageLabel={stageLabel}
-          onClose={() => setMoving(null)}
-          onSave={(newStage, notes) => moveStage.mutate({ id: moving.id, newStage, notes, current: moving.current })}
+      {/* Filtros */}
+      <Card>
+        <CardContent className="p-4 flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[220px]">
+            <label className="text-xs text-muted-foreground">Buscar</label>
+            <div className="relative">
+              <Search className="size-4 absolute left-2 top-2.5 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Empresa, CNPJ ou responsável" className="pl-8" />
+            </div>
+          </div>
+          <div className="min-w-[200px]">
+            <label className="text-xs text-muted-foreground">Fase</label>
+            <Select value={stageFilter} onValueChange={setStageFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas as fases</SelectItem>
+                {stages.map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-[200px]">
+            <label className="text-xs text-muted-foreground">Status</label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todos</SelectItem>
+                <SelectItem value="em_dia">Em dia</SelectItem>
+                <SelectItem value="atencao">Atenção</SelectItem>
+                <SelectItem value="atrasado">Atrasado</SelectItem>
+                <SelectItem value="critico">Crítico</SelectItem>
+                <SelectItem value="pausado">Pausado</SelectItem>
+                <SelectItem value="concluido">Concluído</SelectItem>
+                <SelectItem value="atrasados">Com atrasos</SelectItem>
+                <SelectItem value="pendencias">Com pendências</SelectItem>
+                <SelectItem value="sem_acao">Sem próxima ação</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setStageFilter("__all__"); setStatusFilter("__all__"); }}>
+            Limpar
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Tabela / Kanban */}
+      <Tabs defaultValue="tabela">
+        <TabsList>
+          <TabsTrigger value="tabela">Lista profissional</TabsTrigger>
+          <TabsTrigger value="kanban">Quadro por fase</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tabela" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Fase atual</TableHead>
+                    <TableHead className="w-[160px]">Progresso</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Próxima ação</TableHead>
+                    <TableHead>Pendências</TableHead>
+                    <TableHead>Última atualização</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 && (
+                    <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                      Nenhuma empresa encontrada com os filtros atuais.
+                    </TableCell></TableRow>
+                  )}
+                  {filtered.map((c) => {
+                    const meta = STATUS_META[c._status];
+                    const Icon = meta.icon;
+                    return (
+                      <TableRow key={c.id}>
+                        <TableCell>
+                          <div className="flex items-start gap-2">
+                            <Building2 className="size-4 mt-0.5 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <Link to="/app/empresa/$id" params={{ id: c.id }} className="font-medium hover:underline block truncate">
+                                {c.nome}
+                              </Link>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {[c.cnpj, c.responsavel].filter(Boolean).join(" • ") || "—"}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell><Badge variant="outline">{stageLabel(c.consultancy_stage)}</Badge></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={c._progress} className="h-1.5" />
+                            <span className="text-xs text-muted-foreground tabular-nums w-8">{c._progress}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={meta.cls} variant="outline">
+                            <Icon className="size-3 mr-1 inline" />{meta.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          {c._nextAct ? (
+                            <div className="text-sm truncate">{c._nextAct.title}
+                              {c._nextAct.activity_date && (
+                                <div className="text-[11px] text-muted-foreground">
+                                  {new Date(c._nextAct.activity_date).toLocaleDateString("pt-BR")}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-amber-600">Sem próxima ação</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {c._pendings > 0 ? <Badge variant="destructive">{c._pendings}</Badge>
+                            : <span className="text-xs text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {c.updated_at ? new Date(c.updated_at).toLocaleDateString("pt-BR") : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button asChild size="sm" variant="ghost" title="Ver jornada">
+                              <Link to="/app/jornada/$companyId" params={{ companyId: c.id }}>
+                                <Eye className="size-4" />
+                              </Link>
+                            </Button>
+                            <Button asChild size="sm" variant="ghost" title="Empresa">
+                              <Link to="/app/empresa/$id" params={{ id: c.id }}>
+                                <Building2 className="size-4" />
+                              </Link>
+                            </Button>
+                            <Button asChild size="sm" variant="ghost" title="Agenda">
+                              <Link to="/app/agenda"><Calendar className="size-4" /></Link>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="kanban" className="mt-4">
+          <div className="flex gap-3 overflow-x-auto pb-4">
+            {stages.map((stage) => {
+              const items = filtered.filter((c) => c.consultancy_stage === stage.v);
+              return (
+                <div key={stage.v} className="min-w-[260px] flex-shrink-0">
+                  <div className="bg-muted/40 rounded-t-lg p-3 border-b">
+                    <div className="font-medium text-sm">{stage.l}</div>
+                    <div className="text-xs text-muted-foreground">{items.length} empresa(s)</div>
+                  </div>
+                  <div className="space-y-2 p-2 bg-muted/10 rounded-b-lg min-h-[120px]">
+                    {items.map((c) => {
+                      const meta = STATUS_META[c._status];
+                      return (
+                        <Card key={c.id}>
+                          <CardContent className="p-3 space-y-2">
+                            <Link to="/app/jornada/$companyId" params={{ companyId: c.id }} className="font-medium text-sm hover:underline block truncate">
+                              {c.nome}
+                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Progress value={c._progress} className="h-1 flex-1" />
+                              <span className="text-[10px] tabular-nums">{c._progress}%</span>
+                            </div>
+                            <Badge className={meta.cls + " text-[10px]"} variant="outline">{meta.label}</Badge>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {applyOpen && consultant?.id && (
+        <ApplyModelDialog
+          consultantId={consultant.id}
+          companies={companies}
+          onClose={() => setApplyOpen(false)}
         />
       )}
-
-      {historyFor && (
-        <HistoryDialog companyId={historyFor} stageLabel={stageLabel} onClose={() => setHistoryFor(null)} />
-      )}
-
-      {editingStages && consultant?.id && (
-        <EditStagesDialog
+      {customizeOpen && consultant?.id && (
+        <CustomizeMethodDialog
           consultantId={consultant.id}
           initial={stages}
-          onClose={() => setEditingStages(false)}
+          onClose={() => setCustomizeOpen(false)}
         />
       )}
     </div>
   );
 }
 
-function MoveStageDialog({ item, stages, stageLabel, onClose, onSave }: {
-  item: { id: string; nome: string; current: string };
-  stages: JourneyStage[];
-  stageLabel: (v: string) => string;
-  onClose: () => void;
-  onSave: (s: string, n: string) => void;
+function KpiCard({ label, value, icon: Icon, color, onClick }: {
+  label: string; value: number; icon: any; color: string; onClick?: () => void;
 }) {
-  const [stage, setStage] = useState(item.current);
-  const [notes, setNotes] = useState("");
+  return (
+    <button onClick={onClick} className="text-left">
+      <Card className="hover:shadow-md transition cursor-pointer">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-xs text-muted-foreground">{label}</div>
+              <div className="text-2xl font-bold tabular-nums mt-1">{value}</div>
+            </div>
+            <Icon className={`size-5 ${color}`} />
+          </div>
+        </CardContent>
+      </Card>
+    </button>
+  );
+}
+
+function ApplyModelDialog({ consultantId, companies, onClose }: {
+  consultantId: string; companies: CompanyRow[]; onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [companyId, setCompanyId] = useState("");
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [allowClient, setAllowClient] = useState(false);
+
+  const apply = useMutation({
+    mutationFn: async () => {
+      if (!companyId) throw new Error("Selecione uma empresa");
+      const jid = await applyJourneyToCompany({
+        consultantId, companyId, phases: PROFESSIONAL_JOURNEY_PHASES,
+        startDate, allowClientView: allowClient,
+      });
+      return jid;
+    },
+    onSuccess: (jid) => {
+      toast.success("Modelo aplicado");
+      qc.invalidateQueries({ queryKey: ["company-journey"] });
+      onClose();
+      navigate({ to: "/app/jornada/$companyId", params: { companyId } });
+      void jid;
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro"),
+  });
+
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Mover fase — {item.nome}</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Aplicar modelo de jornada</DialogTitle>
+          <DialogDescription>
+            Modelo padrão: <strong>Consultoria Financeira PJ — 4 semanas</strong> ({PROFESSIONAL_JOURNEY_PHASES.length} fases).
+          </DialogDescription>
+        </DialogHeader>
         <div className="space-y-3">
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Fase atual: <strong>{stageLabel(item.current)}</strong></div>
-            <Select value={stage} onValueChange={setStage}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{stages.map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}</SelectContent>
+            <label className="text-xs text-muted-foreground">Empresa cliente</label>
+            <Select value={companyId} onValueChange={setCompanyId}>
+              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+              </SelectContent>
             </Select>
           </div>
-          <Textarea placeholder="Observação (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <div>
+            <label className="text-xs text-muted-foreground">Data de início</label>
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={allowClient} onChange={(e) => setAllowClient(e.target.checked)} />
+            Liberar visualização da jornada para o cliente
+          </label>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave(stage, notes)} disabled={stage === item.current}>Confirmar</Button>
+          <Button onClick={() => apply.mutate()} disabled={apply.isPending || !companyId}>
+            <ListChecks className="size-4" /> Aplicar modelo
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-function HistoryDialog({ companyId, stageLabel, onClose }: { companyId: string; stageLabel: (v: string) => string; onClose: () => void }) {
-  const { data = [] } = useQuery({
-    queryKey: ["stage-history", companyId],
-    queryFn: async () => {
-      const { data } = await sb.from("consultancy_stage_history").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
-      return data ?? [];
-    },
-  });
-  return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Histórico de fases</DialogTitle></DialogHeader>
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {data.length === 0 && <p className="text-sm text-muted-foreground">Sem histórico ainda.</p>}
-          {data.map((h: any) => (
-            <div key={h.id} className="border rounded p-3 text-sm">
-              <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString("pt-BR")}</div>
-              <div>{stageLabel(h.previous_stage ?? "—")} <ArrowRight className="size-3 inline" /> <strong>{stageLabel(h.new_stage)}</strong></div>
-              {h.notes && <div className="text-xs text-muted-foreground mt-1">{h.notes}</div>}
-            </div>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EditStagesDialog({ consultantId, initial, onClose }: {
-  consultantId: string;
-  initial: JourneyStage[];
-  onClose: () => void;
+function CustomizeMethodDialog({ consultantId, initial, onClose }: {
+  consultantId: string; initial: JourneyStage[]; onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const [items, setItems] = useState<{ v: string; l: string }[]>(() => initial.map((s) => ({ ...s })));
-
-  function move(idx: number, dir: -1 | 1) {
-    const next = [...items];
-    const j = idx + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[idx], next[j]] = [next[j], next[idx]];
-    setItems(next);
-  }
-  function add() {
-    const key = `fase_${Date.now().toString(36)}`;
-    setItems([...items, { v: key, l: "Nova fase" }]);
-  }
-  function remove(idx: number) {
-    setItems(items.filter((_, i) => i !== idx));
-  }
-  function update(idx: number, patch: Partial<{ v: string; l: string }>) {
-    setItems(items.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
-  }
+  const [items, setItems] = useState(initial.map((s) => ({ ...s })));
 
   const save = useMutation({
     mutationFn: async () => {
       if (items.some((s) => !s.v.trim() || !s.l.trim())) throw new Error("Chave e nome são obrigatórios.");
       const keys = items.map((s) => s.v);
       if (new Set(keys).size !== keys.length) throw new Error("Chaves duplicadas.");
-      // Strategy: delete all then insert fresh
       await sb.from("consultancy_journey_stages").delete().eq("consultant_id", consultantId);
       if (items.length === 0) return;
       const rows = items.map((s, i) => ({
@@ -342,7 +592,7 @@ function EditStagesDialog({ consultantId, initial, onClose }: {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Fases atualizadas");
+      toast.success("Método atualizado");
       qc.invalidateQueries({ queryKey: ["journey-stages", consultantId] });
       onClose();
     },
@@ -352,23 +602,23 @@ function EditStagesDialog({ consultantId, initial, onClose }: {
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Personalizar fases da jornada</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Personalizar método</DialogTitle>
+          <DialogDescription>
+            Edite as fases principais que aparecem nos filtros e no quadro.
+          </DialogDescription>
+        </DialogHeader>
         <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-          {items.length === 0 && (
-            <p className="text-sm text-muted-foreground">Sem fases. Adicione pelo menos uma — ou feche para manter as fases padrão.</p>
-          )}
           {items.map((s, i) => (
             <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
-              <Input value={s.l} onChange={(e) => update(i, { l: e.target.value })} placeholder="Nome da fase" />
-              <Input value={s.v} onChange={(e) => update(i, { v: e.target.value })} placeholder="chave_interna" className="font-mono text-xs" />
-              <div className="flex gap-1">
-                <Button size="icon" variant="ghost" onClick={() => move(i, -1)} disabled={i === 0}><ArrowUp className="size-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => move(i, 1)} disabled={i === items.length - 1}><ArrowDown className="size-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => remove(i)}><Trash2 className="size-4" /></Button>
-              </div>
+              <Input value={s.l} onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, l: e.target.value } : x))} placeholder="Nome da fase" />
+              <Input value={s.v} onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, v: e.target.value } : x))} placeholder="chave_interna" className="font-mono text-xs" />
+              <Button size="sm" variant="ghost" onClick={() => setItems(items.filter((_, j) => j !== i))}>Remover</Button>
             </div>
           ))}
-          <Button variant="outline" size="sm" onClick={add}><Plus className="size-4" /> Adicionar fase</Button>
+          <Button variant="outline" size="sm" onClick={() => setItems([...items, { v: `fase_${Date.now().toString(36)}`, l: "Nova fase" }])}>
+            <Plus className="size-4" /> Adicionar fase
+          </Button>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
@@ -378,3 +628,6 @@ function EditStagesDialog({ consultantId, initial, onClose }: {
     </Dialog>
   );
 }
+
+// Mantém export legado para compatibilidade com imports antigos
+export { ArrowRight };
