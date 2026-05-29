@@ -18,7 +18,22 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
+export const AGENDA_SECTIONS = [
+  { id: "lista", label: "Lista" },
+  { id: "calendario", label: "Calendário" },
+  { id: "entregas", label: "Entregas pendentes" },
+  { id: "reunioes", label: "Reuniões" },
+  { id: "prazos", label: "Prazos importantes" },
+  { id: "por-cliente", label: "Por cliente" },
+] as const;
+type AgendaSection = typeof AGENDA_SECTIONS[number]["id"];
+const AGENDA_SECTION_IDS = AGENDA_SECTIONS.map((s) => s.id) as readonly string[];
+
 export const Route = createFileRoute("/app/agenda")({
+  validateSearch: (s: Record<string, unknown>): { section: AgendaSection } => {
+    const v = String(s.section ?? "");
+    return { section: (AGENDA_SECTION_IDS.includes(v) ? v : "lista") as AgendaSection };
+  },
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
