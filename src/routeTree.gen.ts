@@ -23,6 +23,7 @@ import { Route as AppImportacoesRouteImport } from './routes/app.importacoes'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
 import { Route as AppExecutivoRouteImport } from './routes/app.executivo'
 import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
+import { Route as AppCrmRouteImport } from './routes/app.crm'
 import { Route as AppContasReceberRouteImport } from './routes/app.contas-receber'
 import { Route as AppContasPagarRouteImport } from './routes/app.contas-pagar'
 import { Route as AppConsultoriaRouteImport } from './routes/app.consultoria'
@@ -101,6 +102,11 @@ const AppEstoqueRoute = AppEstoqueRouteImport.update({
   path: '/estoque',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCrmRoute = AppCrmRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContasReceberRoute = AppContasReceberRouteImport.update({
   id: '/contas-receber',
   path: '/contas-receber',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/crm': typeof AppCrmRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/crm': typeof AppCrmRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/crm': typeof AppCrmRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/crm'
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/crm'
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/crm'
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
@@ -384,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEstoqueRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/crm': {
+      id: '/app/crm'
+      path: '/crm'
+      fullPath: '/app/crm'
+      preLoaderRoute: typeof AppCrmRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/contas-receber': {
       id: '/app/contas-receber'
       path: '/contas-receber'
@@ -443,6 +462,7 @@ interface AppRouteChildren {
   AppConsultoriaRoute: typeof AppConsultoriaRoute
   AppContasPagarRoute: typeof AppContasPagarRoute
   AppContasReceberRoute: typeof AppContasReceberRoute
+  AppCrmRoute: typeof AppCrmRoute
   AppEstoqueRoute: typeof AppEstoqueRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
@@ -463,6 +483,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConsultoriaRoute: AppConsultoriaRoute,
   AppContasPagarRoute: AppContasPagarRoute,
   AppContasReceberRoute: AppContasReceberRoute,
+  AppCrmRoute: AppCrmRoute,
   AppEstoqueRoute: AppEstoqueRoute,
   AppExecutivoRoute: AppExecutivoRoute,
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
