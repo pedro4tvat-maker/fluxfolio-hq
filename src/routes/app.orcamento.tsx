@@ -95,6 +95,22 @@ function OrcamentoPage() {
     }
   }
 
+  async function salvarEdicao(id: string) {
+    const v = Number(editValue);
+    if (!Number.isFinite(v) || v < 0) return;
+    const { error } = await supabase.from("budgets").update({ valor_orcado: v }).eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Orçamento atualizado"); setEditingId(null); refetch(); }
+  }
+
+  async function excluir(id: string) {
+    if (!confirm("Excluir este orçamento?")) return;
+    const { error } = await supabase.from("budgets").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Orçamento excluído"); refetch(); }
+  }
+
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
