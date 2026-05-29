@@ -13,6 +13,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/app/centro-custos")({ component: CentroCustosPage });
 
 function CentroCustosPage() {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const { selected } = useSelectedCompany();
   const [nome, setNome] = useState("");
   const [saving, setSaving] = useState(false);
