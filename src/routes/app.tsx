@@ -54,9 +54,12 @@ function AppLayout() {
   const navigate = useNavigate();
   const { user, isConsultant, loading } = useAuth();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const search = useRouterState({ select: (s) => s.location.search as { section?: string } });
   const [open, setOpen] = useState(false);
+  const [consultoriaOpen, setConsultoriaOpen] = useState(path.startsWith("/app/consultoria"));
 
   useEffect(() => { setOpen(false); }, [path]);
+  useEffect(() => { if (path.startsWith("/app/consultoria")) setConsultoriaOpen(true); }, [path]);
 
   const nav = useMemo<NavItem[]>(() => (isConsultant ? consultantNav : clientNav), [isConsultant]);
 
