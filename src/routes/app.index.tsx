@@ -3,14 +3,20 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
+import { useSelectedBranch } from "@/hooks/use-selected-branch";
 import { formatDate, formatMoney, monthRange } from "@/lib/format";
 import { CompanySwitcher } from "@/components/company-switcher";
+import { BranchSwitcher } from "@/components/branch-switcher";
 import { Button } from "@/components/ui/button";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight, ShoppingCart, Percent, Box, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Clock, Calendar, DollarSign, FileText } from "lucide-react";
 
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
+
+// Apply branch filter to any supabase query builder when a specific branch is selected.
+const withBranch = <T extends { eq: (col: string, v: any) => T }>(q: T, branchId: string | null): T =>
+  branchId ? q.eq("branch_id", branchId) : q;
 
 export const Route = createFileRoute("/app/")({
   component: AppIndex,
@@ -34,6 +40,8 @@ interface CompanyKpi {
   saldo: number;
   vencidos: number;
   status: "saudavel" | "atencao" | "critico";
+  unidades: number;
+  matrizCidade: string | null;
 }
 
 async function loadCompanies(): Promise<CompanyKpi[]> {
@@ -44,12 +52,13 @@ async function loadCompanies(): Promise<CompanyKpi[]> {
   const range = monthRange();
 
   return Promise.all((companies ?? []).map(async (c) => {
-    const [{ data: tx }, { data: pay }, { data: rec }, { data: accs }, { data: allTx }] = await Promise.all([
+    const [{ data: tx }, { data: pay }, { data: rec }, { data: accs }, { data: allTx }, { data: brs }] = await Promise.all([
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
       supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "pago"),
       supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "recebido"),
       supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", c.id),
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado"),
+      supabase.from("branches").select("id, cidade, is_main_branch, ativa").eq("company_id", c.id),
     ]);
     const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
     const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
@@ -59,10 +68,12 @@ async function loadCompanies(): Promise<CompanyKpi[]> {
     const today = new Date().toISOString().slice(0, 10);
     const vencidos = (pay ?? []).filter((p) => p.vencimento < today).length + (rec ?? []).filter((r) => r.vencimento < today).length;
     const resultado = entradas - saidas;
+    const unidades = (brs ?? []).filter((b: any) => b.ativa).length;
+    const matrizCidade = (brs ?? []).find((b: any) => b.is_main_branch)?.cidade ?? null;
     let status: CompanyKpi["status"] = "saudavel";
     if (saldo < 0 || resultado < 0 || vencidos > 2) status = "critico";
     else if (vencidos > 0 || resultado < entradas * 0.1) status = "atencao";
-    return { id: c.id, nome: c.nome, responsavel: c.responsavel, entradas, saidas, resultado, saldo, vencidos, status };
+    return { id: c.id, nome: c.nome, responsavel: c.responsavel, entradas, saidas, resultado, saldo, vencidos, status, unidades, matrizCidade };
   }));
 }
 
@@ -148,6 +159,9 @@ function ConsultantPanel() {
                 <div>
                   <h3 className="font-display font-semibold leading-tight">{c.nome}</h3>
                   {c.responsavel && <p className="text-xs text-muted-foreground mt-0.5">{c.responsavel}</p>}
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {c.unidades > 1 ? `${c.unidades} unidades` : "Apenas matriz"}{c.matrizCidade ? ` · Matriz: ${c.matrizCidade}` : ""}
+                  </p>
                 </div>
                 <span className={`text-[11px] font-medium px-2 py-1 rounded-full border ${statusColors[c.status]}`}>
                   {statusLabel[c.status]}
@@ -208,9 +222,10 @@ function Kpi({ icon: Icon, label, value, tone, desc }: { icon?: React.ComponentT
 function ClientDashboard() {
   const { companies, selected, isLoading: companyLoading } = useSelectedCompany();
   const company = useMemo(() => companies.find((c) => c.id === selected), [companies, selected]);
+  const { branchId, isAll, branches } = useSelectedBranch();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["client-dashboard", selected],
+    queryKey: ["client-dashboard", selected, branchId],
     enabled: !!selected,
     queryFn: async () => {
       if (!selected) return null;
@@ -220,16 +235,16 @@ function ClientDashboard() {
       last14.setDate(last14.getDate() - 13);
       const range = monthRange(today);
       const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }, { data: categories }, { data: budgets }] = await Promise.all([
-        supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
-        supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado"),
-        supabase.from("transactions").select("tipo, valor, data").eq("company_id", selected).eq("status", "realizado").gte("data", last14.toISOString().slice(0, 10)).lte("data", formattedToday),
-        supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }).limit(10),
-        supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }).limit(10),
+        withBranch(supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado"), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor, data").eq("company_id", selected).eq("status", "realizado").gte("data", last14.toISOString().slice(0, 10)).lte("data", formattedToday), branchId),
+        withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }).limit(10), branchId),
+        withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }).limit(10), branchId),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
-        supabase.from("products").select("quantidade, estoque_minimo, preco_venda, custo_unitario").eq("company_id", selected),
-        supabase.from("transactions").select("id, descricao, tipo, valor, status, data").eq("company_id", selected).order("data", { ascending: false }).limit(5),
+        withBranch(supabase.from("products").select("quantidade, estoque_minimo, preco_venda, custo_unitario").eq("company_id", selected), branchId),
+        withBranch(supabase.from("transactions").select("id, descricao, tipo, valor, status, data").eq("company_id", selected).order("data", { ascending: false }).limit(5), branchId),
         supabase.from("categories").select("id, nome").eq("company_id", selected),
-        supabase.from("budgets").select("mes, ano, categoria_id, valor_orcado").eq("company_id", selected).eq("mes", today.getMonth() + 1).eq("ano", today.getFullYear()),
+        withBranch(supabase.from("budgets").select("mes, ano, categoria_id, valor_orcado").eq("company_id", selected).eq("mes", today.getMonth() + 1).eq("ano", today.getFullYear()), branchId),
       ]);
 
       const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
@@ -410,12 +425,18 @@ function ClientDashboard() {
       {/* 1. Cabeçalho */}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight">{company.nome}</h1>
             <CompanySwitcher />
+            <BranchSwitcher />
           </div>
           <p className="text-muted-foreground">
-            {greeting}. Veja os principais pontos da sua empresa hoje.
+            {greeting}. {branches.length > 1 && (
+              <span className="text-foreground/80">
+                Visualizando: <strong>{isAll ? "Consolidado geral" : (branches.find((b) => b.id === branchId)?.is_main_branch ? "Matriz" : branches.find((b) => b.id === branchId)?.nome)}</strong>.{" "}
+              </span>
+            )}
+            Veja os principais pontos da sua empresa hoje.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

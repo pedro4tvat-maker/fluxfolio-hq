@@ -14,9 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      branches: {
+        Row: {
+          ativa: boolean
+          cidade: string | null
+          cnpj: string | null
+          company_id: string
+          created_at: string
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          id: string
+          is_main_branch: boolean
+          nome: string
+          nome_fantasia: string | null
+          responsavel: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativa?: boolean
+          cidade?: string | null
+          cnpj?: string | null
+          company_id: string
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          is_main_branch?: boolean
+          nome: string
+          nome_fantasia?: string | null
+          responsavel?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativa?: boolean
+          cidade?: string | null
+          cnpj?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          is_main_branch?: boolean
+          nome?: string
+          nome_fantasia?: string | null
+          responsavel?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           ano: number
+          branch_id: string | null
           categoria_id: string
           company_id: string
           created_at: string
@@ -27,6 +82,7 @@ export type Database = {
         }
         Insert: {
           ano: number
+          branch_id?: string | null
           categoria_id: string
           company_id: string
           created_at?: string
@@ -37,6 +93,7 @@ export type Database = {
         }
         Update: {
           ano?: number
+          branch_id?: string | null
           categoria_id?: string
           company_id?: string
           created_at?: string
@@ -97,14 +154,20 @@ export type Database = {
       companies: {
         Row: {
           ativo: boolean
+          bairro: string | null
+          cep: string | null
           cidade: string | null
+          cnpj: string | null
           created_at: string
           data_inicio: string | null
           documento: string | null
           email: string | null
+          endereco: string | null
           estado: string | null
           id: string
+          inscricao_estadual: string | null
           nome: string
+          nome_fantasia: string | null
           observacoes: string | null
           owner_id: string
           responsavel: string | null
@@ -114,14 +177,20 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          bairro?: string | null
+          cep?: string | null
           cidade?: string | null
+          cnpj?: string | null
           created_at?: string
           data_inicio?: string | null
           documento?: string | null
           email?: string | null
+          endereco?: string | null
           estado?: string | null
           id?: string
+          inscricao_estadual?: string | null
           nome: string
+          nome_fantasia?: string | null
           observacoes?: string | null
           owner_id: string
           responsavel?: string | null
@@ -131,14 +200,20 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          bairro?: string | null
+          cep?: string | null
           cidade?: string | null
+          cnpj?: string | null
           created_at?: string
           data_inicio?: string | null
           documento?: string | null
           email?: string | null
+          endereco?: string | null
           estado?: string | null
           id?: string
+          inscricao_estadual?: string | null
           nome?: string
+          nome_fantasia?: string | null
           observacoes?: string | null
           owner_id?: string
           responsavel?: string | null
@@ -249,6 +324,7 @@ export type Database = {
       }
       payables: {
         Row: {
+          branch_id: string | null
           categoria_id: string | null
           centro_custo_id: string | null
           company_id: string
@@ -268,6 +344,7 @@ export type Database = {
           vencimento: string
         }
         Insert: {
+          branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
           company_id: string
@@ -287,6 +364,7 @@ export type Database = {
           vencimento: string
         }
         Update: {
+          branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
           company_id?: string
@@ -338,6 +416,7 @@ export type Database = {
       }
       products: {
         Row: {
+          branch_id: string | null
           categoria: string | null
           company_id: string
           created_at: string
@@ -351,6 +430,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           categoria?: string | null
           company_id: string
           created_at?: string
@@ -364,6 +444,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           categoria?: string | null
           company_id?: string
           created_at?: string
@@ -409,6 +490,7 @@ export type Database = {
       }
       receivables: {
         Row: {
+          branch_id: string | null
           categoria_id: string | null
           centro_custo_id: string | null
           cliente: string | null
@@ -428,6 +510,7 @@ export type Database = {
           vencimento: string
         }
         Insert: {
+          branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
           cliente?: string | null
@@ -447,6 +530,7 @@ export type Database = {
           vencimento: string
         }
         Update: {
+          branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
           cliente?: string | null
@@ -498,6 +582,7 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          branch_id: string | null
           company_id: string
           created_at: string
           custo_unitario: number | null
@@ -510,6 +595,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["transaction_type"]
         }
         Insert: {
+          branch_id?: string | null
           company_id: string
           created_at?: string
           custo_unitario?: number | null
@@ -522,6 +608,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["transaction_type"]
         }
         Update: {
+          branch_id?: string | null
           company_id?: string
           created_at?: string
           custo_unitario?: number | null
@@ -552,6 +639,7 @@ export type Database = {
       }
       transactions: {
         Row: {
+          branch_id: string | null
           categoria_id: string | null
           centro_custo_id: string | null
           company_id: string
@@ -570,6 +658,7 @@ export type Database = {
           valor: number
         }
         Insert: {
+          branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
           company_id: string
@@ -588,6 +677,7 @@ export type Database = {
           valor: number
         }
         Update: {
+          branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
           company_id?: string
