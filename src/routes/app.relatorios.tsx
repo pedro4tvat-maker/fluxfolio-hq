@@ -367,7 +367,9 @@ function Relatorios() {
                   ))}
                 </tr>
               </thead>
+              <tbody>
                 {preview.rows.slice(0, 50).map((r, i) => (
+
                   <tr key={i} className="border-b last:border-0">
                     {Object.keys(preview.rows[0]).map((h) => {
                       const v = (r as Record<string, unknown>)[h];
