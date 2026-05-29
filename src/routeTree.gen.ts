@@ -223,6 +223,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/pendencias': typeof AppPendenciasRoute
+  '/app/jornada': typeof AppJornadaRoute
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -288,6 +290,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/pendencias'
+    | '/app/jornada'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -318,6 +322,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/pendencias'
+    | '/app/jornada'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -349,6 +355,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/pendencias'
+    | '/app/jornada'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -573,6 +581,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/pendencias': {
+      id: '/app/pendencias'
+      path: '/pendencias'
+      fullPath: '/app/pendencias'
+      preLoaderRoute: typeof AppPendenciasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/jornada': {
+      id: '/app/jornada'
+      path: '/jornada'
+      fullPath: '/app/jornada'
+      preLoaderRoute: typeof AppJornadaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/empresa/$id': {
       id: '/app/empresa/$id'
       path: '/empresa/$id'
@@ -603,6 +625,8 @@ const AppCrmRouteWithChildren =
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
+  AppPendenciasRoute: typeof AppPendenciasRoute
+  AppJornadaRoute: typeof AppJornadaRoute
   AppCentroCustosRoute: typeof AppCentroCustosRoute
   AppClientesRoute: typeof AppClientesRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
@@ -630,6 +654,8 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
+  AppPendenciasRoute: AppPendenciasRoute,
+  AppJornadaRoute: AppJornadaRoute,
   AppCentroCustosRoute: AppCentroCustosRoute,
   AppClientesRoute: AppClientesRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
