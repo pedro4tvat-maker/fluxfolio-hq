@@ -9,6 +9,7 @@ import {
   ArrowLeftRight, ArrowDownCircle, ArrowUpCircle, Target, Package, FileBarChart,
   Layers, ShoppingCart, Tag, ArrowLeft, AlertCircle, Building2, Users, FolderArchive,
 } from "lucide-react";
+import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
 export const Route = createFileRoute("/app/empresa/$id")({ component: EmpresaResumo });
 
