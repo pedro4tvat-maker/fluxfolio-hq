@@ -1490,6 +1490,7 @@ export type Database = {
           file_url: string | null
           id: string
           is_default: boolean
+          schema_fields: Json
           status: string
           tags: string[]
           template_type: string
@@ -1508,6 +1509,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_default?: boolean
+          schema_fields?: Json
           status?: string
           tags?: string[]
           template_type?: string
@@ -1526,6 +1528,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_default?: boolean
+          schema_fields?: Json
           status?: string
           tags?: string[]
           template_type?: string
@@ -1875,6 +1878,145 @@ export type Database = {
           strengths?: string | null
           updated_at?: string
           weaknesses?: string | null
+        }
+        Relationships: []
+      }
+      generated_document_attachments: {
+        Row: {
+          created_at: string
+          document_id: string
+          file_name: string
+          file_type: string | null
+          file_url: string
+          id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          file_name: string
+          file_type?: string | null
+          file_url: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          file_name?: string
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_document_attachments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "generated_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_document_versions: {
+        Row: {
+          change_note: string | null
+          changed_by: string | null
+          content_snapshot: string | null
+          created_at: string
+          document_id: string
+          form_data_snapshot: Json | null
+          id: string
+        }
+        Insert: {
+          change_note?: string | null
+          changed_by?: string | null
+          content_snapshot?: string | null
+          created_at?: string
+          document_id: string
+          form_data_snapshot?: Json | null
+          id?: string
+        }
+        Update: {
+          change_note?: string | null
+          changed_by?: string | null
+          content_snapshot?: string | null
+          created_at?: string
+          document_id?: string
+          form_data_snapshot?: Json | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "generated_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_documents: {
+        Row: {
+          branch_id: string | null
+          company_id: string | null
+          consultant_id: string
+          created_at: string
+          created_by: string | null
+          document_type: string
+          final_content: string | null
+          finalized_at: string | null
+          form_data: Json
+          generated_content: string | null
+          id: string
+          pdf_url: string | null
+          shared_with_client: boolean
+          signature_status: string
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id?: string | null
+          consultant_id: string
+          created_at?: string
+          created_by?: string | null
+          document_type: string
+          final_content?: string | null
+          finalized_at?: string | null
+          form_data?: Json
+          generated_content?: string | null
+          id?: string
+          pdf_url?: string | null
+          shared_with_client?: boolean
+          signature_status?: string
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string | null
+          consultant_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_type?: string
+          final_content?: string | null
+          finalized_at?: string | null
+          form_data?: Json
+          generated_content?: string | null
+          id?: string
+          pdf_url?: string | null
+          shared_with_client?: boolean
+          signature_status?: string
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
