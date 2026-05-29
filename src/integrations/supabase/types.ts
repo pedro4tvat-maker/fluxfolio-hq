@@ -306,6 +306,96 @@ export type Database = {
           },
         ]
       }
+      consultancy_activities: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          branch_id: string | null
+          canceled_at: string | null
+          company_id: string | null
+          completed_at: string | null
+          consultant_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          end_time: string | null
+          id: string
+          location: string | null
+          meeting_link: string | null
+          notes: string | null
+          priority: string
+          recurrence_type: string
+          recurrence_until: string | null
+          related_module: string | null
+          related_record_id: string | null
+          reminder_datetime: string | null
+          reminder_type: string | null
+          responsible_name: string | null
+          start_time: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_date?: string
+          activity_type?: string
+          branch_id?: string | null
+          canceled_at?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          consultant_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          meeting_link?: string | null
+          notes?: string | null
+          priority?: string
+          recurrence_type?: string
+          recurrence_until?: string | null
+          related_module?: string | null
+          related_record_id?: string | null
+          reminder_datetime?: string | null
+          reminder_type?: string | null
+          responsible_name?: string | null
+          start_time?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          branch_id?: string | null
+          canceled_at?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          consultant_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          meeting_link?: string | null
+          notes?: string | null
+          priority?: string
+          recurrence_type?: string
+          recurrence_until?: string | null
+          related_module?: string | null
+          related_record_id?: string | null
+          reminder_datetime?: string | null
+          reminder_type?: string | null
+          responsible_name?: string | null
+          start_time?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consultancy_contracts: {
         Row: {
           client_name: string | null
