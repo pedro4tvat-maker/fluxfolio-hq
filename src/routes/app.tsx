@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Gauge, Upload, BadgeCheck, Copy, Users, FolderArchive,
-  ChevronDown, ChevronRight, CalendarDays, Inbox, Route as RouteIcon, NotebookPen,
+  ChevronDown, ChevronRight, CalendarDays, Inbox, Route as RouteIcon, NotebookPen, BookOpen,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
