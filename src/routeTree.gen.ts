@@ -25,6 +25,7 @@ import { Route as AppExecutivoRouteImport } from './routes/app.executivo'
 import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
 import { Route as AppContasReceberRouteImport } from './routes/app.contas-receber'
 import { Route as AppContasPagarRouteImport } from './routes/app.contas-pagar'
+import { Route as AppConsultoriaRouteImport } from './routes/app.consultoria'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppCentroCustosRouteImport } from './routes/app.centro-custos'
@@ -110,6 +111,11 @@ const AppContasPagarRoute = AppContasPagarRouteImport.update({
   path: '/contas-pagar',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConsultoriaRoute = AppConsultoriaRouteImport.update({
+  id: '/consultoria',
+  path: '/consultoria',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/estoque': typeof AppEstoqueRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/estoque': typeof AppEstoqueRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/estoque': typeof AppEstoqueRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
+    | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
     | '/app/estoque'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
+    | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
     | '/app/estoque'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
+    | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
     | '/app/estoque'
@@ -386,6 +398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContasPagarRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/consultoria': {
+      id: '/app/consultoria'
+      path: '/consultoria'
+      fullPath: '/app/consultoria'
+      preLoaderRoute: typeof AppConsultoriaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/configuracoes': {
       id: '/app/configuracoes'
       path: '/configuracoes'
@@ -421,6 +440,7 @@ interface AppRouteChildren {
   AppCentroCustosRoute: typeof AppCentroCustosRoute
   AppClientesRoute: typeof AppClientesRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppConsultoriaRoute: typeof AppConsultoriaRoute
   AppContasPagarRoute: typeof AppContasPagarRoute
   AppContasReceberRoute: typeof AppContasReceberRoute
   AppEstoqueRoute: typeof AppEstoqueRoute
@@ -440,6 +460,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCentroCustosRoute: AppCentroCustosRoute,
   AppClientesRoute: AppClientesRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppConsultoriaRoute: AppConsultoriaRoute,
   AppContasPagarRoute: AppContasPagarRoute,
   AppContasReceberRoute: AppContasReceberRoute,
   AppEstoqueRoute: AppEstoqueRoute,
