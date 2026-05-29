@@ -168,14 +168,28 @@ function OrcamentoPage() {
           <div className="space-y-4">
             {rows.map((r) => (
               <div key={r.id} className="space-y-2 border-b last:border-0 pb-3 last:pb-0">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{r.categoria} <span className="text-xs text-muted-foreground">({r.tipo})</span></p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{r.categoria} <span className="text-xs text-muted-foreground">({r.tipo})</span></p>
                     <p className="text-xs text-muted-foreground">{formatMoney(r.realizado)} de {formatMoney(r.orcado)}</p>
                   </div>
-                  <span className={`text-sm font-display font-semibold ${r.pct > 100 ? "text-destructive" : r.pct > 80 ? "text-warning" : "text-success"}`}>
-                    {r.pct.toFixed(1)}%
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {editingId === r.id ? (
+                      <>
+                        <Input type="number" min="0" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8 w-28" autoFocus />
+                        <Button size="sm" className="h-8" onClick={() => salvarEdicao(r.id)}>Salvar</Button>
+                        <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditingId(null)}>Cancelar</Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`text-sm font-display font-semibold ${r.pct > 100 ? "text-destructive" : r.pct > 80 ? "text-warning" : "text-success"}`}>
+                          {r.pct.toFixed(1)}%
+                        </span>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditValue(String(r.orcado)); }} aria-label="Editar"><Pencil className="size-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => excluir(r.id)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <Progress value={Math.min(r.pct, 100)} />
               </div>
