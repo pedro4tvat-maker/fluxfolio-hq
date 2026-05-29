@@ -528,15 +528,15 @@ function exportCsv(k: any, start: string, end: string) {
     ["Período", `${start} a ${end}`, ""],
     ["Receita total", BRL(k.receitaTotal), ""],
     ["Lucro líquido", BRL(k.lucroLiquido), ""],
-    ["Margem de Lucro Líquido", k.margemLiquida != null ? PCT(k.margemLiquida) : "—", statusLabel[k.margemLiquidaStatus]],
-    ["EBITDA", BRL(k.ebitda), statusLabel[k.ebitdaStatus]],
-    ["Margem de Contribuição", k.margemContribuicaoPct != null ? PCT(k.margemContribuicaoPct) : "—", statusLabel[k.mcStatus]],
-    ["Liquidez Corrente", k.liquidez != null ? k.liquidez.toFixed(2) : "—", statusLabel[k.liquidezStatus]],
-    ["Ponto de Equilíbrio", k.pontoEquilibrio != null ? BRL(k.pontoEquilibrio) : "—", statusLabel[k.peStatus]],
-    ["PMR", k.pmr != null ? `${Math.round(k.pmr)} dias` : "—", statusLabel[k.pmrStatus]],
+    ["Margem de Lucro Líquido", k.margemLiquida != null ? PCT(k.margemLiquida) : "—", sl(k.margemLiquidaStatus)],
+    ["EBITDA", BRL(k.ebitda), sl(k.ebitdaStatus)],
+    ["Margem de Contribuição", k.margemContribuicaoPct != null ? PCT(k.margemContribuicaoPct) : "—", sl(k.mcStatus)],
+    ["Liquidez Corrente", k.liquidez != null ? k.liquidez.toFixed(2) : "—", sl(k.liquidezStatus)],
+    ["Ponto de Equilíbrio", k.pontoEquilibrio != null ? BRL(k.pontoEquilibrio) : "—", sl(k.peStatus)],
+    ["PMR", k.pmr != null ? `${Math.round(k.pmr)} dias` : "—", sl(k.pmrStatus)],
     ["CAC", k.cac != null ? BRL(k.cac) : "—", ""],
     ["LTV", k.ltv != null ? BRL(k.ltv) : "—", ""],
-    ["LTV/CAC", k.ltvCac != null ? k.ltvCac.toFixed(2) : "—", statusLabel[k.ltvCacStatus]],
+    ["LTV/CAC", k.ltvCac != null ? k.ltvCac.toFixed(2) : "—", sl(k.ltvCacStatus)],
   ];
   const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
