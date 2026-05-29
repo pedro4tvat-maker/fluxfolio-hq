@@ -101,7 +101,7 @@ function Inner() {
         <TabsContent value="pagar" className="mt-0"><PagarTab consultantId={consultancy.id} /></TabsContent>
         <TabsContent value="relatorios" className="mt-0"><RelatoriosTab consultantId={consultancy.id} /></TabsContent>
         <TabsContent value="solicitacoes" className="mt-0"><SolicitacoesTab /></TabsContent>
-        <TabsContent value="config" className="mt-0"><PerfilTab /></TabsContent>
+        
       </Tabs>
     </div>
   );
