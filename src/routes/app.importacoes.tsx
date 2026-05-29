@@ -24,7 +24,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { formatBRL } from "@/lib/format";
+import { formatMoney as formatBRL } from "@/lib/format";
 import {
   parseFile, autoMapColumns, parseDate, parseAmount, DEFAULT_RULES,
   type BankFields, type ParsedFile, type Rule,
