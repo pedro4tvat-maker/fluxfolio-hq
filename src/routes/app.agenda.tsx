@@ -132,6 +132,7 @@ function statusBadge(s: string) {
 
 function AgendaPage() {
   const { isConsultant, loading } = useAuth();
+  const { section } = Route.useSearch();
   if (loading) return <div className="text-muted-foreground">Carregando...</div>;
   if (!isConsultant) {
     return (
