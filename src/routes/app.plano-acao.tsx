@@ -23,6 +23,7 @@ import {
   ArrowLeft, Plus, Filter, Trash2, CheckCircle2, MessageSquare,
   LayoutList, Columns, Wand2, AlertTriangle, Clock, CalendarPlus,
 } from "lucide-react";
+import { maybeAdvanceStage } from "@/lib/journey-stages";
 
 export const Route = createFileRoute("/app/plano-acao")({ component: PlanoAcaoPage });
 
@@ -266,11 +267,19 @@ function PlanoAcaoPage() {
       }
       return actionRow;
     },
-    onSuccess: () => {
+    onSuccess: async (row: any) => {
       qc.invalidateQueries({ queryKey: ["action-plans", companyId] });
       toast.success("Ação salva");
       setOpenNew(false);
       setEditing(null);
+      if (consultant?.id && companyId && user?.id) {
+        const moved = await maybeAdvanceStage({
+          companyId, consultantId: consultant.id, targetStage: "plano_acao",
+          userId: user.id, note: "Plano de ação criado",
+        });
+        if (moved) toast.info("Fase da empresa avançada para 'Plano de ação'.");
+        qc.invalidateQueries({ queryKey: ["jornada-companies"] });
+      }
     },
     onError: (e: any) => toast.error(e.message ?? "Erro ao salvar"),
   });
@@ -293,7 +302,23 @@ function PlanoAcaoPage() {
       const { error } = await sb.from("action_plans").update(upd).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["action-plans", companyId] }),
+    onSuccess: async (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["action-plans", companyId] });
+      // If all actions concluded, advance to acompanhamento_mensal
+      if (vars.status === "concluida" && consultant?.id && companyId && user?.id) {
+        const { data: remaining } = await sb.from("action_plans")
+          .select("id").eq("company_id", companyId)
+          .not("status", "in", "(concluida,cancelada)");
+        if ((remaining ?? []).length === 0) {
+          const moved = await maybeAdvanceStage({
+            companyId, consultantId: consultant.id, targetStage: "acompanhamento_mensal",
+            userId: user.id, note: "Todas as ações concluídas",
+          });
+          if (moved) toast.info("Fase avançada para 'Acompanhamento mensal'.");
+          qc.invalidateQueries({ queryKey: ["jornada-companies"] });
+        }
+      }
+    },
   });
 
   if (!companyId) {

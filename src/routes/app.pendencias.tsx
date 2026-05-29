@@ -446,7 +446,8 @@ function ResponsesDialog({ pending, isConsultant, userId, onClose }: {
 }) {
   const qc = useQueryClient();
   const [text, setText] = useState("");
-  const [attachment, setAttachment] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { data: responses = [] } = useQuery({
     queryKey: ["pending-responses", pending.id],
     queryFn: async () => {
@@ -454,27 +455,48 @@ function ResponsesDialog({ pending, isConsultant, userId, onClose }: {
       return data ?? [];
     },
   });
+
   const sendResp = useMutation({
     mutationFn: async () => {
-      if (!text.trim() && !attachment) throw new Error("Escreva uma resposta ou anexe um link.");
+      if (!text.trim() && !file) throw new Error("Escreva uma resposta ou anexe um arquivo.");
+      let attachmentPath: string | null = null;
+      if (file) {
+        if (file.size > 20 * 1024 * 1024) throw new Error("Arquivo maior que 20MB.");
+        setUploading(true);
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+        const path = `${pending.company_id}/pendencias/${pending.id}/${Date.now()}_${safeName}`;
+        const { error: upErr } = await supabase.storage.from("attachments").upload(path, file, {
+          contentType: file.type || undefined, upsert: false,
+        });
+        setUploading(false);
+        if (upErr) throw upErr;
+        attachmentPath = path;
+      }
       const { error } = await sb.from("client_pending_responses").insert({
         pending_item_id: pending.id, user_id: userId, response_text: text || null,
-        attachment_url: attachment || null,
+        attachment_url: attachmentPath,
       });
       if (error) throw error;
-      // If client responded, mark as "enviado_cliente"
       if (!isConsultant && pending.status === "pendente") {
         await sb.from("client_pending_items").update({ status: "enviado_cliente" }).eq("id", pending.id);
       }
     },
     onSuccess: () => {
-      setText(""); setAttachment("");
+      setText(""); setFile(null);
       qc.invalidateQueries({ queryKey: ["pending-responses", pending.id] });
       qc.invalidateQueries({ queryKey: ["pendings"] });
       toast.success("Resposta enviada");
     },
-    onError: (e: any) => toast.error(e.message ?? "Erro"),
+    onError: (e: any) => { setUploading(false); toast.error(e.message ?? "Erro"); },
   });
+
+  async function openAttachment(value: string) {
+    // Legacy values may be full URLs; treat those as-is.
+    if (/^https?:\/\//i.test(value)) { window.open(value, "_blank"); return; }
+    const { data, error } = await supabase.storage.from("attachments").createSignedUrl(value, 300);
+    if (error) { toast.error(error.message); return; }
+    window.open(data.signedUrl, "_blank");
+  }
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
@@ -486,19 +508,36 @@ function ResponsesDialog({ pending, isConsultant, userId, onClose }: {
             <div key={r.id} className="border rounded p-3 text-sm">
               <div className="text-xs text-muted-foreground mb-1">{new Date(r.created_at).toLocaleString("pt-BR")}</div>
               {r.response_text && <div>{r.response_text}</div>}
-              {r.attachment_url && <a href={r.attachment_url} target="_blank" rel="noreferrer" className="text-primary underline text-xs">Ver anexo</a>}
+              {r.attachment_url && (
+                <button onClick={() => openAttachment(r.attachment_url)} className="text-primary underline text-xs mt-1">
+                  Ver anexo
+                </button>
+              )}
             </div>
           ))}
         </div>
         <div className="space-y-2 border-t pt-3">
           <Textarea placeholder="Escrever resposta…" value={text} onChange={(e) => setText(e.target.value)} />
-          <Input placeholder="URL do anexo (opcional)" value={attachment} onChange={(e) => setAttachment(e.target.value)} />
+          <div className="flex items-center gap-2">
+            <Input
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv,.doc,.docx"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="text-xs"
+            />
+            {file && (
+              <Button size="sm" variant="ghost" onClick={() => setFile(null)} type="button">Limpar</Button>
+            )}
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={onClose}>Fechar</Button>
-            <Button onClick={() => sendResp.mutate()}><Send className="size-4" /> Enviar</Button>
+            <Button onClick={() => sendResp.mutate()} disabled={uploading || sendResp.isPending}>
+              <Send className="size-4" /> {uploading ? "Enviando..." : "Enviar"}
+            </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+

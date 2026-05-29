@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -14,36 +15,22 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowRight, History, Building2 } from "lucide-react";
+import { ArrowRight, History, Building2, Settings2, Trash2, Plus, ArrowUp, ArrowDown } from "lucide-react";
+import { DEFAULT_JOURNEY_STAGES, type JourneyStage } from "@/lib/journey-stages";
 
 export const Route = createFileRoute("/app/jornada")({ component: JornadaPage });
 
 const sb = supabase as any;
 
-export const JOURNEY_STAGES = [
-  { v: "novo_cliente", l: "Novo cliente" },
-  { v: "diagnostico_inicial", l: "Diagnóstico inicial" },
-  { v: "organizacao_financeira", l: "Organização financeira" },
-  { v: "fluxo_caixa", l: "Fluxo de caixa" },
-  { v: "contas_pagar_receber", l: "Contas a pagar e receber" },
-  { v: "precificacao_margem", l: "Precificação e margem" },
-  { v: "orcamento_metas", l: "Orçamento e metas" },
-  { v: "dre_relatorios", l: "DRE e relatórios" },
-  { v: "plano_acao", l: "Plano de ação" },
-  { v: "acompanhamento_mensal", l: "Acompanhamento mensal" },
-  { v: "renovacao", l: "Renovação" },
-  { v: "encerrado", l: "Encerrado" },
-] as const;
-
-function stageLabel(v: string) {
-  return JOURNEY_STAGES.find((s) => s.v === v)?.l ?? v;
-}
+// kept for backward compatibility with other imports
+export const JOURNEY_STAGES = DEFAULT_JOURNEY_STAGES;
 
 function JornadaPage() {
   const { user, isConsultant } = useAuth();
   const qc = useQueryClient();
   const [moving, setMoving] = useState<{ id: string; nome: string; current: string } | null>(null);
   const [historyFor, setHistoryFor] = useState<string | null>(null);
+  const [editingStages, setEditingStages] = useState(false);
 
   const { data: consultant } = useQuery({
     queryKey: ["consultant-me", user?.id],
@@ -53,6 +40,27 @@ function JornadaPage() {
       return data;
     },
   });
+
+  const { data: customStages = [] } = useQuery({
+    queryKey: ["journey-stages", consultant?.id],
+    enabled: !!consultant?.id,
+    queryFn: async () => {
+      const { data } = await sb
+        .from("consultancy_journey_stages")
+        .select("stage_key, label, position")
+        .eq("consultant_id", consultant.id)
+        .order("position", { ascending: true });
+      return (data ?? []) as { stage_key: string; label: string; position: number }[];
+    },
+  });
+
+  const stages: JourneyStage[] = useMemo(() => {
+    if (customStages.length === 0) return [...DEFAULT_JOURNEY_STAGES];
+    return customStages.map((r) => ({ v: r.stage_key, l: r.label }));
+  }, [customStages]);
+
+  const stageLabel = (v: string) => stages.find((s) => s.v === v)?.l
+    ?? DEFAULT_JOURNEY_STAGES.find((s) => s.v === v)?.l ?? v;
 
   const { data: companies = [] } = useQuery({
     queryKey: ["jornada-companies", consultant?.id],
@@ -114,13 +122,15 @@ function JornadaPage() {
 
   const byStage = useMemo(() => {
     const map: Record<string, any[]> = {};
-    JOURNEY_STAGES.forEach((s) => { map[s.v] = []; });
+    stages.forEach((s) => { map[s.v] = []; });
+    map["__other__"] = [];
     companies.forEach((c: any) => {
-      const stage = c.consultancy_stage ?? "novo_cliente";
-      (map[stage] ?? map["novo_cliente"]).push(c);
+      const stage = c.consultancy_stage ?? stages[0]?.v ?? "novo_cliente";
+      if (map[stage]) map[stage].push(c);
+      else map["__other__"].push(c);
     });
     return map;
-  }, [companies]);
+  }, [companies, stages]);
 
   if (!isConsultant) {
     return (
@@ -132,20 +142,25 @@ function JornadaPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-display font-bold">Jornada da Consultoria</h1>
-        <p className="text-sm text-muted-foreground">Acompanhe em qual fase cada empresa cliente está.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-display font-bold">Jornada da Consultoria</h1>
+          <p className="text-sm text-muted-foreground">Acompanhe em qual fase cada empresa cliente está.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setEditingStages(true)}>
+          <Settings2 className="size-4" /> Personalizar fases
+        </Button>
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-4">
-        {JOURNEY_STAGES.map((stage) => (
+        {stages.map((stage) => (
           <div key={stage.v} className="min-w-[280px] flex-shrink-0">
             <div className="bg-muted/40 rounded-t-lg p-3 border-b">
               <div className="font-medium text-sm">{stage.l}</div>
-              <div className="text-xs text-muted-foreground">{byStage[stage.v].length} empresa(s)</div>
+              <div className="text-xs text-muted-foreground">{(byStage[stage.v] ?? []).length} empresa(s)</div>
             </div>
             <div className="space-y-2 p-2 bg-muted/10 rounded-b-lg min-h-[200px]">
-              {byStage[stage.v].map((c: any) => {
+              {(byStage[stage.v] ?? []).map((c: any) => {
                 const cPendings = pendings.filter((p: any) => p.company_id === c.id && !["resolvido", "cancelado"].includes(p.status));
                 const nextAct = nextActs.find((a: any) => a.company_id === c.id);
                 return (
@@ -165,7 +180,7 @@ function JornadaPage() {
                         {nextAct && <Badge variant="secondary" className="text-[10px] truncate max-w-full">{nextAct.title}</Badge>}
                       </div>
                       <div className="flex gap-1 pt-1">
-                        <Button size="sm" variant="outline" className="h-7 text-xs flex-1" onClick={() => setMoving({ id: c.id, nome: c.nome, current: c.consultancy_stage ?? "novo_cliente" })}>
+                        <Button size="sm" variant="outline" className="h-7 text-xs flex-1" onClick={() => setMoving({ id: c.id, nome: c.nome, current: c.consultancy_stage ?? stages[0]?.v ?? "novo_cliente" })}>
                           <ArrowRight className="size-3" /> Mover
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setHistoryFor(c.id)}>
@@ -179,24 +194,61 @@ function JornadaPage() {
             </div>
           </div>
         ))}
+        {(byStage["__other__"] ?? []).length > 0 && (
+          <div className="min-w-[280px] flex-shrink-0">
+            <div className="bg-muted/40 rounded-t-lg p-3 border-b">
+              <div className="font-medium text-sm">Outras fases</div>
+              <div className="text-xs text-muted-foreground">{byStage["__other__"].length} empresa(s) em fases desativadas</div>
+            </div>
+            <div className="space-y-2 p-2 bg-muted/10 rounded-b-lg min-h-[200px]">
+              {byStage["__other__"].map((c: any) => (
+                <Card key={c.id}>
+                  <CardContent className="p-3 space-y-1">
+                    <div className="font-medium text-sm truncate">{c.nome}</div>
+                    <div className="text-[10px] text-muted-foreground">Fase: {stageLabel(c.consultancy_stage)}</div>
+                    <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => setMoving({ id: c.id, nome: c.nome, current: c.consultancy_stage })}>
+                      <ArrowRight className="size-3" /> Mover
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {moving && (
         <MoveStageDialog
+          stages={stages}
           item={moving}
+          stageLabel={stageLabel}
           onClose={() => setMoving(null)}
           onSave={(newStage, notes) => moveStage.mutate({ id: moving.id, newStage, notes, current: moving.current })}
         />
       )}
 
       {historyFor && (
-        <HistoryDialog companyId={historyFor} onClose={() => setHistoryFor(null)} />
+        <HistoryDialog companyId={historyFor} stageLabel={stageLabel} onClose={() => setHistoryFor(null)} />
+      )}
+
+      {editingStages && consultant?.id && (
+        <EditStagesDialog
+          consultantId={consultant.id}
+          initial={stages}
+          onClose={() => setEditingStages(false)}
+        />
       )}
     </div>
   );
 }
 
-function MoveStageDialog({ item, onClose, onSave }: { item: { id: string; nome: string; current: string }; onClose: () => void; onSave: (s: string, n: string) => void }) {
+function MoveStageDialog({ item, stages, stageLabel, onClose, onSave }: {
+  item: { id: string; nome: string; current: string };
+  stages: JourneyStage[];
+  stageLabel: (v: string) => string;
+  onClose: () => void;
+  onSave: (s: string, n: string) => void;
+}) {
   const [stage, setStage] = useState(item.current);
   const [notes, setNotes] = useState("");
   return (
@@ -208,7 +260,7 @@ function MoveStageDialog({ item, onClose, onSave }: { item: { id: string; nome: 
             <div className="text-xs text-muted-foreground mb-1">Fase atual: <strong>{stageLabel(item.current)}</strong></div>
             <Select value={stage} onValueChange={setStage}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{JOURNEY_STAGES.map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}</SelectContent>
+              <SelectContent>{stages.map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <Textarea placeholder="Observação (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -222,7 +274,7 @@ function MoveStageDialog({ item, onClose, onSave }: { item: { id: string; nome: 
   );
 }
 
-function HistoryDialog({ companyId, onClose }: { companyId: string; onClose: () => void }) {
+function HistoryDialog({ companyId, stageLabel, onClose }: { companyId: string; stageLabel: (v: string) => string; onClose: () => void }) {
   const { data = [] } = useQuery({
     queryKey: ["stage-history", companyId],
     queryFn: async () => {
@@ -244,6 +296,84 @@ function HistoryDialog({ companyId, onClose }: { companyId: string; onClose: () 
             </div>
           ))}
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditStagesDialog({ consultantId, initial, onClose }: {
+  consultantId: string;
+  initial: JourneyStage[];
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [items, setItems] = useState<{ v: string; l: string }[]>(() => initial.map((s) => ({ ...s })));
+
+  function move(idx: number, dir: -1 | 1) {
+    const next = [...items];
+    const j = idx + dir;
+    if (j < 0 || j >= next.length) return;
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setItems(next);
+  }
+  function add() {
+    const key = `fase_${Date.now().toString(36)}`;
+    setItems([...items, { v: key, l: "Nova fase" }]);
+  }
+  function remove(idx: number) {
+    setItems(items.filter((_, i) => i !== idx));
+  }
+  function update(idx: number, patch: Partial<{ v: string; l: string }>) {
+    setItems(items.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  }
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (items.some((s) => !s.v.trim() || !s.l.trim())) throw new Error("Chave e nome são obrigatórios.");
+      const keys = items.map((s) => s.v);
+      if (new Set(keys).size !== keys.length) throw new Error("Chaves duplicadas.");
+      // Strategy: delete all then insert fresh
+      await sb.from("consultancy_journey_stages").delete().eq("consultant_id", consultantId);
+      if (items.length === 0) return;
+      const rows = items.map((s, i) => ({
+        consultant_id: consultantId, stage_key: s.v.trim(), label: s.l.trim(), position: i,
+      }));
+      const { error } = await sb.from("consultancy_journey_stages").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Fases atualizadas");
+      qc.invalidateQueries({ queryKey: ["journey-stages", consultantId] });
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro"),
+  });
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader><DialogTitle>Personalizar fases da jornada</DialogTitle></DialogHeader>
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {items.length === 0 && (
+            <p className="text-sm text-muted-foreground">Sem fases. Adicione pelo menos uma — ou feche para manter as fases padrão.</p>
+          )}
+          {items.map((s, i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+              <Input value={s.l} onChange={(e) => update(i, { l: e.target.value })} placeholder="Nome da fase" />
+              <Input value={s.v} onChange={(e) => update(i, { v: e.target.value })} placeholder="chave_interna" className="font-mono text-xs" />
+              <div className="flex gap-1">
+                <Button size="icon" variant="ghost" onClick={() => move(i, -1)} disabled={i === 0}><ArrowUp className="size-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => move(i, 1)} disabled={i === items.length - 1}><ArrowDown className="size-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => remove(i)}><Trash2 className="size-4" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={add}><Plus className="size-4" /> Adicionar fase</Button>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -704,6 +704,39 @@ export type Database = {
           },
         ]
       }
+      consultancy_journey_stages: {
+        Row: {
+          consultant_id: string
+          created_at: string
+          id: string
+          is_terminal: boolean
+          label: string
+          position: number
+          stage_key: string
+          updated_at: string
+        }
+        Insert: {
+          consultant_id: string
+          created_at?: string
+          id?: string
+          is_terminal?: boolean
+          label: string
+          position?: number
+          stage_key: string
+          updated_at?: string
+        }
+        Update: {
+          consultant_id?: string
+          created_at?: string
+          id?: string
+          is_terminal?: boolean
+          label?: string
+          position?: number
+          stage_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consultancy_payables: {
         Row: {
           amount: number
