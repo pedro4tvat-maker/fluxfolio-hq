@@ -18,7 +18,22 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
+export const AGENDA_SECTIONS = [
+  { id: "lista", label: "Lista" },
+  { id: "calendario", label: "Calendário" },
+  { id: "entregas", label: "Entregas pendentes" },
+  { id: "reunioes", label: "Reuniões" },
+  { id: "prazos", label: "Prazos importantes" },
+  { id: "por-cliente", label: "Por cliente" },
+] as const;
+type AgendaSection = typeof AGENDA_SECTIONS[number]["id"];
+const AGENDA_SECTION_IDS = AGENDA_SECTIONS.map((s) => s.id) as readonly string[];
+
 export const Route = createFileRoute("/app/agenda")({
+  validateSearch: (s: Record<string, unknown>): { section: AgendaSection } => {
+    const v = String(s.section ?? "");
+    return { section: (AGENDA_SECTION_IDS.includes(v) ? v : "lista") as AgendaSection };
+  },
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
@@ -168,6 +183,7 @@ function useActivities(consultantId: string | undefined) {
 }
 
 function Inner() {
+  const { section } = Route.useSearch();
   const { data: consultant } = useConsultant();
   const { data: companies = [] } = useCompanies();
   const { data: activities = [] } = useActivities(consultant?.id);
@@ -261,67 +277,51 @@ function Inner() {
         <KpiCard icon={<ListChecks className="size-4" />} title="Concluídas no mês" value={kpis.concluidasMes} tone="emerald" />
       </div>
 
-      <Tabs defaultValue="lista">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="lista">Lista</TabsTrigger>
-          <TabsTrigger value="calendario">Calendário</TabsTrigger>
-          <TabsTrigger value="entregas">Entregas pendentes</TabsTrigger>
-          <TabsTrigger value="reunioes">Reuniões</TabsTrigger>
-          <TabsTrigger value="prazos">Prazos importantes</TabsTrigger>
-          <TabsTrigger value="por-cliente">Por cliente</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="lista" className="mt-4">
-          <ListaTab
-            activities={activities}
-            companyMap={companyMap}
-            onEdit={(a) => { setEditing(a); setOpen(true); }}
-            onDelete={(id) => delMut.mutate(id)}
-            onStatus={(id, s) => setStatusMut.mutate({ id, status: s })}
-          />
-        </TabsContent>
-
-        <TabsContent value="calendario" className="mt-4">
-          <CalendarTab activities={activities} companyMap={companyMap} onSelect={(a) => { setEditing(a); setOpen(true); }} />
-        </TabsContent>
-
-        <TabsContent value="entregas" className="mt-4">
-          <ListaTab
-            activities={activities.filter((a) => ENTREGA_TYPES.includes(a.activity_type) && a.status !== "concluida" && a.status !== "cancelada")}
-            companyMap={companyMap}
-            onEdit={(a) => { setEditing(a); setOpen(true); }}
-            onDelete={(id) => delMut.mutate(id)}
-            onStatus={(id, s) => setStatusMut.mutate({ id, status: s })}
-            emptyMsg="Sem entregas pendentes."
-          />
-        </TabsContent>
-
-        <TabsContent value="reunioes" className="mt-4">
-          <ListaTab
-            activities={activities.filter((a) => a.activity_type === "reuniao")}
-            companyMap={companyMap}
-            onEdit={(a) => { setEditing(a); setOpen(true); }}
-            onDelete={(id) => delMut.mutate(id)}
-            onStatus={(id, s) => setStatusMut.mutate({ id, status: s })}
-            emptyMsg="Sem reuniões agendadas."
-          />
-        </TabsContent>
-
-        <TabsContent value="prazos" className="mt-4">
-          <ListaTab
-            activities={activities.filter((a) => a.due_date && a.status !== "concluida" && a.status !== "cancelada").sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))}
-            companyMap={companyMap}
-            onEdit={(a) => { setEditing(a); setOpen(true); }}
-            onDelete={(id) => delMut.mutate(id)}
-            onStatus={(id, s) => setStatusMut.mutate({ id, status: s })}
-            emptyMsg="Sem prazos cadastrados."
-          />
-        </TabsContent>
-
-        <TabsContent value="por-cliente" className="mt-4">
-          <PorClienteTab activities={activities} companies={companies} />
-        </TabsContent>
-      </Tabs>
+      {section === "lista" && (
+        <ListaTab
+          activities={activities}
+          companyMap={companyMap}
+          onEdit={(a) => { setEditing(a); setOpen(true); }}
+          onDelete={(id) => delMut.mutate(id)}
+          onStatus={(id, s) => setStatusMut.mutate({ id, status: s })}
+        />
+      )}
+      {section === "calendario" && (
+        <CalendarTab activities={activities} companyMap={companyMap} onSelect={(a) => { setEditing(a); setOpen(true); }} />
+      )}
+      {section === "entregas" && (
+        <ListaTab
+          activities={activities.filter((a) => ENTREGA_TYPES.includes(a.activity_type) && a.status !== "concluida" && a.status !== "cancelada")}
+          companyMap={companyMap}
+          onEdit={(a) => { setEditing(a); setOpen(true); }}
+          onDelete={(id) => delMut.mutate(id)}
+          onStatus={(id, s) => setStatusMut.mutate({ id, status: s })}
+          emptyMsg="Sem entregas pendentes."
+        />
+      )}
+      {section === "reunioes" && (
+        <ListaTab
+          activities={activities.filter((a) => a.activity_type === "reuniao")}
+          companyMap={companyMap}
+          onEdit={(a) => { setEditing(a); setOpen(true); }}
+          onDelete={(id) => delMut.mutate(id)}
+          onStatus={(id, s) => setStatusMut.mutate({ id, status: s })}
+          emptyMsg="Sem reuniões agendadas."
+        />
+      )}
+      {section === "prazos" && (
+        <ListaTab
+          activities={activities.filter((a) => a.due_date && a.status !== "concluida" && a.status !== "cancelada").sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))}
+          companyMap={companyMap}
+          onEdit={(a) => { setEditing(a); setOpen(true); }}
+          onDelete={(id) => delMut.mutate(id)}
+          onStatus={(id, s) => setStatusMut.mutate({ id, status: s })}
+          emptyMsg="Sem prazos cadastrados."
+        />
+      )}
+      {section === "por-cliente" && (
+        <PorClienteTab activities={activities} companies={companies} />
+      )}
 
       <ActivityDialog
         open={open}
