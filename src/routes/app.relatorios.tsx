@@ -367,11 +367,10 @@ function Relatorios() {
                   ))}
                 </tr>
               </thead>
-              <tbody>
                 {preview.rows.slice(0, 50).map((r, i) => (
                   <tr key={i} className="border-b last:border-0">
                     {Object.keys(preview.rows[0]).map((h) => {
-                      const v = r[h];
+                      const v = (r as Record<string, unknown>)[h];
                       const isMoney = ["Valor", "Orçado", "Realizado", "Restante", "Entradas", "Saídas", "Resultado", "Custo", "Preço atual", "Preço sugerido (40%)", "Lucro R$", "Valor total", "Custo unit.", "Preço venda"].includes(h);
                       return (
                         <td key={h} className={`py-2 pr-4 ${isMoney ? "font-mono" : ""}`}>
@@ -381,6 +380,7 @@ function Relatorios() {
                     })}
                   </tr>
                 ))}
+
               </tbody>
             </table>
             {preview.rows.length > 50 && (
