@@ -39,26 +39,32 @@ interface CompanyKpi {
   resultado: number;
   saldo: number;
   vencidos: number;
+  coletasAtraso: number;
+  pagamentosAtraso: number;
+  semLancamento: boolean;
+  ultimoLancamento: string | null;
   status: "saudavel" | "atencao" | "critico";
   unidades: number;
   matrizCidade: string | null;
+  ativo: boolean;
 }
 
 async function loadCompanies(): Promise<CompanyKpi[]> {
   const { data: companies, error } = await supabase
     .from("companies").select("id, nome, responsavel, ativo")
-    .eq("ativo", true).order("nome");
+    .order("nome");
   if (error) throw error;
   const range = monthRange();
 
   return Promise.all((companies ?? []).map(async (c) => {
-    const [{ data: tx }, { data: pay }, { data: rec }, { data: accs }, { data: allTx }, { data: brs }] = await Promise.all([
+    const [{ data: tx }, { data: pay }, { data: rec }, { data: accs }, { data: allTx }, { data: brs }, { data: lastTx }] = await Promise.all([
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
       supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "pago"),
       supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "recebido"),
       supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", c.id),
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado"),
       supabase.from("branches").select("id, cidade, is_main_branch, ativa").eq("company_id", c.id),
+      supabase.from("transactions").select("data").eq("company_id", c.id).order("data", { ascending: false }).limit(1),
     ]);
     const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
     const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
@@ -66,14 +72,18 @@ async function loadCompanies(): Promise<CompanyKpi[]> {
     const delta = (allTx ?? []).reduce((s, t) => s + (t.tipo === "entrada" ? 1 : -1) * Number(t.valor), 0);
     const saldo = saldoInicial + delta;
     const today = new Date().toISOString().slice(0, 10);
-    const vencidos = (pay ?? []).filter((p) => p.vencimento < today).length + (rec ?? []).filter((r) => r.vencimento < today).length;
+    const pagamentosAtraso = (pay ?? []).filter((p) => p.vencimento < today).length;
+    const coletasAtraso = (rec ?? []).filter((r) => r.vencimento < today).length;
+    const vencidos = pagamentosAtraso + coletasAtraso;
     const resultado = entradas - saidas;
     const unidades = (brs ?? []).filter((b: any) => b.ativa).length;
     const matrizCidade = (brs ?? []).find((b: any) => b.is_main_branch)?.cidade ?? null;
+    const semLancamento = (tx ?? []).length === 0;
+    const ultimoLancamento = (lastTx ?? [])[0]?.data ?? null;
     let status: CompanyKpi["status"] = "saudavel";
     if (saldo < 0 || resultado < 0 || vencidos > 2) status = "critico";
     else if (vencidos > 0 || resultado < entradas * 0.1) status = "atencao";
-    return { id: c.id, nome: c.nome, responsavel: c.responsavel, entradas, saidas, resultado, saldo, vencidos, status, unidades, matrizCidade };
+    return { id: c.id, nome: c.nome, responsavel: c.responsavel, entradas, saidas, resultado, saldo, vencidos, coletasAtraso, pagamentosAtraso, semLancamento, ultimoLancamento, status, unidades, matrizCidade, ativo: c.ativo };
   }));
 }
 
