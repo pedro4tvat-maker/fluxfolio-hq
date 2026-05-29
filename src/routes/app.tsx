@@ -29,8 +29,6 @@ const consultantNav: NavItem[] = [
 ];
 
 const clientNav: NavItem[] = [
-  { to: "/app", label: "Painel", icon: LayoutDashboard, exact: true },
-const clientNav: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
@@ -43,6 +41,8 @@ const clientNav: NavItem[] = [
   { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
+
+function AppLayout() {
 
   const navigate = useNavigate();
   const { user, isConsultant, loading } = useAuth();
