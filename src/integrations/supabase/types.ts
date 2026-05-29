@@ -287,6 +287,54 @@ export type Database = {
           },
         ]
       }
+      executive_reports: {
+        Row: {
+          ano: number
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          diagnostico: string | null
+          id: string
+          mes: number
+          observacoes: string | null
+          plano_acao: string | null
+          problemas: string | null
+          recomendacoes: string | null
+          updated_at: string
+        }
+        Insert: {
+          ano: number
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          diagnostico?: string | null
+          id?: string
+          mes: number
+          observacoes?: string | null
+          plano_acao?: string | null
+          problemas?: string | null
+          recomendacoes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ano?: number
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          diagnostico?: string | null
+          id?: string
+          mes?: number
+          observacoes?: string | null
+          plano_acao?: string | null
+          problemas?: string | null
+          recomendacoes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       financial_accounts: {
         Row: {
           ativo: boolean
