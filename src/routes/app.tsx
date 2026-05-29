@@ -4,11 +4,13 @@ import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Gauge, Upload, BadgeCheck, Copy, Users, FolderArchive,
+  ChevronDown, ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { CONSULTORIA_SECTIONS } from "@/routes/app.consultoria";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async () => {
@@ -52,9 +54,12 @@ function AppLayout() {
   const navigate = useNavigate();
   const { user, isConsultant, loading } = useAuth();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const search = useRouterState({ select: (s) => s.location.search as { section?: string } });
   const [open, setOpen] = useState(false);
+  const [consultoriaOpen, setConsultoriaOpen] = useState(path.startsWith("/app/consultoria"));
 
   useEffect(() => { setOpen(false); }, [path]);
+  useEffect(() => { if (path.startsWith("/app/consultoria")) setConsultoriaOpen(true); }, [path]);
 
   const nav = useMemo<NavItem[]>(() => (isConsultant ? consultantNav : clientNav), [isConsultant]);
 
@@ -69,6 +74,49 @@ function AppLayout() {
     return <div className="min-h-screen grid place-items-center text-muted-foreground">Carregando...</div>;
   }
 
+  const renderNavItem = (n: NavItem) => {
+    const active = n.exact ? path === n.to : path.startsWith(n.to);
+    if (n.to === "/app/consultoria") {
+      const currentSection = path.startsWith("/app/consultoria") ? (search.section ?? "dashboard") : null;
+      return (
+        <div key={n.to}>
+          <button
+            type="button"
+            onClick={() => setConsultoriaOpen((v) => !v)}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}
+          >
+            <n.icon className="size-4" />
+            <span className="flex-1 text-left">{n.label}</span>
+            {consultoriaOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+          </button>
+          {consultoriaOpen && (
+            <div className="mt-1 ml-3 pl-3 border-l border-sidebar-border space-y-0.5">
+              {CONSULTORIA_SECTIONS.map((s) => {
+                const isActive = currentSection === s.id;
+                return (
+                  <Link
+                    key={s.id}
+                    to="/app/consultoria"
+                    search={{ section: s.id }}
+                    className={`block px-3 py-1.5 rounded-md text-[13px] transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}
+                  >
+                    {s.label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <Link key={n.to} to={n.to} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>
+        <n.icon className="size-4" />
+        {n.label}
+      </Link>
+    );
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-64 shrink-0 bg-sidebar text-sidebar-foreground flex-col">
@@ -82,15 +130,7 @@ function AppLayout() {
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {nav.map((n) => {
-            const active = n.exact ? path === n.to : path.startsWith(n.to);
-            return (
-              <Link key={n.to} to={n.to} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>
-                <n.icon className="size-4" />
-                {n.label}
-              </Link>
-            );
-          })}
+          {nav.map((n) => renderNavItem(n))}
         </nav>
         <div className="p-3 border-t border-sidebar-border">
           <div className="px-3 py-2 text-xs text-sidebar-foreground/60 truncate">
@@ -111,11 +151,7 @@ function AppLayout() {
           <aside className="relative w-64 bg-sidebar text-sidebar-foreground flex flex-col">
             <div className="p-5 border-b border-sidebar-border font-display font-semibold">SISTEMAFP PJ</div>
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-              {nav.map((n) => (
-                <Link key={n.to} to={n.to} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-sidebar-accent">
-                  <n.icon className="size-4" /> {n.label}
-                </Link>
-              ))}
+              {nav.map((n) => renderNavItem(n))}
             </nav>
             <div className="p-3 border-t border-sidebar-border">
               <Button onClick={logout} variant="ghost" className="w-full justify-start"><LogOut className="size-4" /> Sair</Button>

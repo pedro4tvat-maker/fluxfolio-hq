@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,7 +20,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { maskCNPJ, maskPhone, BR_STATES } from "@/lib/cnpj";
 import { formatMoney, formatDate, monthRange, downloadCSV } from "@/lib/format";
 
+export const CONSULTORIA_SECTIONS = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "receitas", label: "Receitas" },
+  { id: "despesas", label: "Despesas e Custos" },
+  { id: "contratos", label: "Contratos" },
+  { id: "clientes", label: "Clientes Contratantes" },
+  { id: "receber", label: "Contas a Receber" },
+  { id: "pagar", label: "Contas a Pagar" },
+  { id: "relatorios", label: "Relatórios" },
+  { id: "solicitacoes", label: "Solicitações" },
+  { id: "config", label: "Configurações" },
+] as const;
+type Section = typeof CONSULTORIA_SECTIONS[number]["id"];
+const SECTION_IDS = CONSULTORIA_SECTIONS.map((s) => s.id) as readonly string[];
+
 export const Route = createFileRoute("/app/consultoria")({
+  validateSearch: (s: Record<string, unknown>): { section: Section } => {
+    const v = String(s.section ?? "");
+    return { section: (SECTION_IDS.includes(v) ? v : "dashboard") as Section };
+  },
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
@@ -60,38 +79,30 @@ function useConsultancy() {
 
 function Inner() {
   const { data: consultancy, isLoading } = useConsultancy();
+  const { section } = Route.useSearch();
+  const navigate = Route.useNavigate();
   if (isLoading) return <div className="text-muted-foreground text-sm">Carregando...</div>;
   if (!consultancy) return <div className="text-muted-foreground text-sm">Perfil de consultoria não encontrado.</div>;
+
+  const currentLabel = CONSULTORIA_SECTIONS.find((s) => s.id === section)?.label ?? "Dashboard";
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl md:text-3xl font-display font-bold">Minha Consultoria</h1>
-        <p className="text-muted-foreground text-sm">Visão geral dos ganhos, custos e resultados da sua consultoria.</p>
+        <p className="text-muted-foreground text-sm">{currentLabel}</p>
       </div>
-      <Tabs defaultValue="dashboard">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="receitas">Receitas</TabsTrigger>
-          <TabsTrigger value="despesas">Despesas e Custos</TabsTrigger>
-          <TabsTrigger value="contratos">Contratos</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes Contratantes</TabsTrigger>
-          <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
-          <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
-          <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
-          <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
-          <TabsTrigger value="config">Configurações</TabsTrigger>
-        </TabsList>
-        <TabsContent value="dashboard" className="mt-6"><DashboardTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="receitas" className="mt-6"><ReceitasTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="despesas" className="mt-6"><DespesasTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="contratos" className="mt-6"><ContratosTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="clientes" className="mt-6"><ClientesContratantesTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="receber" className="mt-6"><ReceberTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="pagar" className="mt-6"><PagarTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="relatorios" className="mt-6"><RelatoriosTab consultantId={consultancy.id} /></TabsContent>
-        <TabsContent value="solicitacoes" className="mt-6"><SolicitacoesTab /></TabsContent>
-        <TabsContent value="config" className="mt-6"><PerfilTab /></TabsContent>
+      <Tabs value={section} onValueChange={(v) => navigate({ search: { section: v as Section }, replace: true })}>
+        <TabsContent value="dashboard" className="mt-0"><DashboardTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="receitas" className="mt-0"><ReceitasTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="despesas" className="mt-0"><DespesasTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="contratos" className="mt-0"><ContratosTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="clientes" className="mt-0"><ClientesContratantesTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="receber" className="mt-0"><ReceberTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="pagar" className="mt-0"><PagarTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="relatorios" className="mt-0"><RelatoriosTab consultantId={consultancy.id} /></TabsContent>
+        <TabsContent value="solicitacoes" className="mt-0"><SolicitacoesTab /></TabsContent>
+        <TabsContent value="config" className="mt-0"><PerfilTab /></TabsContent>
       </Tabs>
     </div>
   );
