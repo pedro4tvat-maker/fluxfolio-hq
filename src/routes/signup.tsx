@@ -113,9 +113,14 @@ function SignupPage() {
       if (!consultancyName.trim()) return "Informe o nome da consultoria";
       return null;
     }
-    if (!c_nome.trim()) return "Informe a razão social/nome da empresa";
-    if (!c_fantasia.trim()) return "Informe o nome fantasia";
-    if (!isValidCNPJ(c_cnpj)) return "CNPJ inválido. Use o formato 00.000.000/0000-00";
+    if (personType === "pj") {
+      if (!c_nome.trim()) return "Informe a razão social/nome da empresa";
+      if (!c_fantasia.trim()) return "Informe o nome fantasia";
+      if (!isValidCNPJ(c_cnpj)) return "CNPJ inválido. Use o formato 00.000.000/0000-00";
+    } else {
+      if (!c_nome.trim()) return "Informe o seu nome";
+      if (!isValidCPF(c_cnpj)) return "CPF inválido. Use o formato 000.000.000-00";
+    }
     if (!c_segmento.trim()) return "Informe o segmento";
     if (!c_cidade.trim()) return "Informe a cidade";
     if (!c_estado) return "Informe o estado (UF)";
