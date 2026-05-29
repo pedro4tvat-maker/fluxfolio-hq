@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeftRight, ArrowDownCircle, ArrowUpCircle, Target, Package, FileBarChart,
   Layers, ShoppingCart, Tag, ArrowLeft, AlertCircle, Building2, Users, FolderArchive,
-  ClipboardCheck, ListChecks,
+  ClipboardCheck, ListChecks, Inbox,
 } from "lucide-react";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
@@ -17,6 +17,7 @@ export const Route = createFileRoute("/app/empresa/$id")({ component: EmpresaRes
 const modules = [
   { to: "/app/diagnostico", label: "Diagnóstico Inicial", icon: ClipboardCheck },
   { to: "/app/plano-acao", label: "Plano de Ação", icon: ListChecks },
+  { to: "/app/pendencias", label: "Pendências do Cliente", icon: Inbox },
   { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
   { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
