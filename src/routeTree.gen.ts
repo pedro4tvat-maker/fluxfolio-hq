@@ -24,6 +24,7 @@ import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
 import { Route as AppExecutivoRouteImport } from './routes/app.executivo'
 import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
 import { Route as AppDocumentosRouteImport } from './routes/app.documentos'
+import { Route as AppDiagnosticoRouteImport } from './routes/app.diagnostico'
 import { Route as AppCrmRouteImport } from './routes/app.crm'
 import { Route as AppContasReceberRouteImport } from './routes/app.contas-receber'
 import { Route as AppContasPagarRouteImport } from './routes/app.contas-pagar'
@@ -110,6 +111,11 @@ const AppDocumentosRoute = AppDocumentosRouteImport.update({
   path: '/documentos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDiagnosticoRoute = AppDiagnosticoRouteImport.update({
+  id: '/diagnostico',
+  path: '/diagnostico',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCrmRoute = AppCrmRouteImport.update({
   id: '/crm',
   path: '/crm',
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/crm': typeof AppCrmRouteWithChildren
+  '/app/diagnostico': typeof AppDiagnosticoRoute
   '/app/documentos': typeof AppDocumentosRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/crm': typeof AppCrmRouteWithChildren
+  '/app/diagnostico': typeof AppDiagnosticoRoute
   '/app/documentos': typeof AppDocumentosRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
   '/app/crm': typeof AppCrmRouteWithChildren
+  '/app/diagnostico': typeof AppDiagnosticoRoute
   '/app/documentos': typeof AppDocumentosRoute
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
     | '/app/contas-pagar'
     | '/app/contas-receber'
     | '/app/crm'
+    | '/app/diagnostico'
     | '/app/documentos'
     | '/app/estoque'
     | '/app/executivo'
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/app/contas-pagar'
     | '/app/contas-receber'
     | '/app/crm'
+    | '/app/diagnostico'
     | '/app/documentos'
     | '/app/estoque'
     | '/app/executivo'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/app/contas-pagar'
     | '/app/contas-receber'
     | '/app/crm'
+    | '/app/diagnostico'
     | '/app/documentos'
     | '/app/estoque'
     | '/app/executivo'
@@ -439,6 +451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDocumentosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/diagnostico': {
+      id: '/app/diagnostico'
+      path: '/diagnostico'
+      fullPath: '/app/diagnostico'
+      preLoaderRoute: typeof AppDiagnosticoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/crm': {
       id: '/app/crm'
       path: '/crm'
@@ -532,6 +551,7 @@ interface AppRouteChildren {
   AppContasPagarRoute: typeof AppContasPagarRoute
   AppContasReceberRoute: typeof AppContasReceberRoute
   AppCrmRoute: typeof AppCrmRouteWithChildren
+  AppDiagnosticoRoute: typeof AppDiagnosticoRoute
   AppDocumentosRoute: typeof AppDocumentosRoute
   AppEstoqueRoute: typeof AppEstoqueRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
@@ -555,6 +575,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppContasPagarRoute: AppContasPagarRoute,
   AppContasReceberRoute: AppContasReceberRoute,
   AppCrmRoute: AppCrmRouteWithChildren,
+  AppDiagnosticoRoute: AppDiagnosticoRoute,
   AppDocumentosRoute: AppDocumentosRoute,
   AppEstoqueRoute: AppEstoqueRoute,
   AppExecutivoRoute: AppExecutivoRoute,
