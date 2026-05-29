@@ -114,7 +114,7 @@ const RECOMMENDATIONS: Record<string, string> = {
 
 function DiagnosticoPage() {
   const { user, isConsultant, loading: authLoading } = useAuth();
-  const { selectedCompanyId } = useSelectedCompany();
+  const { selected: selectedCompanyId } = useSelectedCompany();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const { data: consultant } = useQuery({
