@@ -105,7 +105,13 @@ export function parseAmount(s: string): number | null {
 }
 
 // ===== Classification rules =====
-export type Rule = { id: string; keyword: string; category_id: string | null; tipo: string | null };
+export type Rule = {
+  id: string;
+  keyword: string;
+  category_id: string | null;
+  tipo: string | null;
+  is_active?: boolean;
+};
 
 export function classify(description: string, rules: Rule[]): Rule | null {
   const d = (description || "").toLowerCase();
