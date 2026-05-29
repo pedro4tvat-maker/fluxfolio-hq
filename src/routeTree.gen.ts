@@ -19,6 +19,7 @@ import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppPrecificacaoRouteImport } from './routes/app.precificacao'
 import { Route as AppOrcamentoRouteImport } from './routes/app.orcamento'
 import { Route as AppKpisRouteImport } from './routes/app.kpis'
+import { Route as AppImportacoesRouteImport } from './routes/app.importacoes'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
 import { Route as AppExecutivoRouteImport } from './routes/app.executivo'
 import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
@@ -77,6 +78,11 @@ const AppOrcamentoRoute = AppOrcamentoRouteImport.update({
 const AppKpisRoute = AppKpisRouteImport.update({
   id: '/kpis',
   path: '/kpis',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImportacoesRoute = AppImportacoesRouteImport.update({
+  id: '/importacoes',
+  path: '/importacoes',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFluxoCaixaRoute = AppFluxoCaixaRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/importacoes': typeof AppImportacoesRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/importacoes': typeof AppImportacoesRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/importacoes': typeof AppImportacoesRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
+    | '/app/importacoes'
     | '/app/kpis'
     | '/app/orcamento'
     | '/app/precificacao'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
+    | '/app/importacoes'
     | '/app/kpis'
     | '/app/orcamento'
     | '/app/precificacao'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
+    | '/app/importacoes'
     | '/app/kpis'
     | '/app/orcamento'
     | '/app/precificacao'
@@ -332,6 +344,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppKpisRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/importacoes': {
+      id: '/app/importacoes'
+      path: '/importacoes'
+      fullPath: '/app/importacoes'
+      preLoaderRoute: typeof AppImportacoesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/fluxo-caixa': {
       id: '/app/fluxo-caixa'
       path: '/fluxo-caixa'
@@ -407,6 +426,7 @@ interface AppRouteChildren {
   AppEstoqueRoute: typeof AppEstoqueRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
+  AppImportacoesRoute: typeof AppImportacoesRoute
   AppKpisRoute: typeof AppKpisRoute
   AppOrcamentoRoute: typeof AppOrcamentoRoute
   AppPrecificacaoRoute: typeof AppPrecificacaoRoute
@@ -425,6 +445,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEstoqueRoute: AppEstoqueRoute,
   AppExecutivoRoute: AppExecutivoRoute,
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
+  AppImportacoesRoute: AppImportacoesRoute,
   AppKpisRoute: AppKpisRoute,
   AppOrcamentoRoute: AppOrcamentoRoute,
   AppPrecificacaoRoute: AppPrecificacaoRoute,
@@ -445,13 +466,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

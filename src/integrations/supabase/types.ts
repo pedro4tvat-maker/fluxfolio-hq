@@ -373,6 +373,102 @@ export type Database = {
           },
         ]
       }
+      import_batches: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          duplicate_rows: number
+          error_rows: number
+          file_format: string | null
+          file_name: string | null
+          id: string
+          ignored_rows: number
+          import_type: string
+          imported_at: string
+          imported_rows: number
+          notes: string | null
+          reconciled_rows: number
+          status: string
+          total_rows: number
+          undone_at: string | null
+          user_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          duplicate_rows?: number
+          error_rows?: number
+          file_format?: string | null
+          file_name?: string | null
+          id?: string
+          ignored_rows?: number
+          import_type: string
+          imported_at?: string
+          imported_rows?: number
+          notes?: string | null
+          reconciled_rows?: number
+          status?: string
+          total_rows?: number
+          undone_at?: string | null
+          user_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          duplicate_rows?: number
+          error_rows?: number
+          file_format?: string | null
+          file_name?: string | null
+          id?: string
+          ignored_rows?: number
+          import_type?: string
+          imported_at?: string
+          imported_rows?: number
+          notes?: string | null
+          reconciled_rows?: number
+          status?: string
+          total_rows?: number
+          undone_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      import_rules: {
+        Row: {
+          category_id: string | null
+          company_id: string
+          cost_center_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          keyword: string
+          tipo: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          company_id: string
+          cost_center_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keyword: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          company_id?: string
+          cost_center_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keyword?: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kpi_actions: {
         Row: {
           branch_id: string | null
@@ -461,6 +557,7 @@ export type Database = {
           forma_pagamento: string | null
           fornecedor: string | null
           id: string
+          import_batch_id: string | null
           observacoes: string | null
           parcelas: number | null
           recorrencia: Database["public"]["Enums"]["recurrence"] | null
@@ -481,6 +578,7 @@ export type Database = {
           forma_pagamento?: string | null
           fornecedor?: string | null
           id?: string
+          import_batch_id?: string | null
           observacoes?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
@@ -501,6 +599,7 @@ export type Database = {
           forma_pagamento?: string | null
           fornecedor?: string | null
           id?: string
+          import_batch_id?: string | null
           observacoes?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
@@ -550,6 +649,7 @@ export type Database = {
           estoque_minimo: number
           fornecedor: string | null
           id: string
+          import_batch_id: string | null
           nome: string
           preco_venda: number
           quantidade: number
@@ -564,6 +664,7 @@ export type Database = {
           estoque_minimo?: number
           fornecedor?: string | null
           id?: string
+          import_batch_id?: string | null
           nome: string
           preco_venda?: number
           quantidade?: number
@@ -578,6 +679,7 @@ export type Database = {
           estoque_minimo?: number
           fornecedor?: string | null
           id?: string
+          import_batch_id?: string | null
           nome?: string
           preco_venda?: number
           quantidade?: number
@@ -627,6 +729,7 @@ export type Database = {
           descricao: string
           forma_recebimento: string | null
           id: string
+          import_batch_id: string | null
           observacoes: string | null
           parcelas: number | null
           recorrencia: Database["public"]["Enums"]["recurrence"] | null
@@ -647,6 +750,7 @@ export type Database = {
           descricao: string
           forma_recebimento?: string | null
           id?: string
+          import_batch_id?: string | null
           observacoes?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
@@ -667,6 +771,7 @@ export type Database = {
           descricao?: string
           forma_recebimento?: string | null
           id?: string
+          import_batch_id?: string | null
           observacoes?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
@@ -714,6 +819,7 @@ export type Database = {
           custo_unitario: number | null
           data: string
           id: string
+          import_batch_id: string | null
           motivo: string | null
           observacoes: string | null
           product_id: string
@@ -727,6 +833,7 @@ export type Database = {
           custo_unitario?: number | null
           data?: string
           id?: string
+          import_batch_id?: string | null
           motivo?: string | null
           observacoes?: string | null
           product_id: string
@@ -740,6 +847,7 @@ export type Database = {
           custo_unitario?: number | null
           data?: string
           id?: string
+          import_batch_id?: string | null
           motivo?: string | null
           observacoes?: string | null
           product_id?: string
@@ -775,9 +883,13 @@ export type Database = {
           descricao: string
           forma_pagamento: string | null
           id: string
+          import_batch_id: string | null
           observacoes: string | null
           payable_id: string | null
           receivable_id: string | null
+          reconciled_with_id: string | null
+          reconciled_with_type: string | null
+          reconciliation_status: string | null
           status: Database["public"]["Enums"]["transaction_status"]
           tipo: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
@@ -794,9 +906,13 @@ export type Database = {
           descricao: string
           forma_pagamento?: string | null
           id?: string
+          import_batch_id?: string | null
           observacoes?: string | null
           payable_id?: string | null
           receivable_id?: string | null
+          reconciled_with_id?: string | null
+          reconciled_with_type?: string | null
+          reconciliation_status?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           tipo: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -813,9 +929,13 @@ export type Database = {
           descricao?: string
           forma_pagamento?: string | null
           id?: string
+          import_batch_id?: string | null
           observacoes?: string | null
           payable_id?: string | null
           receivable_id?: string | null
+          reconciled_with_id?: string | null
+          reconciled_with_type?: string | null
+          reconciliation_status?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           tipo?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
