@@ -353,7 +353,9 @@ function SignupPage() {
             <details className="rounded-lg border bg-muted/30 px-3 py-2">
               <summary className="text-sm font-medium cursor-pointer">Dados complementares (opcional)</summary>
               <div className="mt-3 space-y-3">
-                <Field label="Inscrição estadual" value={c_ie} onChange={setCIe} />
+                {personType === "pj" && (
+                  <Field label="Inscrição estadual" value={c_ie} onChange={setCIe} />
+                )}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2"><Field label="Endereço" value={c_endereco} onChange={setCEndereco} /></div>
                   <Field label="CEP" value={c_cep} onChange={(v) => setCCep(maskCEP(v))} placeholder="00000-000" />
