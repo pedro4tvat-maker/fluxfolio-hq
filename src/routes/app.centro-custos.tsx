@@ -144,14 +144,6 @@ function CentroCustosPage() {
                 <td className="p-3" />
               </tr>
             )}
-            {(semEntradas > 0 || semSaidas > 0) && (
-              <tr className="border-t bg-muted/30">
-                <td className="p-3 italic text-muted-foreground">Sem centro de custo</td>
-                <td className="p-3 text-right">{formatMoney(semEntradas)}</td>
-                <td className="p-3 text-right">{formatMoney(semSaidas)}</td>
-                <td className="p-3 text-right font-display font-semibold">{formatMoney(semEntradas - semSaidas)}</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
