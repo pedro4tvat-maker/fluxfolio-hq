@@ -41,6 +41,9 @@ import { Route as AppAgendaRouteImport } from './routes/app.agenda'
 import { Route as AppJornadaCompanyIdRouteImport } from './routes/app.jornada.$companyId'
 import { Route as AppEmpresaIdRouteImport } from './routes/app.empresa.$id'
 import { Route as AppCrmIdRouteImport } from './routes/app.crm.$id'
+import { Route as AppBibliotecaDocumentosRouteImport } from './routes/app.biblioteca.documentos'
+import { Route as AppBibliotecaCriarRouteImport } from './routes/app.biblioteca.criar'
+import { Route as AppBibliotecaDocumentoIdRouteImport } from './routes/app.biblioteca.documento.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -202,6 +205,22 @@ const AppCrmIdRoute = AppCrmIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppCrmRoute,
 } as any)
+const AppBibliotecaDocumentosRoute = AppBibliotecaDocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => AppBibliotecaRoute,
+} as any)
+const AppBibliotecaCriarRoute = AppBibliotecaCriarRouteImport.update({
+  id: '/criar',
+  path: '/criar',
+  getParentRoute: () => AppBibliotecaRoute,
+} as any)
+const AppBibliotecaDocumentoIdRoute =
+  AppBibliotecaDocumentoIdRouteImport.update({
+    id: '/documento/$id',
+    path: '/documento/$id',
+    getParentRoute: () => AppBibliotecaRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -210,7 +229,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
-  '/app/biblioteca': typeof AppBibliotecaRoute
+  '/app/biblioteca': typeof AppBibliotecaRouteWithChildren
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -233,9 +252,12 @@ export interface FileRoutesByFullPath {
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
   '/app/': typeof AppIndexRoute
+  '/app/biblioteca/criar': typeof AppBibliotecaCriarRoute
+  '/app/biblioteca/documentos': typeof AppBibliotecaDocumentosRoute
   '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
   '/app/jornada/$companyId': typeof AppJornadaCompanyIdRoute
+  '/app/biblioteca/documento/$id': typeof AppBibliotecaDocumentoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -243,7 +265,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
-  '/app/biblioteca': typeof AppBibliotecaRoute
+  '/app/biblioteca': typeof AppBibliotecaRouteWithChildren
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -266,9 +288,12 @@ export interface FileRoutesByTo {
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
   '/app': typeof AppIndexRoute
+  '/app/biblioteca/criar': typeof AppBibliotecaCriarRoute
+  '/app/biblioteca/documentos': typeof AppBibliotecaDocumentosRoute
   '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
   '/app/jornada/$companyId': typeof AppJornadaCompanyIdRoute
+  '/app/biblioteca/documento/$id': typeof AppBibliotecaDocumentoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -278,7 +303,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
-  '/app/biblioteca': typeof AppBibliotecaRoute
+  '/app/biblioteca': typeof AppBibliotecaRouteWithChildren
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -301,9 +326,12 @@ export interface FileRoutesById {
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/vendas': typeof AppVendasRoute
   '/app/': typeof AppIndexRoute
+  '/app/biblioteca/criar': typeof AppBibliotecaCriarRoute
+  '/app/biblioteca/documentos': typeof AppBibliotecaDocumentosRoute
   '/app/crm/$id': typeof AppCrmIdRoute
   '/app/empresa/$id': typeof AppEmpresaIdRoute
   '/app/jornada/$companyId': typeof AppJornadaCompanyIdRoute
+  '/app/biblioteca/documento/$id': typeof AppBibliotecaDocumentoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -337,9 +365,12 @@ export interface FileRouteTypes {
     | '/app/relatorios'
     | '/app/vendas'
     | '/app/'
+    | '/app/biblioteca/criar'
+    | '/app/biblioteca/documentos'
     | '/app/crm/$id'
     | '/app/empresa/$id'
     | '/app/jornada/$companyId'
+    | '/app/biblioteca/documento/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -370,9 +401,12 @@ export interface FileRouteTypes {
     | '/app/relatorios'
     | '/app/vendas'
     | '/app'
+    | '/app/biblioteca/criar'
+    | '/app/biblioteca/documentos'
     | '/app/crm/$id'
     | '/app/empresa/$id'
     | '/app/jornada/$companyId'
+    | '/app/biblioteca/documento/$id'
   id:
     | '__root__'
     | '/'
@@ -404,9 +438,12 @@ export interface FileRouteTypes {
     | '/app/relatorios'
     | '/app/vendas'
     | '/app/'
+    | '/app/biblioteca/criar'
+    | '/app/biblioteca/documentos'
     | '/app/crm/$id'
     | '/app/empresa/$id'
     | '/app/jornada/$companyId'
+    | '/app/biblioteca/documento/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -642,8 +679,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCrmIdRouteImport
       parentRoute: typeof AppCrmRoute
     }
+    '/app/biblioteca/documentos': {
+      id: '/app/biblioteca/documentos'
+      path: '/documentos'
+      fullPath: '/app/biblioteca/documentos'
+      preLoaderRoute: typeof AppBibliotecaDocumentosRouteImport
+      parentRoute: typeof AppBibliotecaRoute
+    }
+    '/app/biblioteca/criar': {
+      id: '/app/biblioteca/criar'
+      path: '/criar'
+      fullPath: '/app/biblioteca/criar'
+      preLoaderRoute: typeof AppBibliotecaCriarRouteImport
+      parentRoute: typeof AppBibliotecaRoute
+    }
+    '/app/biblioteca/documento/$id': {
+      id: '/app/biblioteca/documento/$id'
+      path: '/documento/$id'
+      fullPath: '/app/biblioteca/documento/$id'
+      preLoaderRoute: typeof AppBibliotecaDocumentoIdRouteImport
+      parentRoute: typeof AppBibliotecaRoute
+    }
   }
 }
+
+interface AppBibliotecaRouteChildren {
+  AppBibliotecaCriarRoute: typeof AppBibliotecaCriarRoute
+  AppBibliotecaDocumentosRoute: typeof AppBibliotecaDocumentosRoute
+  AppBibliotecaDocumentoIdRoute: typeof AppBibliotecaDocumentoIdRoute
+}
+
+const AppBibliotecaRouteChildren: AppBibliotecaRouteChildren = {
+  AppBibliotecaCriarRoute: AppBibliotecaCriarRoute,
+  AppBibliotecaDocumentosRoute: AppBibliotecaDocumentosRoute,
+  AppBibliotecaDocumentoIdRoute: AppBibliotecaDocumentoIdRoute,
+}
+
+const AppBibliotecaRouteWithChildren = AppBibliotecaRoute._addFileChildren(
+  AppBibliotecaRouteChildren,
+)
 
 interface AppCrmRouteChildren {
   AppCrmIdRoute: typeof AppCrmIdRoute
@@ -671,7 +745,7 @@ const AppJornadaRouteWithChildren = AppJornadaRoute._addFileChildren(
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
   AppAtasRoute: typeof AppAtasRoute
-  AppBibliotecaRoute: typeof AppBibliotecaRoute
+  AppBibliotecaRoute: typeof AppBibliotecaRouteWithChildren
   AppCentroCustosRoute: typeof AppCentroCustosRoute
   AppClientesRoute: typeof AppClientesRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
@@ -700,7 +774,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
   AppAtasRoute: AppAtasRoute,
-  AppBibliotecaRoute: AppBibliotecaRoute,
+  AppBibliotecaRoute: AppBibliotecaRouteWithChildren,
   AppCentroCustosRoute: AppCentroCustosRoute,
   AppClientesRoute: AppClientesRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
