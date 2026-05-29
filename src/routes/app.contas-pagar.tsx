@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Building2, Search, PlusCircle, Download, CheckCircle2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
 export const Route = createFileRoute("/app/contas-pagar")({ component: ContasAPagar });
 
@@ -217,6 +218,16 @@ function ContasAPagar() {
           </Table>
         </div>
       </div>
+
+
+      {selected && (
+        <section className="space-y-2">
+          <h2 className="font-display font-semibold">Documentos e comprovantes</h2>
+          <div className="bg-card border rounded-2xl p-4 shadow-card">
+            <AttachmentsPanel companyId={selected} module="payables" />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

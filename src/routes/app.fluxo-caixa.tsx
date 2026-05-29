@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDownCircle, ArrowUpCircle, Download, Filter, PlusCircle, Search, Trash2, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
 export const Route = createFileRoute("/app/fluxo-caixa")({ component: FluxoCaixa });
 
@@ -315,6 +316,15 @@ function FluxoCaixa() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {selected && (
+        <section className="space-y-2">
+          <h2 className="font-display font-semibold">Documentos do fluxo de caixa</h2>
+          <div className="bg-card border rounded-2xl p-4 shadow-card">
+            <AttachmentsPanel companyId={selected} module="cash_flow" />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
