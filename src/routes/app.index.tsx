@@ -559,14 +559,38 @@ function ClientDashboard() {
               <h2 className="font-semibold mt-2">Acessos rápidos</h2>
             </div>
           </div>
-          <div className="mt-5 grid gap-3">
-            <Button asChild variant="secondary"><Link to="/app/fluxo-caixa">Lançar movimentação</Link></Button>
-            <Button asChild variant="outline"><Link to="/app/contas-pagar">Contas a pagar</Link></Button>
-            <Button asChild variant="outline"><Link to="/app/contas-receber">Contas a receber</Link></Button>
-            <Button asChild variant="outline"><Link to="/app/estoque">Estoque</Link></Button>
+          <div className="mt-5 grid gap-2">
+            <Button asChild size="sm"><Link to="/app/fluxo-caixa">+ Novo lançamento</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link to="/app/contas-pagar">+ Nova conta a pagar</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link to="/app/contas-receber">+ Nova conta a receber</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link to="/app/vendas">+ Nova venda</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link to="/app/estoque">+ Novo produto</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link to="/app/precificacao">+ Nova precificação</Link></Button>
+            <Button asChild size="sm" variant="ghost"><Link to="/app/relatorios">Gerar relatório</Link></Button>
           </div>
         </div>
       </section>
+
+      {/* Resumo do mês */}
+      <section className="bg-card border rounded-2xl p-5 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Resumo do mês</p>
+            <h2 className="font-semibold mt-2">Desempenho consolidado</h2>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div><div className="text-xs text-muted-foreground">Total de entradas</div><div className="font-display font-bold text-success mt-1">{formatMoney(data.entradas)}</div></div>
+          <div><div className="text-xs text-muted-foreground">Total de saídas</div><div className="font-display font-bold text-destructive mt-1">{formatMoney(data.saidas)}</div></div>
+          <div><div className="text-xs text-muted-foreground">Resultado líquido</div><div className={`font-display font-bold mt-1 ${data.resultado < 0 ? "text-destructive" : "text-success"}`}>{formatMoney(data.resultado)}</div></div>
+          <div><div className="text-xs text-muted-foreground">Quantidade de vendas</div><div className="font-display font-bold mt-1">{data.vendasCount ?? 0}</div></div>
+          <div><div className="text-xs text-muted-foreground">Vendas do mês</div><div className="font-display font-bold mt-1">{formatMoney(data.vendasMes ?? 0)}</div></div>
+          <div><div className="text-xs text-muted-foreground">Valor em estoque</div><div className="font-display font-bold mt-1">{formatMoney(data.valorEstoque ?? 0)}</div></div>
+          <div><div className="text-xs text-muted-foreground">Margem média</div><div className="font-display font-bold mt-1">{data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(1)}%`}</div></div>
+          <div><div className="text-xs text-muted-foreground">Orçamento utilizado</div><div className="font-display font-bold mt-1">{data.orcamentoUtilizado == null ? "—" : `${data.orcamentoUtilizado.toFixed(1)}%`}</div></div>
+        </div>
+      </section>
+
 
       
     </div>
