@@ -328,271 +328,441 @@ function ClientDashboard() {
     );
   }
 
+  const today = new Date();
+  const hours = today.getHours();
+  const greeting = hours < 12 ? "Bom dia" : hours < 18 ? "Boa tarde" : "Boa noite";
+
+  // Pontos de atenção
+  const alerts: Array<{
+    id: string;
+    tone: "danger" | "warn" | "info";
+    icon: React.ComponentType<{ className?: string }>;
+    text: string;
+    cta: string;
+    to: string;
+  }> = [];
+  if (data.pagarVencidas > 0) {
+    alerts.push({
+      id: "pay-overdue",
+      tone: "danger",
+      icon: AlertTriangle,
+      text: `Existem ${formatMoney(data.pagarVencidas)} em contas vencidas que precisam ser resolvidas.`,
+      cta: "Resolver",
+      to: "/app/contas-pagar",
+    });
+  }
+  if (data.receberVencidas > 0) {
+    alerts.push({
+      id: "rec-overdue",
+      tone: "warn",
+      icon: Clock,
+      text: `Você possui ${formatMoney(data.receberVencidas)} em recebimentos em atraso.`,
+      cta: "Cobrar",
+      to: "/app/contas-receber",
+    });
+  }
+  if (data.orcamentoUtilizado != null && data.orcamentoUtilizado >= 90) {
+    alerts.push({
+      id: "budget",
+      tone: data.orcamentoUtilizado >= 100 ? "danger" : "warn",
+      icon: DollarSign,
+      text: `Seu planejamento está em ${data.orcamentoUtilizado.toFixed(0)}% do limite do mês.`,
+      cta: "Ver planejamento",
+      to: "/app/orcamento",
+    });
+  }
+  if (data.estoqueAlerta > 0) {
+    alerts.push({
+      id: "stock",
+      tone: "warn",
+      icon: Box,
+      text: `${data.estoqueAlerta} ${data.estoqueAlerta === 1 ? "produto está" : "produtos estão"} com estoque baixo.`,
+      cta: "Ver estoque",
+      to: "/app/estoque",
+    });
+  }
+  if (data.resultado < 0) {
+    alerts.push({
+      id: "result-neg",
+      tone: "danger",
+      icon: TrendingDown,
+      text: `O resultado do mês está negativo (${formatMoney(data.resultado)}). Revise suas despesas.`,
+      cta: "Analisar",
+      to: "/app/fluxo-caixa",
+    });
+  }
+  const visibleAlerts = alerts.slice(0, 5);
+
+  // Próximos 7 dias
+  const limit = new Date();
+  limit.setDate(today.getDate() + 7);
+  const limitISO = limit.toISOString().slice(0, 10);
+  const upcomingPay = (data.nextPayables ?? []).filter((p: any) => p.vencimento <= limitISO).slice(0, 3);
+  const upcomingRec = (data.nextReceivables ?? []).filter((r: any) => r.vencimento <= limitISO).slice(0, 3);
+
+  const orc = data.orcamentoUtilizado;
+  const totalMes = data.entradas + data.saidas;
+  const pctEntradas = totalMes > 0 ? (data.entradas / totalMes) * 100 : 0;
+
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Painel da empresa</h1>
-          <p className="text-muted-foreground text-sm mt-1">Visão geral da saúde financeira e operacional da sua empresa.</p>
+    <div className="space-y-8 max-w-6xl">
+      {/* 1. Cabeçalho */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight">{company.nome}</h1>
+            <CompanySwitcher />
+          </div>
+          <p className="text-muted-foreground">
+            {greeting}. Veja os principais pontos da sua empresa hoje.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <CompanySwitcher />
-          <Button asChild><Link to="/app/fluxo-caixa">Lançar movimentação</Link></Button>
+          <Button asChild variant="outline">
+            <Link to="/app/relatorios"><FileText className="size-4" /> Gerar relatório</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/app/fluxo-caixa"><PlusCircle className="size-4" /> Novo lançamento</Link>
+          </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={Box} label="Saldo atual" value={formatMoney(data.saldo)} tone={data.saldo < 0 ? "danger" : "success"} desc="Disponível em contas" />
-        <Kpi icon={TrendingUp} label="Entradas do mês" value={formatMoney(data.entradas)} tone="success" desc="Receitas realizadas" />
-        <Kpi icon={TrendingDown} label="Saídas do mês" value={formatMoney(data.saidas)} tone="danger" desc="Despesas realizadas" />
-        <Kpi icon={Percent} label="Resultado do mês" value={formatMoney(data.resultado)} tone={data.resultado < 0 ? "danger" : "success"} desc="Lucro / prejuízo no mês" />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={ArrowDownCircle} label="Contas a Pagar" value={formatMoney(data.aPagarAbertas)} tone={data.aPagarAbertas > 0 ? "warning" : undefined} desc="Em aberto" />
-        <Kpi icon={ArrowUpCircle} label="Contas a Receber" value={formatMoney(data.aReceberAbertas)} tone={data.aReceberAbertas > 0 ? "success" : undefined} desc="A receber" />
-        <Kpi icon={AlertCircle} label="Contas Vencidas" value={formatMoney(data.pagarVencidas)} tone={data.pagarVencidas > 0 ? "danger" : undefined} desc="Vencidas hoje" />
-        <Kpi icon={Sparkles} label="Recebimentos Vencidos" value={formatMoney(data.receberVencidas)} tone={data.receberVencidas > 0 ? "warning" : undefined} desc="Atrasos" />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={ShoppingCart} label="Vendas do mês" value={formatMoney(data.vendasMes ?? 0)} desc={`Pedidos: ${data.vendasCount ?? 0}`} />
-        <Kpi icon={Percent} label="Margem média" value={data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(1)}%`} desc="Margem estimada" />
-        <Kpi icon={Box} label="Valor em estoque" value={formatMoney(data.valorEstoque ?? 0)} desc="Custo dos itens em estoque" />
-        <Kpi icon={Sparkles} label="Orçamento utilizado" value={data.orcamentoUtilizado == null ? "—" : `${data.orcamentoUtilizado.toFixed(1)}%`} desc="Percentual do orçamento" />
-      </div>
-
-      {/* Alertas Inteligentes */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="bg-card border rounded-2xl p-4">
-          <h3 className="font-semibold">Alertas Inteligentes</h3>
-          <p className="text-sm text-muted-foreground">Principais alertas acionáveis para sua empresa.</p>
-          <div className="mt-3 space-y-2">
-            {data.pagarVencidas > 0 && (
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <AlertTriangle className="size-4 text-destructive" /> Existem {formatMoney(data.pagarVencidas)} em contas a pagar vencidas. <Link to="/app/contas-pagar" className="text-primary ml-2">Ver</Link>
-              </div>
-            )}
-            {data.receberVencidas > 0 && (
-              <div className="flex items-center gap-2 text-sm text-warning">
-                <AlertTriangle className="size-4 text-warning-foreground" /> Existem {formatMoney(data.receberVencidas)} em recebimentos vencidos. <Link to="/app/contas-receber" className="text-primary ml-2">Ver</Link>
-              </div>
-            )}
-            {/* Próximos 7 dias */}
-            {(() => {
-              const today = new Date();
-              const limit = new Date();
-              limit.setDate(today.getDate() + 7);
-              const limitISO = limit.toISOString().slice(0, 10);
-              const paySoon = (data.nextPayables ?? []).filter((p: any) => p.vencimento <= limitISO).length;
-              const recSoon = (data.nextReceivables ?? []).filter((r: any) => r.vencimento <= limitISO).length;
-              return (paySoon > 0 || recSoon > 0) ? (
-                <div className="flex items-center gap-2 text-sm text-foreground">
-                  <Calendar className="size-4" /> Nos próximos 7 dias: {paySoon} contas a pagar, {recSoon} recebimentos. <Link to="/app/contas-pagar" className="text-primary ml-2">Abrir</Link>
-                </div>
-              ) : null;
-            })()}
-            {/* Orçamento */}
-            {data.orcamentoUtilizado != null && data.orcamentoUtilizado >= 90 && (
-              <div className="flex items-center gap-2 text-sm text-warning">
-                <DollarSign className="size-4 text-warning-foreground" /> Orçamento do mês em {data.orcamentoUtilizado.toFixed(1)}% — ver orçamentos. <Link to="/app/orcamento" className="text-primary ml-2">Abrir</Link>
-              </div>
-            )}
-            {/* Inatividade de vendas */}
-            {(() => {
-              const last3 = (data.trend ?? []).slice(-3).reduce((s: number, d: any) => s + (d.entradas ?? 0), 0);
-              const inactive = (data.vendasCount ?? 0) > 0 && last3 === 0;
-              return inactive ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="size-4" /> Sem vendas nos últimos 3 dias. <Link to="/app/vendas" className="text-primary ml-2">Ver vendas</Link>
-                </div>
-              ) : null;
-            })()}
-            {/* Resultado negativo */}
-            {data.resultado < 0 && (
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <AlertTriangle className="size-4 text-destructive" /> Resultado do mês está negativo ({formatMoney(data.resultado)}). Revise despesas. <Link to="/app/fluxo-caixa" className="text-primary ml-2">Analisar</Link>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-card border rounded-2xl p-4">
-          <h3 className="font-semibold">Alertas de estoque</h3>
-          <div className="mt-3">
-            {data.estoqueAlerta > 0 ? (
-              <div className="flex items-center gap-2 text-sm text-warning">
-                <AlertCircle className="size-4 text-warning-foreground" /> {data.estoqueAlerta} produto(s) em alerta de estoque mínimo. <Link to="/app/estoque" className="text-primary ml-2">Ver estoque</Link>
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">Sem alertas de estoque.</div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <section className="bg-card border rounded-2xl p-5 shadow-card">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Tendência de receitas e despesas</p>
-              <h2 className="font-semibold mt-2">Últimos 14 dias</h2>
-            </div>
-            <span className="text-xs text-muted-foreground">Análise rápida</span>
-          </div>
-          <div className="mt-5 h-[260px]">
-            <ResponsiveContainer>
-              <AreaChart data={data.trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="entriesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="expensesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="label" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} width={40} />
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <Tooltip contentStyle={{ borderRadius: 12, borderColor: "rgba(148,163,184,0.2)" }} formatter={(value: number) => formatMoney(value)} labelStyle={{ color: "#0f172a" }} />
-                <Area type="monotone" dataKey="entradas" stroke="#22c55e" fill="url(#entriesGrad)" strokeWidth={2} />
-                <Area type="monotone" dataKey="saidas" stroke="#f97316" fill="url(#expensesGrad)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="bg-card border rounded-2xl p-5 shadow-card">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Próximas contas</p>
-                <h2 className="font-semibold mt-2">Contas a pagar</h2>
-              </div>
-              <span className="text-xs text-muted-foreground">Top 3 vencimentos</span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {data.nextPayables.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Sem contas a pagar próximas.</div>
-              ) : (
-                data.nextPayables.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-border p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{item.descricao || "Conta a pagar"}</p>
-                        <p className="text-xs text-muted-foreground">Vencimento {formatDate(item.vencimento)}</p>
-                      </div>
-                      <span className="font-mono font-semibold text-destructive">{formatMoney(Number(item.valor))}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="bg-card border rounded-2xl p-5 shadow-card">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Próximos recebimentos</p>
-                <h2 className="font-semibold mt-2">Contas a receber</h2>
-              </div>
-              <span className="text-xs text-muted-foreground">Top 3 a vencer</span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {data.nextReceivables.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Sem recebimentos próximos.</div>
-              ) : (
-                data.nextReceivables.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-border p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{item.descricao || "Recebimento"}</p>
-                        <p className="text-xs text-muted-foreground">Vencimento {formatDate(item.vencimento)}</p>
-                      </div>
-                      <span className="font-mono font-semibold text-success">{formatMoney(Number(item.valor))}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-        <div className="bg-card border rounded-2xl p-5 shadow-card">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Últimas movimentações</p>
-              <h2 className="font-semibold mt-2">Lançamentos recentes</h2>
-            </div>
-            <Link to="/app/fluxo-caixa" className="text-sm text-primary hover:underline">Ver todos</Link>
-          </div>
-          <div className="mt-5 space-y-3">
-            {data.latest.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Nenhum lançamento recente.</div>
-            ) : (
-              data.latest.map((item) => (
-                <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-3">
-                  <div>
-                    <p className="font-medium">{item.descricao || (item.tipo === "entrada" ? "Receita" : "Despesa")}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(item.data)}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className={`font-display font-semibold ${item.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
-                      {item.tipo === "entrada" ? "+" : "−"} {formatMoney(item.valor)}
-                    </div>
-                    <span className="text-xs text-muted-foreground">{item.status}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="bg-card border rounded-2xl p-5 shadow-card">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Ações rápidas</p>
-              <h2 className="font-semibold mt-2">Acessos rápidos</h2>
-            </div>
-          </div>
-          <div className="mt-5 grid gap-2">
-            <Button asChild size="sm"><Link to="/app/fluxo-caixa">+ Novo lançamento</Link></Button>
-            <Button asChild size="sm" variant="outline"><Link to="/app/contas-pagar">+ Nova conta a pagar</Link></Button>
-            <Button asChild size="sm" variant="outline"><Link to="/app/contas-receber">+ Nova conta a receber</Link></Button>
-            <Button asChild size="sm" variant="outline"><Link to="/app/vendas">+ Nova venda</Link></Button>
-            <Button asChild size="sm" variant="outline"><Link to="/app/estoque">+ Novo produto</Link></Button>
-            <Button asChild size="sm" variant="outline"><Link to="/app/precificacao">+ Nova precificação</Link></Button>
-            <Button asChild size="sm" variant="ghost"><Link to="/app/relatorios">Gerar relatório</Link></Button>
-          </div>
+      {/* 2. Saúde da empresa */}
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Saúde da empresa</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <HealthBlock
+            label="Saldo atual"
+            value={formatMoney(data.saldo)}
+            hint="Disponível em contas"
+            tone={data.saldo < 0 ? "danger" : "success"}
+          />
+          <HealthBlock
+            label="Resultado do mês"
+            value={formatMoney(data.resultado)}
+            hint={data.resultado >= 0 ? "Mês positivo" : "Mês negativo"}
+            tone={data.resultado < 0 ? "danger" : "success"}
+          />
+          <HealthBlock
+            label="Contas vencidas"
+            value={formatMoney(data.pagarVencidas)}
+            hint={data.pagarVencidas > 0 ? "Precisa atenção" : "Tudo em dia"}
+            tone={data.pagarVencidas > 0 ? "danger" : "neutral"}
+          />
+          <HealthBlock
+            label="Recebimentos em aberto"
+            value={formatMoney(data.aReceberAbertas)}
+            hint={data.receberVencidas > 0 ? `${formatMoney(data.receberVencidas)} em atraso` : "Em dia"}
+            tone={data.receberVencidas > 0 ? "warn" : "neutral"}
+          />
         </div>
       </section>
 
-      {/* Resumo do mês */}
-      <section className="bg-card border rounded-2xl p-5 shadow-card">
-        <div className="flex items-center justify-between gap-3">
+      {/* 3. Pontos de Atenção */}
+      <section className="bg-card border rounded-2xl p-6 shadow-card">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Resumo do mês</p>
-            <h2 className="font-semibold mt-2">Desempenho consolidado</h2>
+            <h2 className="font-display font-semibold text-lg">Pontos de atenção</h2>
+            <p className="text-sm text-muted-foreground">O que precisa do seu olhar agora.</p>
           </div>
         </div>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div><div className="text-xs text-muted-foreground">Total de entradas</div><div className="font-display font-bold text-success mt-1">{formatMoney(data.entradas)}</div></div>
-          <div><div className="text-xs text-muted-foreground">Total de saídas</div><div className="font-display font-bold text-destructive mt-1">{formatMoney(data.saidas)}</div></div>
-          <div><div className="text-xs text-muted-foreground">Resultado líquido</div><div className={`font-display font-bold mt-1 ${data.resultado < 0 ? "text-destructive" : "text-success"}`}>{formatMoney(data.resultado)}</div></div>
-          <div><div className="text-xs text-muted-foreground">Quantidade de vendas</div><div className="font-display font-bold mt-1">{data.vendasCount ?? 0}</div></div>
-          <div><div className="text-xs text-muted-foreground">Vendas do mês</div><div className="font-display font-bold mt-1">{formatMoney(data.vendasMes ?? 0)}</div></div>
-          <div><div className="text-xs text-muted-foreground">Valor em estoque</div><div className="font-display font-bold mt-1">{formatMoney(data.valorEstoque ?? 0)}</div></div>
-          <div><div className="text-xs text-muted-foreground">Margem média</div><div className="font-display font-bold mt-1">{data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(1)}%`}</div></div>
-          <div><div className="text-xs text-muted-foreground">Orçamento utilizado</div><div className="font-display font-bold mt-1">{data.orcamentoUtilizado == null ? "—" : `${data.orcamentoUtilizado.toFixed(1)}%`}</div></div>
+        {visibleAlerts.length === 0 ? (
+          <div className="flex items-center gap-3 rounded-xl bg-success/5 border border-success/20 p-4">
+            <div className="size-9 rounded-full bg-success/10 grid place-items-center text-success">
+              <Sparkles className="size-4" />
+            </div>
+            <div>
+              <p className="font-medium">Tudo em ordem por aqui.</p>
+              <p className="text-sm text-muted-foreground">Nenhum ponto crítico exige sua atenção no momento.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {visibleAlerts.map((a) => (
+              <AlertRow key={a.id} {...a} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* 4. Ações rápidas */}
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Ações rápidas</h2>
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <QuickAction icon={ArrowDownCircle} label="Lançar entrada" to="/app/fluxo-caixa" tone="success" />
+          <QuickAction icon={ArrowUpCircle} label="Lançar saída" to="/app/fluxo-caixa" tone="danger" />
+          <QuickAction icon={ArrowUpCircle} label="Conta a pagar" to="/app/contas-pagar" />
+          <QuickAction icon={ArrowDownCircle} label="Conta a receber" to="/app/contas-receber" />
+          <QuickAction icon={ShoppingCart} label="Nova venda" to="/app/vendas" />
+          <QuickAction icon={Box} label="Novo produto" to="/app/estoque" />
         </div>
       </section>
 
+      {/* 5. Visão do mês + 6. Operação */}
+      <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="bg-card border rounded-2xl p-6 shadow-card">
+          <div className="mb-5">
+            <h2 className="font-display font-semibold text-lg">Visão do mês</h2>
+            <p className="text-sm text-muted-foreground">Como o mês está se comportando.</p>
+          </div>
+          <div className="space-y-5">
+            <ProgressLine
+              label="Entradas"
+              value={formatMoney(data.entradas)}
+              percent={pctEntradas}
+              color="bg-success"
+            />
+            <ProgressLine
+              label="Saídas"
+              value={formatMoney(data.saidas)}
+              percent={totalMes > 0 ? (data.saidas / totalMes) * 100 : 0}
+              color="bg-destructive"
+            />
+            <div className="pt-4 border-t flex items-center justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Resultado</div>
+                <div className={`font-display font-bold text-xl mt-1 ${data.resultado < 0 ? "text-destructive" : "text-success"}`}>
+                  {formatMoney(data.resultado)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Planejado x gasto</div>
+                <div className="font-display font-bold text-xl mt-1">
+                  {orc == null ? "—" : `${orc.toFixed(0)}%`}
+                </div>
+                {orc != null && (
+                  <div className="mt-1 w-32 h-1.5 rounded-full bg-muted overflow-hidden ml-auto">
+                    <div
+                      className={`h-full ${orc >= 100 ? "bg-destructive" : orc >= 90 ? "bg-warning" : "bg-primary"}`}
+                      style={{ width: `${Math.min(orc, 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
-      
+        <div className="bg-card border rounded-2xl p-6 shadow-card">
+          <div className="mb-5">
+            <h2 className="font-display font-semibold text-lg">Operação</h2>
+            <p className="text-sm text-muted-foreground">Indicadores do dia a dia.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <MiniStat label="Vendas do mês" value={formatMoney(data.vendasMes ?? 0)} hint={`${data.vendasCount ?? 0} pedidos`} />
+            <MiniStat label="Margem média" value={data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(0)}%`} />
+            <MiniStat label="Valor em estoque" value={formatMoney(data.valorEstoque ?? 0)} />
+            <MiniStat
+              label="Produtos em alerta"
+              value={String(data.estoqueAlerta ?? 0)}
+              tone={data.estoqueAlerta > 0 ? "warn" : "default"}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Últimos movimentos + 8. Próximos compromissos */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="bg-card border rounded-2xl p-6 shadow-card">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-display font-semibold text-lg">Últimos movimentos</h2>
+              <p className="text-sm text-muted-foreground">Suas 5 movimentações mais recentes.</p>
+            </div>
+          </div>
+          {data.latest.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-6 text-center">Nenhum lançamento ainda.</div>
+          ) : (
+            <ul className="divide-y">
+              {data.latest.map((item) => (
+                <li key={item.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`size-8 rounded-full grid place-items-center shrink-0 ${item.tipo === "entrada" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                      {item.tipo === "entrada" ? <ArrowDownCircle className="size-4" /> : <ArrowUpCircle className="size-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{item.descricao || (item.tipo === "entrada" ? "Entrada" : "Saída")}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(item.data)}</p>
+                    </div>
+                  </div>
+                  <div className={`font-display font-semibold tabular-nums ${item.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
+                    {item.tipo === "entrada" ? "+" : "−"} {formatMoney(item.valor)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-4 pt-3 border-t">
+            <Button asChild variant="ghost" size="sm" className="w-full justify-between">
+              <Link to="/app/fluxo-caixa">Ver fluxo de caixa <ArrowRight className="size-4" /></Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="bg-card border rounded-2xl p-6 shadow-card">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-display font-semibold text-lg">Próximos compromissos</h2>
+              <p className="text-sm text-muted-foreground">A pagar e a receber nos próximos 7 dias.</p>
+            </div>
+          </div>
+          {upcomingPay.length === 0 && upcomingRec.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-6 text-center">Nenhum compromisso nos próximos 7 dias.</div>
+          ) : (
+            <div className="space-y-4">
+              {upcomingPay.length > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">A pagar</div>
+                  <ul className="space-y-2">
+                    {upcomingPay.map((p: any) => (
+                      <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{p.descricao || "Conta a pagar"}</p>
+                          <p className="text-xs text-muted-foreground">Vence em {formatDate(p.vencimento)}</p>
+                        </div>
+                        <span className="font-display font-semibold text-destructive tabular-nums">{formatMoney(Number(p.valor))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {upcomingRec.length > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">A receber</div>
+                  <ul className="space-y-2">
+                    {upcomingRec.map((r: any) => (
+                      <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{r.descricao || "Recebimento"}</p>
+                          <p className="text-xs text-muted-foreground">Vence em {formatDate(r.vencimento)}</p>
+                        </div>
+                        <span className="font-display font-semibold text-success tabular-nums">{formatMoney(Number(r.valor))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="mt-4 pt-3 border-t grid grid-cols-2 gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/app/contas-pagar">Contas a pagar</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/app/contas-receber">Contas a receber</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
+
+/* =============== CLIENT — small building blocks =============== */
+
+function HealthBlock({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "success" | "danger" | "warn" | "neutral";
+}) {
+  const valueTone =
+    tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning-foreground" : "";
+  const accent =
+    tone === "success" ? "bg-success" : tone === "danger" ? "bg-destructive" : tone === "warn" ? "bg-warning" : "bg-muted-foreground/30";
+  return (
+    <div className="bg-card border rounded-2xl p-5 shadow-card relative overflow-hidden">
+      <span className={`absolute left-0 top-0 bottom-0 w-1 ${accent}`} />
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`mt-3 font-display font-bold text-2xl md:text-[28px] leading-tight tabular-nums ${valueTone}`}>{value}</div>
+      {hint && <div className="text-xs text-muted-foreground mt-2">{hint}</div>}
+    </div>
+  );
+}
+
+function AlertRow({
+  tone,
+  icon: Icon,
+  text,
+  cta,
+  to,
+}: {
+  tone: "danger" | "warn" | "info";
+  icon: React.ComponentType<{ className?: string }>;
+  text: string;
+  cta: string;
+  to: string;
+}) {
+  const styles = {
+    danger: { bg: "bg-destructive/5 border-destructive/20", icon: "bg-destructive/10 text-destructive" },
+    warn: { bg: "bg-warning/5 border-warning/30", icon: "bg-warning/10 text-warning-foreground" },
+    info: { bg: "bg-primary/5 border-primary/20", icon: "bg-primary/10 text-primary" },
+  }[tone];
+  return (
+    <div className={`flex items-center gap-3 rounded-xl border p-3 ${styles.bg}`}>
+      <div className={`size-9 rounded-full grid place-items-center shrink-0 ${styles.icon}`}>
+        <Icon className="size-4" />
+      </div>
+      <p className="text-sm flex-1">{text}</p>
+      <Button asChild size="sm" variant="ghost" className="shrink-0">
+        <Link to={to}>{cta} <ArrowRight className="size-3 ml-1" /></Link>
+      </Button>
+    </div>
+  );
+}
+
+function QuickAction({
+  icon: Icon,
+  label,
+  to,
+  tone,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  to: string;
+  tone?: "success" | "danger";
+}) {
+  const iconTone =
+    tone === "success" ? "text-success bg-success/10" : tone === "danger" ? "text-destructive bg-destructive/10" : "text-primary bg-primary/10";
+  return (
+    <Link
+      to={to}
+      className="group bg-card border rounded-xl p-3 hover:border-primary/40 hover:shadow-card transition-all flex items-center gap-3"
+    >
+      <div className={`size-9 rounded-lg grid place-items-center ${iconTone}`}>
+        <Icon className="size-4" />
+      </div>
+      <span className="text-sm font-medium leading-tight">{label}</span>
+    </Link>
+  );
+}
+
+function ProgressLine({ label, value, percent, color }: { label: string; value: string; percent: number; color: string }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className="font-display font-semibold tabular-nums">{value}</span>
+      </div>
+      <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div className={`h-full ${color} transition-all`} style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value, hint, tone = "default" }: { label: string; value: string; hint?: string; tone?: "default" | "warn" }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`mt-1 font-display font-bold text-lg tabular-nums ${tone === "warn" ? "text-warning-foreground" : ""}`}>{value}</div>
+      {hint && <div className="text-[11px] text-muted-foreground mt-0.5">{hint}</div>}
+    </div>
+  );
+}
+
