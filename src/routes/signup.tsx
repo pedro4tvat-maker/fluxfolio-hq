@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { maskCNPJ, maskCEP, maskPhone, isValidCNPJ, BR_STATES } from "@/lib/cnpj";
+import { maskCNPJ, maskCEP, maskPhone, isValidCNPJ, maskCPF, isValidCPF, BR_STATES } from "@/lib/cnpj";
 
 export const Route = createFileRoute("/signup")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -61,6 +61,7 @@ function SignupPage() {
   const strength = useMemo(() => passwordStrength(password), [password]);
 
   // company (cliente)
+  const [personType, setPersonType] = useState<"pj" | "pf">("pj");
   const [c_nome, setCNome] = useState("");
   const [c_fantasia, setCFantasia] = useState("");
   const [c_cnpj, setCCnpj] = useState("");
@@ -112,9 +113,14 @@ function SignupPage() {
       if (!consultancyName.trim()) return "Informe o nome da consultoria";
       return null;
     }
-    if (!c_nome.trim()) return "Informe a razão social/nome da empresa";
-    if (!c_fantasia.trim()) return "Informe o nome fantasia";
-    if (!isValidCNPJ(c_cnpj)) return "CNPJ inválido. Use o formato 00.000.000/0000-00";
+    if (personType === "pj") {
+      if (!c_nome.trim()) return "Informe a razão social/nome da empresa";
+      if (!c_fantasia.trim()) return "Informe o nome fantasia";
+      if (!isValidCNPJ(c_cnpj)) return "CNPJ inválido. Use o formato 00.000.000/0000-00";
+    } else {
+      if (!c_nome.trim()) return "Informe o seu nome";
+      if (!isValidCPF(c_cnpj)) return "CPF inválido. Use o formato 000.000.000-00";
+    }
     if (!c_segmento.trim()) return "Informe o segmento";
     if (!c_cidade.trim()) return "Informe a cidade";
     if (!c_estado) return "Informe o estado (UF)";
@@ -193,9 +199,12 @@ function SignupPage() {
           role: kind,
           user_phone: phone,
           // empresa (cliente)
+          company_person_type: kind === "client_manager" ? personType : null,
           company_name: kind === "client_manager" ? c_nome.trim() : null,
-          company_trade_name: c_fantasia.trim(),
-          company_cnpj: c_cnpj.replace(/\D/g, ""),
+          company_trade_name: personType === "pj" ? c_fantasia.trim() : c_nome.trim(),
+          company_cnpj: personType === "pj" ? c_cnpj.replace(/\D/g, "") : "",
+          company_cpf: personType === "pf" ? c_cnpj.replace(/\D/g, "") : "",
+          company_document: c_cnpj.replace(/\D/g, ""),
           company_ie: c_ie.trim(),
           company_segment: c_segmento.trim(),
           company_city: c_cidade.trim(),
@@ -295,10 +304,41 @@ function SignupPage() {
 
         {step === 2 && kind === "client_manager" && (
           <div className="space-y-3">
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dados da empresa principal (Matriz)</div>
-            <Field label="Razão social" required value={c_nome} onChange={setCNome} />
-            <Field label="Nome fantasia" required value={c_fantasia} onChange={setCFantasia} />
-            <Field label="CNPJ" required value={c_cnpj} onChange={(v) => setCCnpj(maskCNPJ(v))} placeholder="00.000.000/0000-00" />
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {personType === "pj" ? "Dados da empresa principal (Matriz)" : "Seus dados (Pessoa Física / Autônomo)"}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => { setPersonType("pj"); setCCnpj(""); }}
+                className={`p-3 rounded-xl border text-left transition ${personType === "pj" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+              >
+                <div className="font-medium text-sm">Pessoa Jurídica</div>
+                <div className="text-xs text-muted-foreground">Empresa com CNPJ</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPersonType("pf"); setCCnpj(""); }}
+                className={`p-3 rounded-xl border text-left transition ${personType === "pf" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+              >
+                <div className="font-medium text-sm">Pessoa Física</div>
+                <div className="text-xs text-muted-foreground">Autônomo / MEI com CPF</div>
+              </button>
+            </div>
+
+            {personType === "pj" ? (
+              <>
+                <Field label="Razão social" required value={c_nome} onChange={setCNome} />
+                <Field label="Nome fantasia" required value={c_fantasia} onChange={setCFantasia} />
+                <Field label="CNPJ" required value={c_cnpj} onChange={(v) => setCCnpj(maskCNPJ(v))} placeholder="00.000.000/0000-00" />
+              </>
+            ) : (
+              <>
+                <Field label="Nome completo" required value={c_nome} onChange={setCNome} />
+                <Field label="CPF" required value={c_cnpj} onChange={(v) => setCCnpj(maskCPF(v))} placeholder="000.000.000-00" />
+              </>
+            )}
             <Field label="Segmento de atuação" required value={c_segmento} onChange={setCSegmento} placeholder="Ex.: Comércio, Serviços, Indústria" />
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2"><Field label="Cidade" required value={c_cidade} onChange={setCCidade} /></div>
@@ -313,7 +353,9 @@ function SignupPage() {
             <details className="rounded-lg border bg-muted/30 px-3 py-2">
               <summary className="text-sm font-medium cursor-pointer">Dados complementares (opcional)</summary>
               <div className="mt-3 space-y-3">
-                <Field label="Inscrição estadual" value={c_ie} onChange={setCIe} />
+                {personType === "pj" && (
+                  <Field label="Inscrição estadual" value={c_ie} onChange={setCIe} />
+                )}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2"><Field label="Endereço" value={c_endereco} onChange={setCEndereco} /></div>
                   <Field label="CEP" value={c_cep} onChange={(v) => setCCep(maskCEP(v))} placeholder="00000-000" />
