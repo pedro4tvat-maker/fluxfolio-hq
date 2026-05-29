@@ -18,8 +18,10 @@ import { Route as AppVendasRouteImport } from './routes/app.vendas'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppPrecificacaoRouteImport } from './routes/app.precificacao'
 import { Route as AppPlanoAcaoRouteImport } from './routes/app.plano-acao'
+import { Route as AppPendenciasRouteImport } from './routes/app.pendencias'
 import { Route as AppOrcamentoRouteImport } from './routes/app.orcamento'
 import { Route as AppKpisRouteImport } from './routes/app.kpis'
+import { Route as AppJornadaRouteImport } from './routes/app.jornada'
 import { Route as AppImportacoesRouteImport } from './routes/app.importacoes'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
 import { Route as AppExecutivoRouteImport } from './routes/app.executivo'
@@ -82,6 +84,11 @@ const AppPlanoAcaoRoute = AppPlanoAcaoRouteImport.update({
   path: '/plano-acao',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPendenciasRoute = AppPendenciasRouteImport.update({
+  id: '/pendencias',
+  path: '/pendencias',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppOrcamentoRoute = AppOrcamentoRouteImport.update({
   id: '/orcamento',
   path: '/orcamento',
@@ -90,6 +97,11 @@ const AppOrcamentoRoute = AppOrcamentoRouteImport.update({
 const AppKpisRoute = AppKpisRouteImport.update({
   id: '/kpis',
   path: '/kpis',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppJornadaRoute = AppJornadaRouteImport.update({
+  id: '/jornada',
+  path: '/jornada',
   getParentRoute: () => AppRoute,
 } as any)
 const AppImportacoesRoute = AppImportacoesRouteImport.update({
@@ -179,6 +191,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/pendencias': typeof AppPendenciasRoute
+  '/app/jornada': typeof AppJornadaRoute
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -192,8 +206,10 @@ export interface FileRoutesByFullPath {
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
+  '/app/jornada': typeof AppJornadaRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/pendencias': typeof AppPendenciasRoute
   '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
@@ -207,6 +223,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/pendencias': typeof AppPendenciasRoute
+  '/app/jornada': typeof AppJornadaRoute
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -220,8 +238,10 @@ export interface FileRoutesByTo {
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
+  '/app/jornada': typeof AppJornadaRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/pendencias': typeof AppPendenciasRoute
   '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
@@ -250,8 +270,10 @@ export interface FileRoutesById {
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
+  '/app/jornada': typeof AppJornadaRoute
   '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
+  '/app/pendencias': typeof AppPendenciasRoute
   '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
@@ -268,6 +290,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/pendencias'
+    | '/app/jornada'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -281,8 +305,10 @@ export interface FileRouteTypes {
     | '/app/executivo'
     | '/app/fluxo-caixa'
     | '/app/importacoes'
+    | '/app/jornada'
     | '/app/kpis'
     | '/app/orcamento'
+    | '/app/pendencias'
     | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
@@ -296,6 +322,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/pendencias'
+    | '/app/jornada'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -309,8 +337,10 @@ export interface FileRouteTypes {
     | '/app/executivo'
     | '/app/fluxo-caixa'
     | '/app/importacoes'
+    | '/app/jornada'
     | '/app/kpis'
     | '/app/orcamento'
+    | '/app/pendencias'
     | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
@@ -325,6 +355,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/agenda'
+    | '/app/pendencias'
+    | '/app/jornada'
     | '/app/centro-custos'
     | '/app/clientes'
     | '/app/configuracoes'
@@ -338,8 +370,10 @@ export interface FileRouteTypes {
     | '/app/executivo'
     | '/app/fluxo-caixa'
     | '/app/importacoes'
+    | '/app/jornada'
     | '/app/kpis'
     | '/app/orcamento'
+    | '/app/pendencias'
     | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
@@ -421,6 +455,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPlanoAcaoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/pendencias': {
+      id: '/app/pendencias'
+      path: '/pendencias'
+      fullPath: '/app/pendencias'
+      preLoaderRoute: typeof AppPendenciasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/orcamento': {
       id: '/app/orcamento'
       path: '/orcamento'
@@ -433,6 +474,13 @@ declare module '@tanstack/react-router' {
       path: '/kpis'
       fullPath: '/app/kpis'
       preLoaderRoute: typeof AppKpisRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/jornada': {
+      id: '/app/jornada'
+      path: '/jornada'
+      fullPath: '/app/jornada'
+      preLoaderRoute: typeof AppJornadaRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/importacoes': {
@@ -533,6 +581,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/pendencias': {
+      id: '/app/pendencias'
+      path: '/pendencias'
+      fullPath: '/app/pendencias'
+      preLoaderRoute: typeof AppPendenciasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/jornada': {
+      id: '/app/jornada'
+      path: '/jornada'
+      fullPath: '/app/jornada'
+      preLoaderRoute: typeof AppJornadaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/empresa/$id': {
       id: '/app/empresa/$id'
       path: '/empresa/$id'
@@ -563,6 +625,8 @@ const AppCrmRouteWithChildren =
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
+  AppPendenciasRoute: typeof AppPendenciasRoute
+  AppJornadaRoute: typeof AppJornadaRoute
   AppCentroCustosRoute: typeof AppCentroCustosRoute
   AppClientesRoute: typeof AppClientesRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
@@ -576,8 +640,10 @@ interface AppRouteChildren {
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
   AppImportacoesRoute: typeof AppImportacoesRoute
+  AppJornadaRoute: typeof AppJornadaRoute
   AppKpisRoute: typeof AppKpisRoute
   AppOrcamentoRoute: typeof AppOrcamentoRoute
+  AppPendenciasRoute: typeof AppPendenciasRoute
   AppPlanoAcaoRoute: typeof AppPlanoAcaoRoute
   AppPrecificacaoRoute: typeof AppPrecificacaoRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
@@ -588,6 +654,8 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
+  AppPendenciasRoute: AppPendenciasRoute,
+  AppJornadaRoute: AppJornadaRoute,
   AppCentroCustosRoute: AppCentroCustosRoute,
   AppClientesRoute: AppClientesRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
@@ -601,8 +669,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppExecutivoRoute: AppExecutivoRoute,
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
   AppImportacoesRoute: AppImportacoesRoute,
+  AppJornadaRoute: AppJornadaRoute,
   AppKpisRoute: AppKpisRoute,
   AppOrcamentoRoute: AppOrcamentoRoute,
+  AppPendenciasRoute: AppPendenciasRoute,
   AppPlanoAcaoRoute: AppPlanoAcaoRoute,
   AppPrecificacaoRoute: AppPrecificacaoRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,

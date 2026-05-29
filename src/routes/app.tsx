@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Gauge, Upload, BadgeCheck, Copy, Users, FolderArchive,
-  ChevronDown, ChevronRight, CalendarDays,
+  ChevronDown, ChevronRight, CalendarDays, Inbox, Route as RouteIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,12 +29,15 @@ const consultantNav: NavItem[] = [
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
   { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
   { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
+  { to: "/app/pendencias", label: "Central de Pendências", icon: Inbox },
+  { to: "/app/jornada", label: "Jornada da Consultoria", icon: RouteIcon },
   { to: "/app/relatorios", label: "Relatórios consolidados", icon: FileBarChart },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 const clientNav: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/app/pendencias", label: "Minhas Pendências", icon: Inbox },
   { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
   { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },

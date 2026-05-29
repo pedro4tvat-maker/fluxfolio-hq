@@ -330,6 +330,108 @@ export type Database = {
           },
         ]
       }
+      client_pending_items: {
+        Row: {
+          allow_client_view: boolean
+          branch_id: string | null
+          company_id: string
+          consultant_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          pending_type: string
+          priority: string
+          related_module: string | null
+          related_record_id: string | null
+          request_date: string
+          requested_by_user_id: string | null
+          resolved_at: string | null
+          responsible_name: string | null
+          responsible_user_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          allow_client_view?: boolean
+          branch_id?: string | null
+          company_id: string
+          consultant_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          pending_type?: string
+          priority?: string
+          related_module?: string | null
+          related_record_id?: string | null
+          request_date?: string
+          requested_by_user_id?: string | null
+          resolved_at?: string | null
+          responsible_name?: string | null
+          responsible_user_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          allow_client_view?: boolean
+          branch_id?: string | null
+          company_id?: string
+          consultant_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          pending_type?: string
+          priority?: string
+          related_module?: string | null
+          related_record_id?: string | null
+          request_date?: string
+          requested_by_user_id?: string | null
+          resolved_at?: string | null
+          responsible_name?: string | null
+          responsible_user_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_pending_responses: {
+        Row: {
+          attachment_url: string | null
+          author_name: string | null
+          created_at: string
+          id: string
+          pending_item_id: string
+          response_text: string | null
+          user_id: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          author_name?: string | null
+          created_at?: string
+          id?: string
+          pending_item_id: string
+          response_text?: string | null
+          user_id: string
+        }
+        Update: {
+          attachment_url?: string | null
+          author_name?: string | null
+          created_at?: string
+          id?: string
+          pending_item_id?: string
+          response_text?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           ativo: boolean
@@ -337,6 +439,9 @@ export type Database = {
           cep: string | null
           cidade: string | null
           cnpj: string | null
+          consultancy_progress: number
+          consultancy_stage: string
+          consultancy_status: string
           created_at: string
           data_inicio: string | null
           documento: string | null
@@ -360,6 +465,9 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           cnpj?: string | null
+          consultancy_progress?: number
+          consultancy_stage?: string
+          consultancy_status?: string
           created_at?: string
           data_inicio?: string | null
           documento?: string | null
@@ -383,6 +491,9 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           cnpj?: string | null
+          consultancy_progress?: number
+          consultancy_stage?: string
+          consultancy_status?: string
           created_at?: string
           data_inicio?: string | null
           documento?: string | null
@@ -724,6 +835,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      consultancy_stage_history: {
+        Row: {
+          changed_by: string | null
+          company_id: string
+          consultant_id: string
+          created_at: string
+          id: string
+          new_stage: string
+          notes: string | null
+          previous_stage: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          company_id: string
+          consultant_id: string
+          created_at?: string
+          id?: string
+          new_stage: string
+          notes?: string | null
+          previous_stage?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          company_id?: string
+          consultant_id?: string
+          created_at?: string
+          id?: string
+          new_stage?: string
+          notes?: string | null
+          previous_stage?: string | null
+        }
+        Relationships: []
       }
       consultancy_transactions: {
         Row: {
