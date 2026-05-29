@@ -146,6 +146,11 @@ function EmpresaResumo() {
           ))}
         </div>
       </div>
+
+      <div>
+        <h2 className="font-display font-semibold mb-3">Documentos da empresa</h2>
+        <AttachmentsPanel companyId={id} module="empresa" recordId={id} />
+      </div>
     </div>
   );
 }
