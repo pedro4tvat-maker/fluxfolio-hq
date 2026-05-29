@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDownCircle, ArrowUpCircle, Download, Filter, PlusCircle, Search, Trash2, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
 export const Route = createFileRoute("/app/fluxo-caixa")({ component: FluxoCaixa });
 

@@ -218,6 +218,16 @@ function ContasAPagar() {
           </Table>
         </div>
       </div>
+      </div>
+
+      {selected && (
+        <section className="space-y-2">
+          <h2 className="font-display font-semibold">Documentos e comprovantes</h2>
+          <div className="bg-card border rounded-2xl p-4 shadow-card">
+            <AttachmentsPanel companyId={selected} module="payables" />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
