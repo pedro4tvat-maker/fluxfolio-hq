@@ -969,6 +969,116 @@ export type Database = {
           },
         ]
       }
+      financial_diagnostic_answers: {
+        Row: {
+          answer: string | null
+          created_at: string
+          diagnostic_id: string
+          id: string
+          notes: string | null
+          question: string
+          question_key: string
+          score: number
+          section: string
+          updated_at: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string
+          diagnostic_id: string
+          id?: string
+          notes?: string | null
+          question: string
+          question_key: string
+          score?: number
+          section: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string
+          diagnostic_id?: string
+          id?: string
+          notes?: string | null
+          question?: string
+          question_key?: string
+          score?: number
+          section?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_diagnostic_answers_diagnostic_id_fkey"
+            columns: ["diagnostic_id"]
+            isOneToOne: false
+            referencedRelation: "financial_diagnostics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_diagnostics: {
+        Row: {
+          allow_client_view: boolean
+          branch_id: string | null
+          classification: string | null
+          company_id: string
+          consultant_id: string
+          created_at: string
+          diagnostic_date: string
+          finalized_at: string | null
+          id: string
+          next_steps: string | null
+          notes: string | null
+          overall_score: number
+          recommendations: string | null
+          responsible_name: string | null
+          status: string
+          strengths: string | null
+          updated_at: string
+          weaknesses: string | null
+        }
+        Insert: {
+          allow_client_view?: boolean
+          branch_id?: string | null
+          classification?: string | null
+          company_id: string
+          consultant_id: string
+          created_at?: string
+          diagnostic_date?: string
+          finalized_at?: string | null
+          id?: string
+          next_steps?: string | null
+          notes?: string | null
+          overall_score?: number
+          recommendations?: string | null
+          responsible_name?: string | null
+          status?: string
+          strengths?: string | null
+          updated_at?: string
+          weaknesses?: string | null
+        }
+        Update: {
+          allow_client_view?: boolean
+          branch_id?: string | null
+          classification?: string | null
+          company_id?: string
+          consultant_id?: string
+          created_at?: string
+          diagnostic_date?: string
+          finalized_at?: string | null
+          id?: string
+          next_steps?: string | null
+          notes?: string | null
+          overall_score?: number
+          recommendations?: string | null
+          responsible_name?: string | null
+          status?: string
+          strengths?: string | null
+          updated_at?: string
+          weaknesses?: string | null
+        }
+        Relationships: []
+      }
       import_batches: {
         Row: {
           branch_id: string | null
