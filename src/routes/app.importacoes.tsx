@@ -223,17 +223,20 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
       toast.error("Mapeie ao menos Data e Valor.");
       return;
     }
-    const [{ data: payables = [] }, { data: receivables = [] }] = await Promise.all([
+    const [payRes, recRes] = await Promise.all([
       supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).in("status", ["em_aberto", "vencido"]),
       supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).in("status", ["em_aberto", "vencido"]),
     ]);
+    const payables = payRes.data ?? [];
+    const receivables = recRes.data ?? [];
 
     const since = new Date(); since.setDate(since.getDate() - 180);
-    const { data: existing = [] } = await supabase
+    const existRes = await supabase
       .from("transactions")
       .select("data, valor, descricao, conta_id")
       .eq("company_id", companyId!)
       .gte("data", since.toISOString().slice(0, 10));
+    const existing = existRes.data ?? [];
 
     const rows: PreviewRow[] = parsed.rows.map((raw, idx) => {
       const dataStr = mapping.data ? String(raw[mapping.data] ?? "") : "";
