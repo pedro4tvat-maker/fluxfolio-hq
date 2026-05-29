@@ -29,6 +29,8 @@ import {
   parseFile, autoMapColumns, parseDate, parseAmount, DEFAULT_RULES,
   type BankFields, type ParsedFile, type Rule,
 } from "@/lib/import-engine";
+import { SCHEMAS } from "@/lib/import-schemas";
+import { GenericImportWizard } from "@/components/imports/GenericImportWizard";
 
 export const Route = createFileRoute("/app/importacoes")({
   component: ImportacoesPage,
