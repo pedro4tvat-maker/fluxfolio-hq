@@ -304,10 +304,41 @@ function SignupPage() {
 
         {step === 2 && kind === "client_manager" && (
           <div className="space-y-3">
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dados da empresa principal (Matriz)</div>
-            <Field label="Razão social" required value={c_nome} onChange={setCNome} />
-            <Field label="Nome fantasia" required value={c_fantasia} onChange={setCFantasia} />
-            <Field label="CNPJ" required value={c_cnpj} onChange={(v) => setCCnpj(maskCNPJ(v))} placeholder="00.000.000/0000-00" />
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {personType === "pj" ? "Dados da empresa principal (Matriz)" : "Seus dados (Pessoa Física / Autônomo)"}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => { setPersonType("pj"); setCCnpj(""); }}
+                className={`p-3 rounded-xl border text-left transition ${personType === "pj" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+              >
+                <div className="font-medium text-sm">Pessoa Jurídica</div>
+                <div className="text-xs text-muted-foreground">Empresa com CNPJ</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPersonType("pf"); setCCnpj(""); }}
+                className={`p-3 rounded-xl border text-left transition ${personType === "pf" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+              >
+                <div className="font-medium text-sm">Pessoa Física</div>
+                <div className="text-xs text-muted-foreground">Autônomo / MEI com CPF</div>
+              </button>
+            </div>
+
+            {personType === "pj" ? (
+              <>
+                <Field label="Razão social" required value={c_nome} onChange={setCNome} />
+                <Field label="Nome fantasia" required value={c_fantasia} onChange={setCFantasia} />
+                <Field label="CNPJ" required value={c_cnpj} onChange={(v) => setCCnpj(maskCNPJ(v))} placeholder="00.000.000/0000-00" />
+              </>
+            ) : (
+              <>
+                <Field label="Nome completo" required value={c_nome} onChange={setCNome} />
+                <Field label="CPF" required value={c_cnpj} onChange={(v) => setCCnpj(maskCPF(v))} placeholder="000.000.000-00" />
+              </>
+            )}
             <Field label="Segmento de atuação" required value={c_segmento} onChange={setCSegmento} placeholder="Ex.: Comércio, Serviços, Indústria" />
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2"><Field label="Cidade" required value={c_cidade} onChange={setCCidade} /></div>
