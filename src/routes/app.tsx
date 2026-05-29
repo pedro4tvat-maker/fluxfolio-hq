@@ -38,8 +38,10 @@ const clientNav: NavItem[] = [
   { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
   { to: "/app/estoque", label: "Estoque", icon: Package },
   { to: "/app/precificacao", label: "Precificação", icon: Tag },
+  { to: "/app/precificacao", label: "Precificação", icon: Tag },
+  { to: "/app/kpis", label: "KPIs", icon: Gauge },
   { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
-  { to: "/app/configuracoes", label: "Configurações", icon: Settings },
+  { to: "/app/configuracoes", label: "Configurações da Empresa", icon: Settings },
 ];
 
 function AppLayout() {
