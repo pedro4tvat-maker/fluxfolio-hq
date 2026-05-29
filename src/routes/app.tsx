@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Gauge, Upload, BadgeCheck, Copy, Users, FolderArchive,
-  ChevronDown, ChevronRight, CalendarDays, Inbox, Route as RouteIcon, NotebookPen,
+  ChevronDown, ChevronRight, CalendarDays, Inbox, Route as RouteIcon, NotebookPen, BookOpen,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,7 @@ const consultantNav: NavItem[] = [
   { to: "/app/pendencias", label: "Central de Pendências", icon: Inbox },
   { to: "/app/jornada", label: "Jornada da Consultoria", icon: RouteIcon },
   { to: "/app/atas", label: "Atas de Reunião", icon: NotebookPen },
+  { to: "/app/biblioteca", label: "Biblioteca do Consultor", icon: BookOpen },
   { to: "/app/relatorios", label: "Relatórios consolidados", icon: FileBarChart },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
