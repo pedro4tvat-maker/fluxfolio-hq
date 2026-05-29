@@ -1042,6 +1042,160 @@ export type Database = {
           },
         ]
       }
+      consultant_library_template_usage: {
+        Row: {
+          branch_id: string | null
+          company_id: string | null
+          consultant_id: string
+          created_at: string
+          created_by: string | null
+          generated_content: string | null
+          generated_title: string
+          id: string
+          period: string | null
+          related_module: string | null
+          related_record_id: string | null
+          shared_with_client: boolean
+          status: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id?: string | null
+          consultant_id: string
+          created_at?: string
+          created_by?: string | null
+          generated_content?: string | null
+          generated_title: string
+          id?: string
+          period?: string | null
+          related_module?: string | null
+          related_record_id?: string | null
+          shared_with_client?: boolean
+          status?: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string | null
+          consultant_id?: string
+          created_at?: string
+          created_by?: string | null
+          generated_content?: string | null
+          generated_title?: string
+          id?: string
+          period?: string | null
+          related_module?: string | null
+          related_record_id?: string | null
+          shared_with_client?: boolean
+          status?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_library_template_usage_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "consultant_library_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultant_library_template_versions: {
+        Row: {
+          change_note: string | null
+          changed_by: string | null
+          content_snapshot: string | null
+          created_at: string
+          id: string
+          template_id: string
+        }
+        Insert: {
+          change_note?: string | null
+          changed_by?: string | null
+          content_snapshot?: string | null
+          created_at?: string
+          id?: string
+          template_id: string
+        }
+        Update: {
+          change_note?: string | null
+          changed_by?: string | null
+          content_snapshot?: string | null
+          created_at?: string
+          id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_library_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "consultant_library_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultant_library_templates: {
+        Row: {
+          category: string
+          consultant_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_url: string | null
+          id: string
+          is_default: boolean
+          status: string
+          tags: string[]
+          template_type: string
+          title: string
+          updated_at: string
+          usage_count: number
+          visibility: string
+        }
+        Insert: {
+          category?: string
+          consultant_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_default?: boolean
+          status?: string
+          tags?: string[]
+          template_type?: string
+          title: string
+          updated_at?: string
+          usage_count?: number
+          visibility?: string
+        }
+        Update: {
+          category?: string
+          consultant_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_default?: boolean
+          status?: string
+          tags?: string[]
+          template_type?: string
+          title?: string
+          updated_at?: string
+          usage_count?: number
+          visibility?: string
+        }
+        Relationships: []
+      }
       consultants: {
         Row: {
           city: string | null
