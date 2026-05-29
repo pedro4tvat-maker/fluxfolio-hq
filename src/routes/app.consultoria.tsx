@@ -30,7 +30,6 @@ export const CONSULTORIA_SECTIONS = [
   { id: "pagar", label: "Contas a Pagar" },
   { id: "relatorios", label: "Relatórios" },
   { id: "solicitacoes", label: "Solicitações" },
-  { id: "config", label: "Configurações" },
 ] as const;
 type Section = typeof CONSULTORIA_SECTIONS[number]["id"];
 const SECTION_IDS = CONSULTORIA_SECTIONS.map((s) => s.id) as readonly string[];
@@ -102,7 +101,7 @@ function Inner() {
         <TabsContent value="pagar" className="mt-0"><PagarTab consultantId={consultancy.id} /></TabsContent>
         <TabsContent value="relatorios" className="mt-0"><RelatoriosTab consultantId={consultancy.id} /></TabsContent>
         <TabsContent value="solicitacoes" className="mt-0"><SolicitacoesTab /></TabsContent>
-        <TabsContent value="config" className="mt-0"><PerfilTab /></TabsContent>
+        
       </Tabs>
     </div>
   );

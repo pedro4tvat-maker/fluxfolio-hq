@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Gauge, Upload, BadgeCheck, Copy, Users, FolderArchive,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,6 +27,7 @@ const consultantNav: NavItem[] = [
   { to: "/app", label: "Painel do consultor", icon: LayoutDashboard, exact: true },
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
   { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
+  { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
   { to: "/app/relatorios", label: "Relatórios consolidados", icon: FileBarChart },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
