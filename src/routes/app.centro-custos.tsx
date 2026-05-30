@@ -7,25 +7,11 @@ import { formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/centro-custos")({ component: CentroCustosPage });
 
-const KPI_OPTIONS: { value: string; label: string }[] = [
-  { value: "none", label: "Sem classificação (usar categoria)" },
-  { value: "outras_receitas", label: "Outras Receitas" },
-  { value: "impostos", label: "Deduções / Impostos" },
-  { value: "custos_variaveis", label: "Custos Variáveis" },
-  { value: "custos_fixos", label: "Custos Fixos" },
-  { value: "despesas_operacionais", label: "Despesas Operacionais" },
-  { value: "marketing", label: "Marketing" },
-  { value: "despesas_financeiras", label: "Despesas Financeiras" },
-];
-
-const kpiLabel = (v: string | null | undefined) =>
-  KPI_OPTIONS.find((o) => o.value === v)?.label ?? "—";
 
 function CentroCustosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
