@@ -533,7 +533,10 @@ function VendasPage() {
     const parsed: ParsedItem[] = partes.map((p) => {
       // Formato novo: "2x Nome @21.00|c17.00" (preço e custo cadastrados NA venda)
       // Formato legado: "2x Nome"
-      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?$/i);
+      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
+      // Se não captou @preco mas o nome contém "@", refaz greedy
+      const m2 = !m || (!m[3] && /@/.test(p)) ? null : m;
+      const mFinal = m2 ?? p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+)$/i);
       const qtd = m ? Number(m[1].replace(",", ".")) : 1;
       const nome = m ? m[2].trim() : p;
       const precoSale = m && m[3] ? Number(m[3].replace(",", ".")) : NaN;
