@@ -950,7 +950,6 @@ function VendasPage() {
         />
       )}
 
-      <section className="space-y-3">
       <section className="bg-card border rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
