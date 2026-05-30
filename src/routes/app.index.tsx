@@ -608,8 +608,6 @@ function ClientDashboard() {
         </div>
       </section>
 
-
-      {/* 7. Resumo operacional */}
       <section>
         <SectionTitle>Resumo operacional</SectionTitle>
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
