@@ -558,14 +558,8 @@ function VendasPage() {
     if (parsed.length === 0) {
       return [{ nome: desc || "Venda", qtd: 1, preco: valorTotal, custo: 0, subtotal: valorTotal, custoTotal: 0, margem: valorTotal }];
     }
-    const totalParsed = parsed.reduce((a, b) => a + b.subtotal, 0);
-    if (totalParsed > 0 && Math.abs(totalParsed - valorTotal) > 0.5) {
-      const factor = valorTotal / totalParsed;
-      return parsed.map((it) => {
-        const subtotal = it.subtotal * factor;
-        return { ...it, preco: it.preco * factor, subtotal, margem: subtotal - it.custoTotal };
-      });
-    }
+    // Mantém o preço unitário cadastrado do produto, sem rescalonar pelo total da venda
+    // (rescalonamento causava distorção quando havia desconto/arredondamento na venda).
     return parsed;
   }
 
