@@ -951,6 +951,29 @@ function VendasPage() {
       )}
 
       <section className="space-y-3">
+      <section className="bg-card border rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg font-display font-semibold flex items-center gap-2"><TrendingUp className="size-5" /> Relatório do período</h2>
+            <p className="text-xs text-muted-foreground">Faturamento, custos diretos e margem de cada venda no intervalo escolhido.</p>
+          </div>
+          <div className="flex items-end gap-2 flex-wrap">
+            <div className="space-y-1">
+              <Label className="text-xs">De</Label>
+              <Input type="date" value={reportFrom} onChange={(e) => setReportFrom(e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Até</Label>
+              <Input type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} className="h-9" />
+            </div>
+            <Button type="button" onClick={printPeriodMarginReport}>
+              <Download className="size-4" /> Exportar Fluxo + Margem
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3">
         <h2 className="text-lg font-display font-semibold">Vendas recentes (à vista)</h2>
         <div className="bg-card border rounded-2xl p-4">
           {isLoading ? (
