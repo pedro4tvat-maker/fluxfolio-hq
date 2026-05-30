@@ -1113,6 +1113,10 @@ function VendasPage() {
                     <Button type="button" variant="outline" size="sm" onClick={() => printSaleMarginReport(row, "vista")}>
                       <TrendingUp className="size-4" /> Margem
                     </Button>
+                    <Button type="button" variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => cancelSale(row, "vista")}>
+                      <Ban className="size-4" /> Cancelar
+                    </Button>
+
                   </div>
                 </div>
               ))}
