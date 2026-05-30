@@ -101,6 +101,16 @@ function Relatorios() {
   const [inicio, setInicio] = useState(range.start);
   const [fim, setFim] = useState(range.end);
   const [active, setActive] = useState<ReportKey | null>(null);
+  const [costCenterId, setCostCenterId] = useState<string>("");
+
+  const { data: costCenters = [] } = useQuery({
+    queryKey: ["cost_centers", currentCompanyId],
+    enabled: !!currentCompanyId,
+    queryFn: async () => {
+      const { data } = await supabase.from("cost_centers").select("id, nome").eq("company_id", currentCompanyId!).order("nome");
+      return data ?? [];
+    },
+  });
 
   // período anterior automático
   const prevPeriod = useMemo(() => {
@@ -114,15 +124,15 @@ function Relatorios() {
   }, [inicio, fim]);
 
   const { data, isFetching } = useQuery({
-    queryKey: ["report-data", currentCompanyId, branchId, inicio, fim],
+    queryKey: ["report-data", currentCompanyId, branchId, inicio, fim, costCenterId],
     enabled: !!currentCompanyId,
-    queryFn: () => fetchReportData(currentCompanyId!, branchId, { start: inicio, end: fim }),
+    queryFn: () => fetchReportData(currentCompanyId!, branchId, { start: inicio, end: fim }, costCenterId || null),
   });
 
   const { data: dataPrev } = useQuery({
-    queryKey: ["report-data-prev", currentCompanyId, branchId, prevPeriod.start, prevPeriod.end],
+    queryKey: ["report-data-prev", currentCompanyId, branchId, prevPeriod.start, prevPeriod.end, costCenterId],
     enabled: !!currentCompanyId && active === "comparativo_periodos",
-    queryFn: () => fetchReportData(currentCompanyId!, branchId, prevPeriod),
+    queryFn: () => fetchReportData(currentCompanyId!, branchId, prevPeriod, costCenterId || null),
   });
 
   const { data: filiaisData } = useQuery({
