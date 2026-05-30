@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Package, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 export const Route = createFileRoute("/app/estoque")({ component: EstoquePage });
 
@@ -47,16 +48,16 @@ const emptyProduct = {
   nome: "",
   categoria: "",
   fornecedor: "",
-  custo_unitario: "0",
-  preco_venda: "0",
-  estoque_minimo: "0",
-  quantidade_inicial: "0",
+  custo_unitario: "",
+  preco_venda: "",
+  estoque_minimo: "",
+  quantidade_inicial: "",
 };
 
 const emptyMovement = {
   product_id: "",
   tipo: "entrada" as "entrada" | "saida",
-  quantidade: "1",
+  quantidade: "",
   custo_unitario: "",
   motivo: "",
   data: new Date().toISOString().slice(0, 10),
@@ -144,10 +145,10 @@ function EstoquePage() {
       nome: p.nome,
       categoria: p.categoria ?? "",
       fornecedor: p.fornecedor ?? "",
-      custo_unitario: String(p.custo_unitario ?? 0),
-      preco_venda: String(p.preco_venda ?? 0),
-      estoque_minimo: String(p.estoque_minimo ?? 0),
-      quantidade_inicial: "0",
+      custo_unitario: p.custo_unitario ? String(p.custo_unitario) : "",
+      preco_venda: p.preco_venda ? String(p.preco_venda) : "",
+      estoque_minimo: p.estoque_minimo ? String(p.estoque_minimo) : "",
+      quantidade_inicial: "",
     });
     setProductOpen(true);
   }
@@ -465,20 +466,20 @@ function EstoquePage() {
             </div>
             <div className="space-y-1">
               <Label>Custo unitário</Label>
-              <Input type="number" min="0" step="0.01" value={productForm.custo_unitario} onChange={(e) => setProductForm({ ...productForm, custo_unitario: e.target.value })} />
+              <CurrencyInput value={productForm.custo_unitario} onChange={(v) => setProductForm({ ...productForm, custo_unitario: v })} />
             </div>
             <div className="space-y-1">
               <Label>Preço de venda</Label>
-              <Input type="number" min="0" step="0.01" value={productForm.preco_venda} onChange={(e) => setProductForm({ ...productForm, preco_venda: e.target.value })} />
+              <CurrencyInput value={productForm.preco_venda} onChange={(v) => setProductForm({ ...productForm, preco_venda: v })} />
             </div>
             <div className="space-y-1">
               <Label>Estoque mínimo</Label>
-              <Input type="number" min="0" step="0.01" value={productForm.estoque_minimo} onChange={(e) => setProductForm({ ...productForm, estoque_minimo: e.target.value })} />
+              <Input type="number" min="0" step="1" placeholder="0" value={productForm.estoque_minimo} onChange={(e) => setProductForm({ ...productForm, estoque_minimo: e.target.value })} />
             </div>
             {!editing && (
               <div className="space-y-1">
                 <Label>Quantidade inicial</Label>
-                <Input type="number" min="0" step="0.01" value={productForm.quantidade_inicial} onChange={(e) => setProductForm({ ...productForm, quantidade_inicial: e.target.value })} />
+                <Input type="number" min="0" step="1" placeholder="0" value={productForm.quantidade_inicial} onChange={(e) => setProductForm({ ...productForm, quantidade_inicial: e.target.value })} />
               </div>
             )}
             <DialogFooter className="md:col-span-2">
@@ -523,11 +524,11 @@ function EstoquePage() {
               </div>
               <div className="space-y-1">
                 <Label>Quantidade</Label>
-                <Input type="number" min="0" step="0.01" value={moveForm.quantidade} onChange={(e) => setMoveForm({ ...moveForm, quantidade: e.target.value })} />
+                <Input type="number" min="0" step="1" placeholder="0" value={moveForm.quantidade} onChange={(e) => setMoveForm({ ...moveForm, quantidade: e.target.value })} />
               </div>
               <div className="space-y-1">
                 <Label>Custo unitário (opcional)</Label>
-                <Input type="number" min="0" step="0.01" value={moveForm.custo_unitario} onChange={(e) => setMoveForm({ ...moveForm, custo_unitario: e.target.value })} />
+                <CurrencyInput value={moveForm.custo_unitario} onChange={(v) => setMoveForm({ ...moveForm, custo_unitario: v })} />
               </div>
             </div>
             <div className="space-y-1">
