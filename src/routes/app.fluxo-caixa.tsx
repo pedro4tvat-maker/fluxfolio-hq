@@ -391,19 +391,38 @@ function TransactionDialog({
     if (!descricao.trim()) return toast.error("Informe uma descrição");
     if (!v || v <= 0) return toast.error("Informe um valor válido");
     setSaving(true);
-    const { error } = await supabase.from("transactions").insert({
-      company_id: companyId,
-      data, tipo, descricao: descricao.trim(), valor: v, status,
-      categoria_id: categoriaId || null,
-      conta_id: contaId || null,
-      centro_custo_id: centroCustoId || null,
-      forma_pagamento: forma || null,
-      observacoes: observacoes.trim() || null,
-    });
-    setSaving(false);
-    if (error) return toast.error("Erro ao salvar", { description: error.message });
-    toast.success("Lançamento criado");
-    setDescricao(""); setValor(""); setObservacoes("");
+  const submit = async () => {
+    const v = Number(valor.replace(",", "."));
+    if (!descricao.trim()) return toast.error("Informe uma descrição");
+    if (!v || v <= 0) return toast.error("Informe um valor válido");
+    setSaving(true);
+    if (tx) {
+      const { error } = await supabase.from("transactions").update({
+        data, tipo, descricao: descricao.trim(), valor: v, status,
+        categoria_id: categoriaId || null,
+        conta_id: contaId || null,
+        centro_custo_id: centroCustoId || null,
+        forma_pagamento: forma || null,
+        observacoes: observacoes.trim() || null,
+      }).eq("id", tx.id);
+      setSaving(false);
+      if (error) return toast.error("Erro ao atualizar", { description: error.message });
+      toast.success("Lançamento atualizado");
+    } else {
+      const { error } = await supabase.from("transactions").insert({
+        company_id: companyId,
+        data, tipo, descricao: descricao.trim(), valor: v, status,
+        categoria_id: categoriaId || null,
+        conta_id: contaId || null,
+        centro_custo_id: centroCustoId || null,
+        forma_pagamento: forma || null,
+        observacoes: observacoes.trim() || null,
+      });
+      setSaving(false);
+      if (error) return toast.error("Erro ao salvar", { description: error.message });
+      toast.success("Lançamento criado");
+      setDescricao(""); setValor(""); setObservacoes("");
+    }
     onDone();
   };
 
