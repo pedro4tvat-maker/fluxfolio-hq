@@ -246,7 +246,13 @@ function VendasPage() {
     setSaving(true);
     try {
       const valor = total;
-      const partes = items.map((it) => `${it.quantidade}x ${it.nome}`).join(", ");
+      const partes = items
+        .map((it) => {
+          const preco = Number(it.preco_unitario) || 0;
+          const custo = Number(it.custo_unitario) || 0;
+          return `${it.quantidade}x ${it.nome} @${preco.toFixed(2)}|c${custo.toFixed(2)}`;
+        })
+        .join(", ");
       const descricao = `Venda${cliente?.name ? ` - ${cliente.name}` : ""} (${partes})`;
 
       for (const it of items) {
@@ -433,7 +439,7 @@ function VendasPage() {
     const itensTxt = matchItens ? matchItens[1] : desc;
     const itensArr = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
     const linhas = itensArr
-      .map((it) => `<tr><td>${escapeHtml(it)}</td></tr>`)
+      .map((it) => `<tr><td>${escapeHtml(it.replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?\s*$/, ""))}</td></tr>`)
       .join("");
 
     const html = `<!doctype html>
@@ -525,32 +531,42 @@ function VendasPage() {
     const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
     const dateKey = (saleDate || "").slice(0, 10);
     const parsed: ParsedItem[] = partes.map((p) => {
-      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+)$/i);
+      // Formato novo: "2x Nome @21.00|c17.00" (preço e custo cadastrados NA venda)
+      // Formato legado: "2x Nome"
+      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
       const qtd = m ? Number(m[1].replace(",", ".")) : 1;
       const nome = m ? m[2].trim() : p;
+      const precoSale = m && m[3] ? Number(m[3].replace(",", ".")) : NaN;
+      const custoSale = m && m[4] ? Number(m[4].replace(",", ".")) : NaN;
       const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
-      // Procura movimento de estoque correspondente (custo registrado NO MOMENTO da venda)
-      let custo = Number(prod?.custo_unitario ?? 0);
-      if (prod) {
-        // Match exato: produto + qtd + mesma data
-        let idx = movsPool.findIndex((mv) =>
-          mv.product_id === prod.id &&
-          Number(mv.quantidade) === qtd &&
-          String(mv.data || "").slice(0, 10) === dateKey,
-        );
-        // Fallback: produto + mesma data (ignora qtd)
-        if (idx < 0) idx = movsPool.findIndex((mv) =>
-          mv.product_id === prod.id && String(mv.data || "").slice(0, 10) === dateKey,
-        );
-        // Fallback: qualquer movimento desse produto (mais recente)
-        if (idx < 0) idx = movsPool.findIndex((mv) => mv.product_id === prod.id);
-        if (idx >= 0) {
-          const movCusto = Number(movsPool[idx].custo_unitario);
-          if (Number.isFinite(movCusto) && movCusto > 0) custo = movCusto;
-          movsPool.splice(idx, 1);
+
+      // CUSTO: 1) custo registrado na venda (descrição); 2) stock_movement da venda; 3) custo atual do produto
+      let custo = Number.isFinite(custoSale) && custoSale > 0
+        ? custoSale
+        : Number(prod?.custo_unitario ?? 0);
+      if (!Number.isFinite(custoSale) || custoSale <= 0) {
+        if (prod) {
+          let idx = movsPool.findIndex((mv) =>
+            mv.product_id === prod.id &&
+            Number(mv.quantidade) === qtd &&
+            String(mv.data || "").slice(0, 10) === dateKey,
+          );
+          if (idx < 0) idx = movsPool.findIndex((mv) =>
+            mv.product_id === prod.id && String(mv.data || "").slice(0, 10) === dateKey,
+          );
+          if (idx < 0) idx = movsPool.findIndex((mv) => mv.product_id === prod.id);
+          if (idx >= 0) {
+            const movCusto = Number(movsPool[idx].custo_unitario);
+            if (Number.isFinite(movCusto) && movCusto > 0) custo = movCusto;
+            movsPool.splice(idx, 1);
+          }
         }
       }
-      const preco = Number(prod?.preco_venda ?? 0);
+
+      // PREÇO: 1) preço registrado na venda (descrição); 2) preço atual do produto
+      const preco = Number.isFinite(precoSale) && precoSale > 0
+        ? precoSale
+        : Number(prod?.preco_venda ?? 0);
       const subtotal = qtd * preco;
       const custoTotal = qtd * custo;
       return { nome, qtd, preco, custo, subtotal, custoTotal, margem: subtotal - custoTotal };
@@ -1012,7 +1028,7 @@ function VendasPage() {
               {vendas?.tx.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{row.descricao}</p>
+                    <p className="font-medium truncate">{(row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(row.data)} • {row.forma_pagamento ?? "—"}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
@@ -1041,7 +1057,7 @@ function VendasPage() {
               {vendas?.rec.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{row.descricao}</p>
+                    <p className="font-medium truncate">{(row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
                     <p className="text-xs text-muted-foreground">{row.cliente ?? "—"} • venc. {formatDate(row.vencimento)} • {row.status}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
