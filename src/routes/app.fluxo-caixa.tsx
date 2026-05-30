@@ -391,11 +391,6 @@ function TransactionDialog({
     if (!descricao.trim()) return toast.error("Informe uma descrição");
     if (!v || v <= 0) return toast.error("Informe um valor válido");
     setSaving(true);
-  const submit = async () => {
-    const v = Number(valor.replace(",", "."));
-    if (!descricao.trim()) return toast.error("Informe uma descrição");
-    if (!v || v <= 0) return toast.error("Informe um valor válido");
-    setSaving(true);
     if (tx) {
       const { error } = await supabase.from("transactions").update({
         data, tipo, descricao: descricao.trim(), valor: v, status,
@@ -429,7 +424,7 @@ function TransactionDialog({
   return (
     <DialogContent className="max-w-lg">
       <DialogHeader>
-        <DialogTitle>Novo lançamento</DialogTitle>
+        <DialogTitle>{tx ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
       </DialogHeader>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
