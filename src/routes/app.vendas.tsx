@@ -397,6 +397,113 @@ function VendasPage() {
     return html;
   }
 
+  function printPastSaleOS(row: {
+    id: string;
+    descricao: string | null;
+    valor: number | string | null;
+    data?: string | null;
+    vencimento?: string | null;
+    forma_pagamento?: string | null;
+    cliente?: string | null;
+  }, tipo: "vista" | "prazo") {
+    const orderNumber = `OS-${String(row.id).slice(0, 8).toUpperCase()}`;
+    const empresaDoc = company?.cnpj ?? company?.documento ?? "";
+    const empresaEnd = [company?.endereco, company?.bairro, company?.cidade, company?.estado, company?.cep]
+      .filter(Boolean)
+      .join(", ");
+    const dataRef = tipo === "vista" ? row.data : row.vencimento;
+    const valor = Number(row.valor) || 0;
+    const desc = row.descricao || "Venda";
+    // descricao salva no formato: "Venda - Cliente (2x Item A, 1x Item B)"
+    const matchItens = desc.match(/\(([^)]+)\)\s*$/);
+    const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
+    const clienteNome = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
+    const itensTxt = matchItens ? matchItens[1] : desc;
+    const itensArr = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+    const linhas = itensArr
+      .map((it) => `<tr><td>${escapeHtml(it)}</td></tr>`)
+      .join("");
+
+    const html = `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8" />
+<title>${orderNumber}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color:#111; margin: 32px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .muted { color:#666; font-size: 12px; }
+  .row { display:flex; justify-content:space-between; gap:16px; margin-top: 16px; }
+  .card { border:1px solid #ddd; border-radius:8px; padding:12px; flex:1; }
+  table { width:100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
+  th { background: #f7f7f7; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .totals { margin-top: 12px; text-align: right; font-size: 14px; }
+  .totals .grand { font-size: 20px; font-weight: 700; margin-top: 6px; }
+  .footer { margin-top: 32px; font-size: 11px; color:#666; text-align:center; }
+  .signs { display:flex; gap:24px; margin-top: 48px; }
+  .sign { flex:1; border-top:1px solid #333; padding-top:6px; text-align:center; font-size:12px; }
+  @media print { body { margin: 16mm; } .noprint { display:none; } }
+</style></head>
+<body>
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h1>${escapeHtml(company?.nome_fantasia || company?.nome || "")}</h1>
+      <div class="muted">${escapeHtml(company?.nome || "")}</div>
+      <div class="muted">${empresaDoc ? "CNPJ/CPF: " + escapeHtml(empresaDoc) : ""}</div>
+      <div class="muted">${escapeHtml(empresaEnd)}</div>
+      <div class="muted">${escapeHtml(company?.telefone || "")} ${company?.email ? "· " + escapeHtml(company.email) : ""}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#888">Ordem de Serviço / Venda</div>
+      <div style="font-size:20px; font-weight:700">${orderNumber}</div>
+      <div class="muted">Data: ${dataRef ? formatDate(dataRef) : "—"}</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <div style="font-size:11px; text-transform:uppercase; color:#888">Cliente</div>
+      <div style="font-weight:600; margin-top:4px">${escapeHtml(clienteNome)}</div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px; text-transform:uppercase; color:#888">Pagamento</div>
+      <div style="margin-top:4px"><b>Forma:</b> ${escapeHtml(row.forma_pagamento || "—")}</div>
+      <div><b>Condição:</b> ${tipo === "vista" ? "À vista" : "A prazo"}</div>
+      ${tipo === "prazo" && row.vencimento ? `<div><b>Vencimento:</b> ${formatDate(row.vencimento)}</div>` : ""}
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Descrição</th></tr></thead>
+    <tbody>${linhas}</tbody>
+  </table>
+
+  <div class="totals">
+    <div class="grand">TOTAL: ${formatMoney(valor)}</div>
+  </div>
+
+  <div class="signs">
+    <div class="sign">Empresa</div>
+    <div class="sign">Cliente</div>
+  </div>
+
+  <div class="footer">Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+  <div class="noprint" style="margin-top:16px; text-align:center">
+    <button onclick="window.print()" style="padding:8px 16px; cursor:pointer">Imprimir / Salvar PDF</button>
+  </div>
+</body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      toast.error("Pop-up bloqueado. Permita pop-ups para gerar a OS.");
+    }
+  }
+
+
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between">
