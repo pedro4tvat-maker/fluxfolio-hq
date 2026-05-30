@@ -708,43 +708,6 @@ function FlowBar({
   );
 }
 
-function CommitmentList({
-  title, items, emptyText, tone, ctaTo, ctaLabel,
-}: {
-  title: string;
-  items: Array<{ id: string; descricao: string | null; valor: number | string; vencimento: string; status?: string | null }>;
-  emptyText: string;
-  tone: "success" | "danger";
-  ctaTo: string;
-  ctaLabel: string;
-}) {
-  const valueTone = tone === "success" ? "text-success" : "text-destructive";
-  return (
-    <div className="bg-card border rounded-2xl p-6 flex flex-col">
-      <h3 className="font-display font-semibold mb-4">{title}</h3>
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-6 text-center flex-1">{emptyText}</p>
-      ) : (
-        <ul className="divide-y flex-1">
-          {items.map((item) => (
-            <li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-              <div className="min-w-0">
-                <p className="font-medium truncate">{item.descricao || "—"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Vence em {formatDate(item.vencimento)}</p>
-              </div>
-              <span className={`font-display font-semibold tabular-nums ${valueTone}`}>{formatMoney(Number(item.valor))}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="mt-4 pt-3 border-t">
-        <Button asChild variant="ghost" size="sm" className="w-full justify-between">
-          <Link to={ctaTo}>{ctaLabel} <ArrowRight className="size-4" /></Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function QuickAction({
   icon: Icon, label, to, tone,
