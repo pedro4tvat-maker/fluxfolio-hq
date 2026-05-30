@@ -50,7 +50,6 @@ const clientNav: NavItem[] = [
   { to: "/app/crm", label: "CRM", icon: Users },
   { to: "/app/estoque", label: "Controle de Estoque", icon: Package },
   { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
-  { to: "/app/kpis", label: "KPIs", icon: Gauge },
   { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
   { to: "/app/importacoes", label: "Importador de Dados", icon: Upload },
   { to: "/app/documentos", label: "Documentos e Anexos", icon: FolderArchive },
