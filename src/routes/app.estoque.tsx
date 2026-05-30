@@ -48,16 +48,16 @@ const emptyProduct = {
   nome: "",
   categoria: "",
   fornecedor: "",
-  custo_unitario: "0",
-  preco_venda: "0",
-  estoque_minimo: "0",
-  quantidade_inicial: "0",
+  custo_unitario: "",
+  preco_venda: "",
+  estoque_minimo: "",
+  quantidade_inicial: "",
 };
 
 const emptyMovement = {
   product_id: "",
   tipo: "entrada" as "entrada" | "saida",
-  quantidade: "1",
+  quantidade: "",
   custo_unitario: "",
   motivo: "",
   data: new Date().toISOString().slice(0, 10),
