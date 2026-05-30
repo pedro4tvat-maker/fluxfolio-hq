@@ -676,12 +676,13 @@ function VendasPage() {
       const s = String(d).slice(0, 10);
       return s >= from && s <= to;
     };
+    const sharedPool: SaleMov[] = (vendas.movs ?? []).map((m) => ({ ...m })) as SaleMov[];
     const vistaRows = vendas.tx
       .filter((r) => inRange(r.data))
-      .map((r) => buildSaleMarginRows(r, "vista"));
+      .map((r) => buildSaleMarginRows(r, "vista", sharedPool));
     const prazoRows = vendas.rec
       .filter((r) => inRange(r.vencimento))
-      .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo"));
+      .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool));
     const all = [...vistaRows, ...prazoRows];
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
     const totalReceita = all.reduce((a, b) => a + b.totalReceita, 0);
