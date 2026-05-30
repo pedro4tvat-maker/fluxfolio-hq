@@ -466,14 +466,6 @@ function ClientDashboard() {
             <p className="text-xs text-muted-foreground">Visualizando: <span className="text-foreground/80 font-medium">{branchLabel}</span></p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline">
-            <Link to="/app/relatorios"><FileText className="size-4" /> Gerar relatório</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/app/fluxo-caixa"><PlusCircle className="size-4" /> Novo lançamento</Link>
-          </Button>
-        </div>
       </header>
 
       {/* 2. Visão rápida */}
@@ -515,7 +507,20 @@ function ClientDashboard() {
         </div>
       </section>
 
-      {/* 3. Pontos de atenção */}
+      {/* 3. Ações rápidas */}
+      <section>
+        <SectionTitle>Ações rápidas</SectionTitle>
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <QuickAction icon={ArrowDownCircle} label="Lançar entrada" to="/app/fluxo-caixa" tone="success" />
+          <QuickAction icon={ArrowUpCircle} label="Lançar saída" to="/app/fluxo-caixa" tone="danger" />
+          <QuickAction icon={ArrowUpCircle} label="Nova conta a pagar" to="/app/contas-pagar" />
+          <QuickAction icon={ArrowDownCircle} label="Nova conta a receber" to="/app/contas-receber" />
+          <QuickAction icon={ShoppingCart} label="Nova venda" to="/app/vendas" />
+          <QuickAction icon={FileText} label="Importar extrato" to="/app/importacoes" />
+        </div>
+      </section>
+
+      {/* 4. Pontos de atenção */}
       <section>
         <SectionTitle>Pontos de atenção</SectionTitle>
         {visibleAlerts.length === 0 ? (
@@ -537,7 +542,7 @@ function ClientDashboard() {
         )}
       </section>
 
-      {/* 4. Movimento do mês */}
+      {/* 5. Movimento do mês */}
       <section>
         <SectionTitle>Movimento do mês</SectionTitle>
         <div className="bg-card border rounded-2xl p-6">
@@ -580,7 +585,7 @@ function ClientDashboard() {
         </div>
       </section>
 
-      {/* 5. Próximos compromissos */}
+      {/* 6. Próximos compromissos */}
       <section>
         <SectionTitle>Próximos compromissos</SectionTitle>
         <div className="grid gap-4 lg:grid-cols-2">
@@ -603,20 +608,6 @@ function ClientDashboard() {
         </div>
       </section>
 
-      {/* 6. Ações rápidas */}
-      <section>
-        <SectionTitle>Ações rápidas</SectionTitle>
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-          <QuickAction icon={ArrowDownCircle} label="Lançar entrada" to="/app/fluxo-caixa" tone="success" />
-          <QuickAction icon={ArrowUpCircle} label="Lançar saída" to="/app/fluxo-caixa" tone="danger" />
-          <QuickAction icon={ArrowUpCircle} label="Nova conta a pagar" to="/app/contas-pagar" />
-          <QuickAction icon={ArrowDownCircle} label="Nova conta a receber" to="/app/contas-receber" />
-          <QuickAction icon={ShoppingCart} label="Nova venda" to="/app/vendas" />
-          <QuickAction icon={FileText} label="Importar extrato" to="/app/importacoes" />
-        </div>
-      </section>
-
-      {/* 7. Resumo operacional */}
       <section>
         <SectionTitle>Resumo operacional</SectionTitle>
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
