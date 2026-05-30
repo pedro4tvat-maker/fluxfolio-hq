@@ -40,7 +40,7 @@ const consultantNav: NavItem[] = [
 
 const clientNav: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/app/pendencias", label: "Minhas Pendências", icon: Inbox },
+  
   { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
   { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
