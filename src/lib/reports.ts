@@ -155,6 +155,59 @@ export async function fetchReportData(
 const inPeriod = (d: string, p: Period) => d >= p.start && d <= p.end;
 
 // ============ DRE GERENCIAL ============
+
+// Normaliza texto livre/códigos em buckets canônicos da DRE.
+// Aceita variações singular/plural, com/sem acento, maiúsculas, e rótulos
+// digitados pelo usuário (ex: "Custos Variáveis", "CUSTO VARIÁVEL", "Juros").
+function slug(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+type DreBucket =
+  | "outras_receitas"
+  | "impostos"
+  | "custos_variaveis"
+  | "custos_fixos"
+  | "despesas_operacionais"
+  | "marketing"
+  | "despesas_financeiras";
+
+const BUCKET_ALIASES: Record<DreBucket, string[]> = {
+  outras_receitas: ["outras_receitas", "outra_receita", "receita_nao_operacional", "receitas_nao_operacionais"],
+  impostos: ["impostos", "imposto", "deducoes", "deducoes_e_impostos", "tributos"],
+  custos_variaveis: ["custos_variaveis", "custo_variavel", "custos_variavel", "custo_variaveis", "cmv", "custo_mercadoria_vendida"],
+  custos_fixos: ["custos_fixos", "custo_fixo"],
+  despesas_operacionais: [
+    "despesas_operacionais",
+    "despesa_operacional",
+    "despesa_administrativa",
+    "despesas_administrativas",
+    "despesa_comercial",
+    "despesas_comerciais",
+  ],
+  marketing: ["marketing", "marketing_vendas", "marketing_e_vendas"],
+  despesas_financeiras: ["despesas_financeiras", "despesa_financeira", "juros", "encargos_financeiros"],
+};
+
+const ALIAS_TO_BUCKET: Map<string, DreBucket> = (() => {
+  const m = new Map<string, DreBucket>();
+  (Object.keys(BUCKET_ALIASES) as DreBucket[]).forEach((b) => {
+    BUCKET_ALIASES[b].forEach((a) => m.set(a, b));
+  });
+  return m;
+})();
+
+function toBucket(raw: string | null | undefined): DreBucket | null {
+  if (!raw) return null;
+  return ALIAS_TO_BUCKET.get(slug(raw)) ?? null;
+}
+
 export function buildDRE(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
   const catMap = new Map(data.categories.map((c) => [c.id, c]));
@@ -167,43 +220,43 @@ export function buildDRE(data: ReportData, period: Period) {
     return catMap.get(t.categoria_id ?? "")?.kpi_classification ?? null;
   };
 
-  const sumBy = (pred: (kpi: string | null, t: Tx) => boolean) =>
-    realized.filter((t) => pred(classOf(t), t)).reduce((s, t) => s + t.valor, 0);
+  const bucketOf = (t: Tx): DreBucket | null => toBucket(classOf(t));
 
-  const receitaBruta = sumBy((k, t) => t.tipo === "entrada" && k !== "outras_receitas");
-  const outrasReceitas = sumBy((k) => k === "outras_receitas");
-  const deducoes = sumBy((k) => k === "impostos");
+  const sumByBucket = (bucket: DreBucket) =>
+    realized.filter((t) => bucketOf(t) === bucket).reduce((s, t) => s + t.valor, 0);
+
+  // Receita bruta = entradas que NÃO se enquadram em outras_receitas/impostos
+  const receitaBruta = realized
+    .filter((t) => {
+      if (t.tipo !== "entrada") return false;
+      const b = bucketOf(t);
+      return b !== "outras_receitas" && b !== "impostos";
+    })
+    .reduce((s, t) => s + t.valor, 0);
+
+  const outrasReceitas = sumByBucket("outras_receitas");
+  const deducoes = sumByBucket("impostos");
   const receitaLiquida = receitaBruta + outrasReceitas - deducoes;
-  const custosVariaveis = sumBy((k) => k === "custos_variaveis");
+  const custosVariaveis = sumByBucket("custos_variaveis");
   const margemContribuicao = receitaLiquida - custosVariaveis;
-  const custosFixos = sumBy((k) => k === "custos_fixos");
-  const despesasOperacionais = sumBy(
-    (k) => k === "despesas_operacionais" || k === "marketing",
-  );
+  const custosFixos = sumByBucket("custos_fixos");
+  const despesasOperacionais = sumByBucket("despesas_operacionais") + sumByBucket("marketing");
   const resultadoOperacional = margemContribuicao - custosFixos - despesasOperacionais;
-  const despesasFinanceiras = sumBy((k) => k === "despesas_financeiras");
+  const despesasFinanceiras = sumByBucket("despesas_financeiras");
   const lucroLiquido = resultadoOperacional - despesasFinanceiras;
   const margemLiquida = receitaLiquida > 0 ? (lucroLiquido / receitaLiquida) * 100 : 0;
 
   const semClassificacao = data.categories.filter((c) => !c.kpi_classification).length;
 
-  // Classificações customizadas: qualquer classificação que não seja um dos códigos fixos
+  // Classificações customizadas: classificação preenchida que não mapeia em nenhum bucket fixo
   // vira uma linha extra na DRE somando as transações vinculadas (saídas negativas).
-  const FIXED = new Set([
-    "outras_receitas",
-    "impostos",
-    "custos_variaveis",
-    "custos_fixos",
-    "despesas_operacionais",
-    "marketing",
-    "despesas_financeiras",
-  ]);
   const customMap = new Map<string, number>();
   realized.forEach((t) => {
-    const k = classOf(t);
-    if (!k || FIXED.has(k)) return;
+    const raw = classOf(t);
+    if (!raw) return;
+    if (toBucket(raw)) return; // já contabilizado em bucket fixo
     const signed = t.tipo === "entrada" ? t.valor : -t.valor;
-    customMap.set(k, (customMap.get(k) ?? 0) + signed);
+    customMap.set(raw, (customMap.get(raw) ?? 0) + signed);
   });
   const customRows = Array.from(customMap.entries()).map(([k, v]) => ({
     Linha: v >= 0 ? `(+) ${k}` : `(–) ${k}`,
