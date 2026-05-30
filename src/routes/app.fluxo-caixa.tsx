@@ -341,11 +341,12 @@ function FluxoCaixa() {
 }
 
 function NewTransactionDialog({
-  companyId, categorias, contas, onDone,
+  companyId, categorias, contas, costCenters, onDone,
 }: {
   companyId: string;
   categorias: { id: string; nome: string; tipo: string }[];
   contas: { id: string; nome: string }[];
+  costCenters: { id: string; nome: string }[];
   onDone: () => void;
 }) {
   const [tipo, setTipo] = useState<"entrada" | "saida">("entrada");
@@ -354,6 +355,7 @@ function NewTransactionDialog({
   const [valor, setValor] = useState("");
   const [categoriaId, setCategoriaId] = useState<string>("");
   const [contaId, setContaId] = useState<string>("");
+  const [centroCustoId, setCentroCustoId] = useState<string>("");
   const [forma, setForma] = useState<string>("");
   const [status, setStatus] = useState<"realizado" | "previsto">("realizado");
   const [observacoes, setObservacoes] = useState("");
