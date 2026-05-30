@@ -24,13 +24,16 @@ export const Route = createFileRoute("/app")({
 });
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean };
+type NavGroup = { id: string; label: string; icon: React.ComponentType<{ className?: string }>; children: NavItem[] };
+type NavEntry = NavItem | NavGroup;
 
-const consultantNav: NavItem[] = [
+const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
+
+const consultantNav: NavEntry[] = [
   { to: "/app", label: "Painel do consultor", icon: LayoutDashboard, exact: true },
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
   { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
   { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
-  
   { to: "/app/jornada", label: "Jornada da Consultoria", icon: RouteIcon },
   { to: "/app/atas", label: "Atas de Reunião", icon: NotebookPen },
   { to: "/app/biblioteca", label: "Biblioteca do Consultor", icon: BookOpen },
@@ -38,21 +41,41 @@ const consultantNav: NavItem[] = [
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-const clientNav: NavItem[] = [
+const clientNav: NavEntry[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  
-  { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
-  { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
-  { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
-  { to: "/app/orcamento", label: "Orçamento", icon: Target },
-  { to: "/app/centro-custos", label: "Centro de Custos", icon: Layers },
-  { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
-  { to: "/app/crm", label: "CRM", icon: Users },
-  { to: "/app/estoque", label: "Controle de Estoque", icon: Package },
-  { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
-  { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
+  {
+    id: "fluxo",
+    label: "Fluxo",
+    icon: ArrowLeftRight,
+    children: [
+      { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
+      { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
+      { to: "/app/estoque", label: "Fluxo de Estoque", icon: Package },
+    ],
+  },
+  {
+    id: "gerenciamento",
+    label: "Gerenciamento",
+    icon: Tag,
+    children: [
+      { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
+      { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
+      { to: "/app/documentos", label: "Documentos e Anexos", icon: FolderArchive },
+      { to: "/app/centro-custos", label: "Centro de Custos", icon: Layers },
+    ],
+  },
+  {
+    id: "organizacao",
+    label: "Organização",
+    icon: Inbox,
+    children: [
+      { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
+      { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
+      { to: "/app/orcamento", label: "Orçamento", icon: Target },
+    ],
+  },
   { to: "/app/importacoes", label: "Importador de Dados", icon: Upload },
-  { to: "/app/documentos", label: "Documentos e Anexos", icon: FolderArchive },
+  { to: "/app/crm", label: "CRM", icon: Users },
   { to: "/app/configuracoes", label: "Configurações da Empresa", icon: Settings },
 ];
 
@@ -70,7 +93,14 @@ function AppLayout() {
   useEffect(() => { if (path.startsWith("/app/consultoria")) setConsultoriaOpen(true); }, [path]);
   useEffect(() => { if (path.startsWith("/app/agenda")) setAgendaOpen(true); }, [path]);
 
-  const nav = useMemo<NavItem[]>(() => (isConsultant ? consultantNav : clientNav), [isConsultant]);
+  const nav = useMemo<NavEntry[]>(() => (isConsultant ? consultantNav : clientNav), [isConsultant]);
+
+  const [groupsOpen, setGroupsOpen] = useState<Record<string, boolean>>({
+    fluxo: true,
+    gerenciamento: true,
+    organizacao: true,
+  });
+  const toggleGroup = (id: string) => setGroupsOpen((s) => ({ ...s, [id]: !s[id] }));
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -118,7 +148,7 @@ function AppLayout() {
     );
   };
 
-  const renderNavItem = (n: NavItem) => {
+  const renderLeaf = (n: NavItem) => {
     const active = n.exact ? path === n.to : path.startsWith(n.to);
     if (n.to === "/app/consultoria") {
       return renderSubmenu(n, CONSULTORIA_SECTIONS, consultoriaOpen, () => setConsultoriaOpen((v) => !v), "dashboard");
@@ -134,6 +164,31 @@ function AppLayout() {
     );
   };
 
+  const renderGroup = (g: NavGroup) => {
+    const isOpen = groupsOpen[g.id] ?? true;
+    const groupActive = g.children.some((c) => path.startsWith(c.to));
+    return (
+      <div key={g.id}>
+        <button
+          type="button"
+          onClick={() => toggleGroup(g.id)}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors ${groupActive ? "text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground"}`}
+        >
+          <g.icon className="size-4" />
+          <span className="flex-1 text-left">{g.label}</span>
+          {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        </button>
+        {isOpen && (
+          <div className="mt-1 ml-3 pl-3 border-l border-sidebar-border space-y-0.5">
+            {g.children.map((c) => renderLeaf(c))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderEntry = (e: NavEntry) => (isGroup(e) ? renderGroup(e) : renderLeaf(e));
+
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-64 shrink-0 bg-sidebar text-sidebar-foreground flex-col">
@@ -147,7 +202,7 @@ function AppLayout() {
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {nav.map((n) => renderNavItem(n))}
+          {nav.map((n) => renderEntry(n))}
         </nav>
         <div className="p-3 border-t border-sidebar-border">
           <div className="px-3 py-2 text-xs text-sidebar-foreground/60 truncate">
@@ -168,7 +223,7 @@ function AppLayout() {
           <aside className="relative w-64 bg-sidebar text-sidebar-foreground flex flex-col">
             <div className="p-5 border-b border-sidebar-border font-display font-semibold">SISTEMAFP PJ</div>
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-              {nav.map((n) => renderNavItem(n))}
+              {nav.map((n) => renderEntry(n))}
             </nav>
             <div className="p-3 border-t border-sidebar-border">
               <Button onClick={logout} variant="ghost" className="w-full justify-start"><LogOut className="size-4" /> Sair</Button>
