@@ -16,12 +16,17 @@ function formatBRL(digitsOnly: string): string {
 // Converts a numeric value (e.g. 12.5) or stored string into a display string "12,50"
 function toDisplay(v: string | number | null | undefined): string {
   if (v === "" || v === null || v === undefined) return "";
-  const num = typeof v === "number" ? v : Number(String(v).replace(/\./g, "").replace(",", "."));
-  if (!Number.isFinite(num) || num === 0) {
-    // allow user to clear and show empty rather than "0,00"
-    if (v === 0 || v === "0") return "";
-    return "";
+  let num: number;
+  if (typeof v === "number") {
+    num = v;
+  } else {
+    const s = String(v).trim();
+    // If string contains a comma, treat as BR-formatted ("1.234,56"); otherwise as canonical JS number ("1234.56")
+    num = s.includes(",")
+      ? Number(s.replace(/\./g, "").replace(",", "."))
+      : Number(s);
   }
+  if (!Number.isFinite(num) || num === 0) return "";
   return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
