@@ -799,10 +799,11 @@ function MargemHistorica({ companyId, products }: { companyId: string; products:
       }, 0);
     }
 
-    // Custo real: usa custo_unitario registrado na venda; fallback ao custo do cadastro
+    // Custo: usa o custo cadastrado do produto (referência atual no cadastro).
+    // Fallback ao custo_unitario registrado no movimento caso o produto não exista mais.
     const custo = movsFiltered.reduce((acc: number, m: any) => {
       const p = prodMap.get(m.product_id);
-      const custoUnit = m.custo_unitario != null ? Number(m.custo_unitario) : Number(p?.custo_unitario) || 0;
+      const custoUnit = Number(p?.custo_unitario) || (m.custo_unitario != null ? Number(m.custo_unitario) : 0);
       return acc + (Number(m.quantidade) || 0) * custoUnit;
     }, 0);
 
