@@ -466,14 +466,6 @@ function ClientDashboard() {
             <p className="text-xs text-muted-foreground">Visualizando: <span className="text-foreground/80 font-medium">{branchLabel}</span></p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline">
-            <Link to="/app/relatorios"><FileText className="size-4" /> Gerar relatório</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/app/fluxo-caixa"><PlusCircle className="size-4" /> Novo lançamento</Link>
-          </Button>
-        </div>
       </header>
 
       {/* 2. Visão rápida */}
