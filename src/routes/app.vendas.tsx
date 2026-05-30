@@ -130,7 +130,7 @@ function VendasPage() {
     queryKey: ["vendas-list", selected],
     enabled: !!selected,
     queryFn: async () => {
-      const [tx, rec] = await Promise.all([
+      const [tx, rec, movs] = await Promise.all([
         supabase
           .from("transactions")
           .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id")
@@ -144,8 +144,16 @@ function VendasPage() {
           .eq("company_id", selected!)
           .order("vencimento", { ascending: false })
           .limit(50),
+        supabase
+          .from("stock_movements")
+          .select("id, product_id, quantidade, custo_unitario, data, motivo")
+          .eq("company_id", selected!)
+          .eq("tipo", "saida")
+          .eq("motivo", "Venda")
+          .order("data", { ascending: false })
+          .limit(500),
       ]);
-      return { tx: tx.data ?? [], rec: rec.data ?? [] };
+      return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [] };
     },
   });
 
