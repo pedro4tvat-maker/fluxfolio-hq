@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Package, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { CurrencyInput } from "@/components/ui/currency-input";
