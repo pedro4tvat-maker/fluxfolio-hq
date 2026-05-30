@@ -1595,18 +1595,21 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          kpi_classification: string | null
           nome: string
         }
         Insert: {
           company_id: string
           created_at?: string
           id?: string
+          kpi_classification?: string | null
           nome: string
         }
         Update: {
           company_id?: string
           created_at?: string
           id?: string
+          kpi_classification?: string | null
           nome?: string
         }
         Relationships: [
