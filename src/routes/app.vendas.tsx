@@ -775,11 +775,16 @@ function VendasPage() {
             <div className="space-y-2">
               {vendas?.rec.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-                  <div>
-                    <p className="font-medium">{row.descricao}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{row.descricao}</p>
                     <p className="text-xs text-muted-foreground">{row.cliente ?? "—"} • venc. {formatDate(row.vencimento)} • {row.status}</p>
                   </div>
-                  <div className="font-display font-semibold">{formatMoney(Number(row.valor))}</div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="font-display font-semibold">{formatMoney(Number(row.valor))}</div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => printPastSaleOS(row, "prazo")}>
+                      <FileText className="size-4" /> Baixar OS
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
