@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Package, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -77,6 +77,9 @@ function EstoquePage() {
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveForm, setMoveForm] = useState({ ...emptyMovement });
   const [saving, setSaving] = useState(false);
+
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustForm, setAdjustForm] = useState({ product_id: "", nova_quantidade: "" });
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["estoque-products", selected],
@@ -225,6 +228,49 @@ function EstoquePage() {
     }
     toast.success("Produto removido");
     qc.invalidateQueries({ queryKey: ["estoque-products"] });
+  }
+
+  function openAdjustQuantity(p: Product) {
+    setAdjustForm({ product_id: p.id, nova_quantidade: String(p.quantidade) });
+    setAdjustOpen(true);
+  }
+
+  async function handleAdjustQuantity(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selected) return;
+    const p = productMap.get(adjustForm.product_id);
+    if (!p) return;
+    const novaQtd = Number(adjustForm.nova_quantidade);
+    if (isNaN(novaQtd) || novaQtd < 0) {
+      toast.error("Quantidade inválida");
+      return;
+    }
+    const diff = novaQtd - Number(p.quantidade);
+    if (diff === 0) {
+      setAdjustOpen(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("stock_movements").insert({
+        company_id: selected,
+        product_id: adjustForm.product_id,
+        tipo: diff > 0 ? "entrada" : "saida",
+        quantidade: Math.abs(diff),
+        custo_unitario: p.custo_unitario || null,
+        motivo: "Ajuste de estoque",
+        data: new Date().toISOString().slice(0, 10),
+      });
+      if (error) throw error;
+      toast.success("Quantidade ajustada");
+      setAdjustOpen(false);
+      qc.invalidateQueries({ queryKey: ["estoque-products"] });
+      qc.invalidateQueries({ queryKey: ["estoque-movements"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao ajustar quantidade");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function openNewMovement(productId?: string) {
@@ -397,6 +443,9 @@ function EstoquePage() {
                           <Button size="icon" variant="ghost" title="Saída" onClick={() => { setMoveForm({ ...emptyMovement, product_id: p.id, tipo: "saida" }); setMoveOpen(true); }}>
                             <ArrowUpFromLine className="size-4" />
                           </Button>
+                          <Button size="icon" variant="ghost" title="Ajustar quantidade" onClick={() => openAdjustQuantity(p)}>
+                            <Scale className="size-4" />
+                          </Button>
                           <Button size="icon" variant="ghost" title="Editar" onClick={() => openEditProduct(p)}>
                             <Pencil className="size-4" />
                           </Button>
@@ -538,6 +587,35 @@ function EstoquePage() {
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setMoveOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Registrar"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajustar quantidade em estoque</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAdjustQuantity} className="grid gap-3">
+            <div className="space-y-1">
+              <Label>Produto</Label>
+              <Select value={adjustForm.product_id} onValueChange={(v) => setAdjustForm({ ...adjustForm, product_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {(products ?? []).map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome} (estoque atual: {Number(p.quantidade)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Nova quantidade</Label>
+              <Input type="number" min="0" step="1" placeholder="0" value={adjustForm.nova_quantidade} onChange={(e) => setAdjustForm({ ...adjustForm, nova_quantidade: e.target.value })} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setAdjustOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Confirmar ajuste"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
