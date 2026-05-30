@@ -101,7 +101,7 @@ function VendasPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("id, nome, preco_venda, quantidade")
+        .select("id, nome, preco_venda, quantidade, custo_unitario")
         .eq("company_id", selected!)
         .order("nome");
       return data ?? [];
