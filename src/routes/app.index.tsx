@@ -585,28 +585,6 @@ function ClientDashboard() {
         </div>
       </section>
 
-      {/* 6. Próximos compromissos */}
-      <section>
-        <SectionTitle>Próximos compromissos</SectionTitle>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <CommitmentList
-            title="Próximas contas a pagar"
-            items={data.upcomingPay}
-            emptyText="Nenhuma conta prevista para os próximos dias."
-            tone="danger"
-            ctaTo="/app/contas-pagar"
-            ctaLabel="Ver todas as contas a pagar"
-          />
-          <CommitmentList
-            title="Próximos recebimentos"
-            items={data.upcomingRec}
-            emptyText="Nenhum recebimento previsto para os próximos dias."
-            tone="success"
-            ctaTo="/app/contas-receber"
-            ctaLabel="Ver todos os recebimentos"
-          />
-        </div>
-      </section>
 
       <section>
         <SectionTitle>Resumo operacional</SectionTitle>
