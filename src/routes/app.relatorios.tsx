@@ -358,7 +358,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
           {r.semClassificacao > 0 && (
             <div className="rounded-xl border-amber-500/30 bg-amber-500/10 border p-3 text-sm flex gap-2 items-start">
               <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-              <span>Existem <strong>{r.semClassificacao}</strong> categorias sem classificação financeira. Isso pode afetar a precisão da DRE. Configure em <Link to="/app/kpis" className="underline">KPIs → Configuração</Link>.</span>
+              <span>Existem <strong>{r.semClassificacao}</strong> categorias sem classificação financeira. Isso pode afetar a precisão da DRE. Configure-as no Centro de Custos.</span>
             </div>
           )}
           <Table rows={r.rows} moneyCols={["Valor"]} />
