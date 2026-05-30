@@ -140,7 +140,7 @@ function VendasPage() {
           .limit(50),
         supabase
           .from("receivables")
-          .select("id, descricao, cliente, valor, vencimento, status")
+          .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id")
           .eq("company_id", selected!)
           .order("vencimento", { ascending: false })
           .limit(50),
