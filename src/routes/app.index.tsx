@@ -281,109 +281,97 @@ function ClientDashboard() {
   const { branchId, isAll, branches } = useSelectedBranch();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["client-dashboard", selected, branchId],
+    queryKey: ["client-dashboard-v2", selected, branchId],
     enabled: !!selected,
     queryFn: async () => {
       if (!selected) return null;
       const today = new Date();
-      const formattedToday = today.toISOString().slice(0, 10);
-      const last14 = new Date(today);
-      last14.setDate(last14.getDate() - 13);
+      const todayISO = today.toISOString().slice(0, 10);
+      const in7 = new Date(today);
+      in7.setDate(today.getDate() + 7);
+      const in7ISO = in7.toISOString().slice(0, 10);
+
       const range = monthRange(today);
-      const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }, { data: categories }, { data: budgets }, { data: vendasVista }, { data: vendasPrazo }, { data: stockMovs }] = await Promise.all([
-        withBranch(supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
-        withBranch(supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado"), branchId),
-        withBranch(supabase.from("transactions").select("tipo, valor, data").eq("company_id", selected).eq("status", "realizado").gte("data", last14.toISOString().slice(0, 10)).lte("data", formattedToday), branchId),
-        withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }).limit(10), branchId),
-        withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }).limit(10), branchId),
+      const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const prevRange = monthRange(prev);
+
+      const [
+        { data: txMes },
+        { data: txMesAnterior },
+        { data: allTx },
+        { data: pay },
+        { data: rec },
+        { data: accs },
+        { data: prods },
+        { data: vendasVista },
+        { data: vendasPrazo },
+      ] = await Promise.all([
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", prevRange.start).lte("data", prevRange.end), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado"), branchId),
+        withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }), branchId),
+        withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status, cliente").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }), branchId),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
-        withBranch(supabase.from("products").select("id, quantidade, estoque_minimo, preco_venda, custo_unitario").eq("company_id", selected), branchId),
-        withBranch(supabase.from("transactions").select("id, descricao, tipo, valor, status, data").eq("company_id", selected).order("data", { ascending: false }).limit(5), branchId),
-        supabase.from("categories").select("id, nome").eq("company_id", selected),
-        withBranch(supabase.from("budgets").select("mes, ano, categoria_id, valor_orcado").eq("company_id", selected).eq("mes", today.getMonth() + 1).eq("ano", today.getFullYear()), branchId),
-        withBranch(supabase.from("transactions").select("id, valor, data").eq("company_id", selected).eq("tipo", "entrada").ilike("descricao", "Venda%").gte("data", range.start).lte("data", range.end), branchId),
-        withBranch(supabase.from("receivables").select("id, valor, created_at").eq("company_id", selected).ilike("descricao", "Venda%").gte("created_at", range.start).lte("created_at", range.end + "T23:59:59"), branchId),
-        withBranch(supabase.from("stock_movements").select("product_id, quantidade, custo_unitario, data").eq("company_id", selected).eq("tipo", "saida").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("products").select("id, quantidade, estoque_minimo").eq("company_id", selected), branchId),
+        withBranch(supabase.from("transactions").select("id, valor").eq("company_id", selected).eq("tipo", "entrada").ilike("descricao", "Venda%").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("receivables").select("id, valor").eq("company_id", selected).ilike("descricao", "Venda%").gte("created_at", range.start).lte("created_at", range.end + "T23:59:59"), branchId),
       ]);
 
-      const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
-      const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
-      const saldoInicial = (accs ?? []).reduce((s, a) => s + Number(a.saldo_inicial), 0);
-      const delta = (allTx ?? []).reduce((s, t) => s + (t.tipo === "entrada" ? 1 : -1) * Number((t as any).valor ?? 0), 0);
+      const sum = (arr: any[] | null, k = "valor") => (arr ?? []).reduce((s, x) => s + Number(x[k] ?? 0), 0);
+
+      const entradas = (txMes ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
+      const saidas = (txMes ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
+      const entradasAnt = (txMesAnterior ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
+      const saidasAnt = (txMesAnterior ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
+
+      const saldoInicial = sum(accs, "saldo_inicial");
+      const delta = (allTx ?? []).reduce((s, t) => s + (t.tipo === "entrada" ? 1 : -1) * Number(t.valor), 0);
       const saldo = saldoInicial + delta;
-      const aPagarAbertas = (pay ?? []).reduce((s, p) => s + Number(p.valor), 0);
-      const aReceberAbertas = (rec ?? []).reduce((s, r) => s + Number(r.valor), 0);
-      const pagarVencidas = (pay ?? []).filter((p) => p.vencimento < formattedToday).reduce((s, p) => s + Number(p.valor), 0);
-      const receberVencidas = (rec ?? []).filter((r) => r.vencimento < formattedToday).reduce((s, r) => s + Number(r.valor), 0);
+
+      const payOpen = pay ?? [];
+      const recOpen = rec ?? [];
+
+      const payNext7 = payOpen.filter((p) => p.vencimento >= todayISO && p.vencimento <= in7ISO);
+      const recNext7 = recOpen.filter((r) => r.vencimento >= todayISO && r.vencimento <= in7ISO);
+      const payOverdue = payOpen.filter((p) => p.vencimento < todayISO);
+      const recOverdue = recOpen.filter((r) => r.vencimento < todayISO);
+
       const estoqueAlerta = (prods ?? []).filter((p) => Number(p.quantidade) <= Number(p.estoque_minimo)).length;
-      const nextPayables = (pay ?? []).slice(0, 3);
-      const nextReceivables = (rec ?? []).slice(0, 3);
-      const latest = (latestTx ?? []).map((item) => ({
-        id: item.id,
-        descricao: item.descricao,
-        tipo: item.tipo,
-        valor: Number(item.valor),
-        status: item.status,
-        data: item.data,
-      }));
+      const clientesAtraso = new Set(recOverdue.map((r) => r.cliente).filter(Boolean)).size;
 
-      const trendMap = new Map<string, { date: string; label: string; entradas: number; saidas: number }>();
-      for (let i = 0; i < 14; i += 1) {
-        const day = new Date(last14);
-        day.setDate(last14.getDate() + i);
-        const date = day.toISOString().slice(0, 10);
-        const label = day.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-        trendMap.set(date, { date, label, entradas: 0, saidas: 0 });
-      }
-      (trendTx ?? []).forEach((txItem) => {
-        const row = trendMap.get(txItem.data);
-        if (!row) return;
-        if (txItem.tipo === "entrada") row.entradas += Number(txItem.valor);
-        if (txItem.tipo === "saida") row.saidas += Number(txItem.valor);
-      });
-      const trend = Array.from(trendMap.values());
+      const vendasMes = sum(vendasVista) + sum(vendasPrazo);
+      const vendasCount = (vendasVista ?? []).length + (vendasPrazo ?? []).length;
+      const ticketMedio = vendasCount > 0 ? vendasMes / vendasCount : null;
 
-      // Vendas do mês: faturamento vem das vendas registradas (transações à vista + recebíveis a prazo
-      // com descrição iniciando em "Venda"). OS count = quantidade de vendas registradas no mês.
-      const vendasMes =
-        (vendasVista ?? []).reduce((s, t) => s + Number((t as any).valor ?? 0), 0) +
-        (vendasPrazo ?? []).reduce((s, r) => s + Number((r as any).valor ?? 0), 0);
-      const ordensServico = (vendasVista ?? []).length + (vendasPrazo ?? []).length;
-      const vendasCount = ordensServico;
+      const totalMovsMes = (txMes ?? []).length + (txMesAnterior ?? []).length;
+      const entradasDelta = entradasAnt > 0 ? ((entradas - entradasAnt) / entradasAnt) * 100 : null;
+      const saidasDelta = saidasAnt > 0 ? ((saidas - saidasAnt) / saidasAnt) * 100 : null;
 
-      // Margem operacional do mês: (Receita - Custos/Despesas) / Receita.
-      // Usa as vendas do mês como receita e as saídas realizadas no fluxo de
-      // caixa do mês como custos/despesas, refletindo a operação real.
-      const margemMedia = vendasMes > 0 ? (vendasMes - saidas) / vendasMes : null;
-
-      // Budget utilization for current month
-      const totalOrcado = (budgets ?? []).reduce((s, b) => s + Number(b.valor_orcado ?? 0), 0);
-      let totalRealizado = 0;
-      if ((budgets ?? []).length) {
-        const budgetCategoryIds = (budgets ?? []).map((b) => b.categoria_id);
-        totalRealizado = (allTx ?? []).filter((t) => budgetCategoryIds.includes((t as any).categoria_id)).reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
-      }
-      const orcamentoUtilizado = totalOrcado > 0 ? (totalRealizado / totalOrcado) * 100 : null;
       return {
         company,
+        saldo,
         entradas,
         saidas,
-        saldo,
         resultado: entradas - saidas,
-        aPagarAbertas,
-        aReceberAbertas,
-        pagarVencidas,
-        receberVencidas,
+        entradasDelta,
+        saidasDelta,
+        hasComparison: totalMovsMes > 0 && (entradasAnt > 0 || saidasAnt > 0),
+        payNext7Total: sum(payNext7),
+        payNext7Count: payNext7.length,
+        recNext7Total: sum(recNext7),
+        recNext7Count: recNext7.length,
+        payOverdueTotal: sum(payOverdue),
+        payOverdueCount: payOverdue.length,
+        recOverdueTotal: sum(recOverdue),
+        recOverdueCount: recOverdue.length,
+        upcomingPay: payNext7.slice(0, 5),
+        upcomingRec: recNext7.slice(0, 5),
         estoqueAlerta,
-        nextPayables,
-        nextReceivables,
-        latest,
-        trend,
+        clientesAtraso,
         vendasMes,
         vendasCount,
-        ordensServico,
-        margemMedia,
-        orcamentoUtilizado,
+        ticketMedio,
+        hasAnyMovement: (allTx ?? []).length > 0,
       };
     },
   });
@@ -401,100 +389,82 @@ function ClientDashboard() {
     );
   }
 
-  const today = new Date();
-  const hours = today.getHours();
+  const hours = new Date().getHours();
   const greeting = hours < 12 ? "Bom dia" : hours < 18 ? "Boa tarde" : "Boa noite";
+  const branchLabel = isAll
+    ? "Consolidado geral"
+    : branches.find((b) => b.id === branchId)?.is_main_branch
+    ? "Matriz"
+    : branches.find((b) => b.id === branchId)?.nome ?? "—";
 
-  // Pontos de atenção
+  // ===== Alerts =====
   const alerts: Array<{
     id: string;
     tone: "danger" | "warn" | "info";
     icon: React.ComponentType<{ className?: string }>;
-    text: string;
+    title: string;
+    desc: string;
     cta: string;
     to: string;
   }> = [];
-  if (data.pagarVencidas > 0) {
+  if (data.payOverdueCount > 0) {
     alerts.push({
-      id: "pay-overdue",
-      tone: "danger",
-      icon: AlertTriangle,
-      text: `Existem ${formatMoney(data.pagarVencidas)} em contas vencidas que precisam ser resolvidas.`,
-      cta: "Resolver",
-      to: "/app/contas-pagar",
+      id: "pay-overdue", tone: "danger", icon: AlertTriangle,
+      title: "Contas vencidas",
+      desc: `${data.payOverdueCount} ${data.payOverdueCount === 1 ? "conta" : "contas"} em atraso (${formatMoney(data.payOverdueTotal)}).`,
+      cta: "Ver contas", to: "/app/contas-pagar",
     });
   }
-  if (data.receberVencidas > 0) {
+  if (data.recOverdueCount > 0) {
     alerts.push({
-      id: "rec-overdue",
-      tone: "warn",
-      icon: Clock,
-      text: `Você possui ${formatMoney(data.receberVencidas)} em recebimentos em atraso.`,
-      cta: "Cobrar",
-      to: "/app/contas-receber",
-    });
-  }
-  if (data.orcamentoUtilizado != null && data.orcamentoUtilizado >= 90) {
-    alerts.push({
-      id: "budget",
-      tone: data.orcamentoUtilizado >= 100 ? "danger" : "warn",
-      icon: DollarSign,
-      text: `Seu planejamento está em ${data.orcamentoUtilizado.toFixed(0)}% do limite do mês.`,
-      cta: "Ver planejamento",
-      to: "/app/orcamento",
-    });
-  }
-  if (data.estoqueAlerta > 0) {
-    alerts.push({
-      id: "stock",
-      tone: "warn",
-      icon: Box,
-      text: `${data.estoqueAlerta} ${data.estoqueAlerta === 1 ? "produto está" : "produtos estão"} com estoque baixo.`,
-      cta: "Ver estoque",
-      to: "/app/estoque",
+      id: "rec-overdue", tone: "warn", icon: Clock,
+      title: "Recebimentos em atraso",
+      desc: `${formatMoney(data.recOverdueTotal)} ainda não foi recebido.`,
+      cta: "Ver recebimentos", to: "/app/contas-receber",
     });
   }
   if (data.resultado < 0) {
     alerts.push({
-      id: "result-neg",
-      tone: "danger",
-      icon: TrendingDown,
-      text: `O resultado do mês está negativo (${formatMoney(data.resultado)}). Revise suas despesas.`,
-      cta: "Analisar",
-      to: "/app/fluxo-caixa",
+      id: "result-neg", tone: "danger", icon: TrendingDown,
+      title: "Resultado do mês negativo",
+      desc: `As saídas estão acima das entradas (${formatMoney(data.resultado)}).`,
+      cta: "Analisar fluxo", to: "/app/fluxo-caixa",
+    });
+  }
+  if (data.estoqueAlerta > 0) {
+    alerts.push({
+      id: "stock", tone: "warn", icon: Box,
+      title: "Estoque baixo",
+      desc: `${data.estoqueAlerta} ${data.estoqueAlerta === 1 ? "produto está" : "produtos estão"} no nível mínimo.`,
+      cta: "Ver estoque", to: "/app/estoque",
+    });
+  }
+  if (!data.hasAnyMovement) {
+    alerts.push({
+      id: "no-mov", tone: "info", icon: AlertCircle,
+      title: "Sem lançamentos",
+      desc: "Cadastre seu primeiro lançamento para acompanhar o resultado.",
+      cta: "Lançar agora", to: "/app/fluxo-caixa",
     });
   }
   const visibleAlerts = alerts.slice(0, 5);
 
-  // Próximos 7 dias
-  const limit = new Date();
-  limit.setDate(today.getDate() + 7);
-  const limitISO = limit.toISOString().slice(0, 10);
-  const upcomingPay = (data.nextPayables ?? []).filter((p: any) => p.vencimento <= limitISO).slice(0, 3);
-  const upcomingRec = (data.nextReceivables ?? []).filter((r: any) => r.vencimento <= limitISO).slice(0, 3);
-
-  const orc = data.orcamentoUtilizado;
-  const totalMes = data.entradas + data.saidas;
-  const pctEntradas = totalMes > 0 ? (data.entradas / totalMes) * 100 : 0;
-
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="space-y-10 max-w-6xl">
       {/* 1. Cabeçalho */}
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-1">
+        <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight">{company.nome}</h1>
             <CompanySwitcher />
             <BranchSwitcher />
           </div>
-          <p className="text-muted-foreground">
-            {greeting}. {branches.length > 1 && (
-              <span className="text-foreground/80">
-                Visualizando: <strong>{isAll ? "Consolidado geral" : (branches.find((b) => b.id === branchId)?.is_main_branch ? "Matriz" : branches.find((b) => b.id === branchId)?.nome)}</strong>.{" "}
-              </span>
-            )}
-            Veja os principais pontos da sua empresa hoje.
+          <p className="text-muted-foreground text-sm">
+            {greeting}. Veja os principais pontos da sua empresa hoje.
           </p>
+          {branches.length > 1 && (
+            <p className="text-xs text-muted-foreground">Visualizando: <span className="text-foreground/80 font-medium">{branchLabel}</span></p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="outline">
@@ -506,57 +476,60 @@ function ClientDashboard() {
         </div>
       </header>
 
-      {/* 2. Saúde da empresa */}
+      {/* 2. Visão rápida */}
       <section>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Saúde da empresa</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <HealthBlock
-            label="Saldo atual"
+        <SectionTitle>Visão rápida</SectionTitle>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickCard
+            label="Saldo disponível"
             value={formatMoney(data.saldo)}
-            hint="Disponível em contas"
-            tone={data.saldo < 0 ? "danger" : "success"}
+            hint="Disponível nas contas"
+            tone={data.saldo < 0 ? "danger" : "neutral"}
           />
-          <HealthBlock
+          <QuickCard
             label="Resultado do mês"
             value={formatMoney(data.resultado)}
-            hint={data.resultado >= 0 ? "Mês positivo" : "Mês negativo"}
-            tone={data.resultado < 0 ? "danger" : "success"}
+            hint={
+              !data.hasAnyMovement
+                ? "Sem movimentação suficiente"
+                : data.resultado > 0
+                ? "Mês positivo"
+                : data.resultado < 0
+                ? "Mês negativo"
+                : "Equilibrado"
+            }
+            tone={data.resultado > 0 ? "success" : data.resultado < 0 ? "danger" : "neutral"}
           />
-          <HealthBlock
-            label="Contas vencidas"
-            value={formatMoney(data.pagarVencidas)}
-            hint={data.pagarVencidas > 0 ? "Precisa atenção" : "Tudo em dia"}
-            tone={data.pagarVencidas > 0 ? "danger" : "neutral"}
+          <QuickCard
+            label="A pagar — 7 dias"
+            value={data.payNext7Count === 0 ? "—" : formatMoney(data.payNext7Total)}
+            hint={data.payNext7Count === 0 ? "Nenhuma conta próxima" : `${data.payNext7Count} ${data.payNext7Count === 1 ? "conta" : "contas"}`}
+            tone="neutral"
           />
-          <HealthBlock
-            label="Recebimentos em aberto"
-            value={formatMoney(data.aReceberAbertas)}
-            hint={data.receberVencidas > 0 ? `${formatMoney(data.receberVencidas)} em atraso` : "Em dia"}
-            tone={data.receberVencidas > 0 ? "warn" : "neutral"}
+          <QuickCard
+            label="A receber — 7 dias"
+            value={data.recNext7Count === 0 ? "—" : formatMoney(data.recNext7Total)}
+            hint={data.recNext7Count === 0 ? "Nenhum recebimento próximo" : `${data.recNext7Count} ${data.recNext7Count === 1 ? "recebimento" : "recebimentos"}`}
+            tone="neutral"
           />
         </div>
       </section>
 
-      {/* 3. Pontos de Atenção */}
-      <section className="bg-card border rounded-2xl p-6 shadow-card">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-display font-semibold text-lg">Pontos de atenção</h2>
-            <p className="text-sm text-muted-foreground">O que precisa do seu olhar agora.</p>
-          </div>
-        </div>
+      {/* 3. Pontos de atenção */}
+      <section>
+        <SectionTitle>Pontos de atenção</SectionTitle>
         {visibleAlerts.length === 0 ? (
-          <div className="flex items-center gap-3 rounded-xl bg-success/5 border border-success/20 p-4">
-            <div className="size-9 rounded-full bg-success/10 grid place-items-center text-success">
+          <div className="bg-card border rounded-2xl p-5 flex items-center gap-3">
+            <div className="size-9 rounded-full bg-success/10 grid place-items-center text-success shrink-0">
               <Sparkles className="size-4" />
             </div>
             <div>
-              <p className="font-medium">Tudo em ordem por aqui.</p>
-              <p className="text-sm text-muted-foreground">Nenhum ponto crítico exige sua atenção no momento.</p>
+              <p className="font-medium">Tudo certo por enquanto.</p>
+              <p className="text-sm text-muted-foreground">Nenhum ponto crítico identificado.</p>
             </div>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="bg-card border rounded-2xl divide-y overflow-hidden">
             {visibleAlerts.map((a) => (
               <AlertRow key={a.id} {...a} />
             ))}
@@ -564,168 +537,111 @@ function ClientDashboard() {
         )}
       </section>
 
-      {/* 4. Ações rápidas */}
+      {/* 4. Movimento do mês */}
       <section>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Ações rápidas</h2>
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-          <QuickAction icon={ArrowDownCircle} label="Lançar entrada" to="/app/fluxo-caixa" tone="success" />
-          <QuickAction icon={ArrowUpCircle} label="Lançar saída" to="/app/fluxo-caixa" tone="danger" />
-          <QuickAction icon={ArrowUpCircle} label="Conta a pagar" to="/app/contas-pagar" />
-          <QuickAction icon={ArrowDownCircle} label="Conta a receber" to="/app/contas-receber" />
-          <QuickAction icon={ShoppingCart} label="Nova venda" to="/app/vendas" />
-          <QuickAction icon={Box} label="Novo produto" to="/app/estoque" />
-        </div>
-      </section>
-
-      {/* 5. Visão do mês + 6. Operação */}
-      <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="bg-card border rounded-2xl p-6 shadow-card">
-          <div className="mb-5">
-            <h2 className="font-display font-semibold text-lg">Visão do mês</h2>
-            <p className="text-sm text-muted-foreground">Como o mês está se comportando.</p>
-          </div>
-          <div className="space-y-5">
-            <ProgressLine
-              label="Entradas"
-              value={formatMoney(data.entradas)}
-              percent={pctEntradas}
-              color="bg-success"
-            />
-            <ProgressLine
-              label="Saídas"
-              value={formatMoney(data.saidas)}
-              percent={totalMes > 0 ? (data.saidas / totalMes) * 100 : 0}
-              color="bg-destructive"
-            />
-            <div className="pt-4 border-t flex items-center justify-between">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Resultado</div>
-                <div className={`font-display font-bold text-xl mt-1 ${data.resultado < 0 ? "text-destructive" : "text-success"}`}>
-                  {formatMoney(data.resultado)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Planejado x gasto</div>
-                <div className="font-display font-bold text-xl mt-1">
-                  {orc == null ? "—" : `${orc.toFixed(0)}%`}
-                </div>
-                {orc != null && (
-                  <div className="mt-1 w-32 h-1.5 rounded-full bg-muted overflow-hidden ml-auto">
-                    <div
-                      className={`h-full ${orc >= 100 ? "bg-destructive" : orc >= 90 ? "bg-warning" : "bg-primary"}`}
-                      style={{ width: `${Math.min(orc, 100)}%` }}
-                    />
+        <SectionTitle>Movimento do mês</SectionTitle>
+        <div className="bg-card border rounded-2xl p-6">
+          {data.entradas === 0 && data.saidas === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Nenhuma movimentação registrada ainda neste mês.
+            </p>
+          ) : (
+            <div className="space-y-6">
+              <FlowBar
+                label="Entradas"
+                value={data.entradas}
+                max={Math.max(data.entradas, data.saidas)}
+                color="bg-success"
+                delta={data.entradasDelta}
+              />
+              <FlowBar
+                label="Saídas"
+                value={data.saidas}
+                max={Math.max(data.entradas, data.saidas)}
+                color="bg-destructive"
+                delta={data.saidasDelta}
+                deltaInverse
+              />
+              <div className="pt-4 border-t flex items-end justify-between">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Resultado</div>
+                  <div className={`mt-1 font-display font-bold text-2xl tabular-nums ${data.resultado < 0 ? "text-destructive" : "text-success"}`}>
+                    {formatMoney(data.resultado)}
                   </div>
+                </div>
+                {!data.hasComparison && (
+                  <p className="text-xs text-muted-foreground max-w-xs text-right">
+                    Ainda não há dados suficientes para comparar com o mês anterior.
+                  </p>
                 )}
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-card border rounded-2xl p-6 shadow-card">
-          <div className="mb-5">
-            <h2 className="font-display font-semibold text-lg">Operação</h2>
-            <p className="text-sm text-muted-foreground">Indicadores do dia a dia.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <MiniStat label="Vendas do mês" value={formatMoney(data.vendasMes ?? 0)} hint={`${data.vendasCount ?? 0} pedidos`} />
-            <MiniStat label="Margem operacional" value={data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(1)}%`} />
-            <MiniStat label="OS do mês" value={String(data.ordensServico ?? 0)} hint="Ordens de serviço" />
-          </div>
+          )}
         </div>
       </section>
 
-      {/* 7. Últimos movimentos + 8. Próximos compromissos */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="bg-card border rounded-2xl p-6 shadow-card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-display font-semibold text-lg">Últimos movimentos</h2>
-              <p className="text-sm text-muted-foreground">Suas 5 movimentações mais recentes.</p>
-            </div>
-          </div>
-          {data.latest.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-6 text-center">Nenhum lançamento ainda.</div>
-          ) : (
-            <ul className="divide-y">
-              {data.latest.map((item) => (
-                <li key={item.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`size-8 rounded-full grid place-items-center shrink-0 ${item.tipo === "entrada" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                      {item.tipo === "entrada" ? <ArrowDownCircle className="size-4" /> : <ArrowUpCircle className="size-4" />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{item.descricao || (item.tipo === "entrada" ? "Entrada" : "Saída")}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(item.data)}</p>
-                    </div>
-                  </div>
-                  <div className={`font-display font-semibold tabular-nums ${item.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
-                    {item.tipo === "entrada" ? "+" : "−"} {formatMoney(item.valor)}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-4 pt-3 border-t">
-            <Button asChild variant="ghost" size="sm" className="w-full justify-between">
-              <Link to="/app/fluxo-caixa">Ver fluxo de caixa <ArrowRight className="size-4" /></Link>
-            </Button>
-          </div>
+      {/* 5. Próximos compromissos */}
+      <section>
+        <SectionTitle>Próximos compromissos</SectionTitle>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CommitmentList
+            title="Próximas contas a pagar"
+            items={data.upcomingPay}
+            emptyText="Nenhuma conta prevista para os próximos dias."
+            tone="danger"
+            ctaTo="/app/contas-pagar"
+            ctaLabel="Ver todas as contas a pagar"
+          />
+          <CommitmentList
+            title="Próximos recebimentos"
+            items={data.upcomingRec}
+            emptyText="Nenhum recebimento previsto para os próximos dias."
+            tone="success"
+            ctaTo="/app/contas-receber"
+            ctaLabel="Ver todos os recebimentos"
+          />
         </div>
+      </section>
 
-        <div className="bg-card border rounded-2xl p-6 shadow-card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-display font-semibold text-lg">Próximos compromissos</h2>
-              <p className="text-sm text-muted-foreground">A pagar e a receber nos próximos 7 dias.</p>
-            </div>
-          </div>
-          {upcomingPay.length === 0 && upcomingRec.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-6 text-center">Nenhum compromisso nos próximos 7 dias.</div>
-          ) : (
-            <div className="space-y-4">
-              {upcomingPay.length > 0 && (
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">A pagar</div>
-                  <ul className="space-y-2">
-                    {upcomingPay.map((p: any) => (
-                      <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
-                        <div className="min-w-0">
-                          <p className="font-medium truncate">{p.descricao || "Conta a pagar"}</p>
-                          <p className="text-xs text-muted-foreground">Vence em {formatDate(p.vencimento)}</p>
-                        </div>
-                        <span className="font-display font-semibold text-destructive tabular-nums">{formatMoney(Number(p.valor))}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {upcomingRec.length > 0 && (
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">A receber</div>
-                  <ul className="space-y-2">
-                    {upcomingRec.map((r: any) => (
-                      <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
-                        <div className="min-w-0">
-                          <p className="font-medium truncate">{r.descricao || "Recebimento"}</p>
-                          <p className="text-xs text-muted-foreground">Vence em {formatDate(r.vencimento)}</p>
-                        </div>
-                        <span className="font-display font-semibold text-success tabular-nums">{formatMoney(Number(r.valor))}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-          <div className="mt-4 pt-3 border-t grid grid-cols-2 gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/app/contas-pagar">Contas a pagar</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/app/contas-receber">Contas a receber</Link>
-            </Button>
-          </div>
+      {/* 6. Ações rápidas */}
+      <section>
+        <SectionTitle>Ações rápidas</SectionTitle>
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <QuickAction icon={ArrowDownCircle} label="Lançar entrada" to="/app/fluxo-caixa" tone="success" />
+          <QuickAction icon={ArrowUpCircle} label="Lançar saída" to="/app/fluxo-caixa" tone="danger" />
+          <QuickAction icon={ArrowUpCircle} label="Nova conta a pagar" to="/app/contas-pagar" />
+          <QuickAction icon={ArrowDownCircle} label="Nova conta a receber" to="/app/contas-receber" />
+          <QuickAction icon={ShoppingCart} label="Nova venda" to="/app/vendas" />
+          <QuickAction icon={FileText} label="Importar extrato" to="/app/importacoes" />
+        </div>
+      </section>
+
+      {/* 7. Resumo operacional */}
+      <section>
+        <SectionTitle>Resumo operacional</SectionTitle>
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <SmallStat
+            label="Vendas do mês"
+            value={data.vendasCount === 0 ? "—" : formatMoney(data.vendasMes)}
+            hint={data.vendasCount === 0 ? "Cadastre vendas para acompanhar" : `${data.vendasCount} ${data.vendasCount === 1 ? "venda" : "vendas"}`}
+          />
+          <SmallStat
+            label="Ticket médio"
+            value={data.ticketMedio == null ? "—" : formatMoney(data.ticketMedio)}
+            hint={data.ticketMedio == null ? "Cadastre vendas para visualizar" : "Média por venda"}
+          />
+          <SmallStat
+            label="Estoque baixo"
+            value={String(data.estoqueAlerta)}
+            hint={data.estoqueAlerta === 0 ? "Tudo abastecido" : "Produtos no mínimo"}
+            tone={data.estoqueAlerta > 0 ? "warn" : "default"}
+          />
+          <SmallStat
+            label="Clientes em atraso"
+            value={String(data.clientesAtraso)}
+            hint={data.clientesAtraso === 0 ? "Nenhum em atraso" : "Com recebimentos vencidos"}
+            tone={data.clientesAtraso > 0 ? "warn" : "default"}
+          />
         </div>
       </section>
     </div>
@@ -734,11 +650,14 @@ function ClientDashboard() {
 
 /* =============== CLIENT — small building blocks =============== */
 
-function HealthBlock({
-  label,
-  value,
-  hint,
-  tone = "neutral",
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">{children}</h2>
+  );
+}
+
+function QuickCard({
+  label, value, hint, tone = "neutral",
 }: {
   label: string;
   value: string;
@@ -747,42 +666,38 @@ function HealthBlock({
 }) {
   const valueTone =
     tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning-foreground" : "";
-  const accent =
-    tone === "success" ? "bg-success" : tone === "danger" ? "bg-destructive" : tone === "warn" ? "bg-warning" : "bg-muted-foreground/30";
   return (
-    <div className="bg-card border rounded-2xl p-5 shadow-card relative overflow-hidden">
-      <span className={`absolute left-0 top-0 bottom-0 w-1 ${accent}`} />
+    <div className="bg-card border rounded-2xl p-6">
       <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-3 font-display font-bold text-2xl md:text-[28px] leading-tight tabular-nums ${valueTone}`}>{value}</div>
+      <div className={`mt-3 font-display font-bold text-[26px] leading-tight tabular-nums ${valueTone}`}>{value}</div>
       {hint && <div className="text-xs text-muted-foreground mt-2">{hint}</div>}
     </div>
   );
 }
 
 function AlertRow({
-  tone,
-  icon: Icon,
-  text,
-  cta,
-  to,
+  tone, icon: Icon, title, desc, cta, to,
 }: {
   tone: "danger" | "warn" | "info";
   icon: React.ComponentType<{ className?: string }>;
-  text: string;
+  title: string;
+  desc: string;
   cta: string;
   to: string;
 }) {
-  const styles = {
-    danger: { bg: "bg-destructive/5 border-destructive/20", icon: "bg-destructive/10 text-destructive" },
-    warn: { bg: "bg-warning/5 border-warning/30", icon: "bg-warning/10 text-warning-foreground" },
-    info: { bg: "bg-primary/5 border-primary/20", icon: "bg-primary/10 text-primary" },
-  }[tone];
+  const iconBg =
+    tone === "danger" ? "bg-destructive/10 text-destructive"
+    : tone === "warn" ? "bg-warning/10 text-warning-foreground"
+    : "bg-primary/10 text-primary";
   return (
-    <div className={`flex items-center gap-3 rounded-xl border p-3 ${styles.bg}`}>
-      <div className={`size-9 rounded-full grid place-items-center shrink-0 ${styles.icon}`}>
+    <div className="flex items-center gap-4 p-4">
+      <div className={`size-10 rounded-full grid place-items-center shrink-0 ${iconBg}`}>
         <Icon className="size-4" />
       </div>
-      <p className="text-sm flex-1">{text}</p>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium leading-tight">{title}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{desc}</p>
+      </div>
       <Button asChild size="sm" variant="ghost" className="shrink-0">
         <Link to={to}>{cta} <ArrowRight className="size-3 ml-1" /></Link>
       </Button>
@@ -790,11 +705,80 @@ function AlertRow({
   );
 }
 
+function FlowBar({
+  label, value, max, color, delta, deltaInverse,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  color: string;
+  delta: number | null;
+  deltaInverse?: boolean;
+}) {
+  const pct = max > 0 ? (value / max) * 100 : 0;
+  const positive = delta != null && delta >= 0;
+  // For "saidas" (deltaInverse), going up is bad
+  const deltaTone =
+    delta == null ? "" : (deltaInverse ? (positive ? "text-destructive" : "text-success") : (positive ? "text-success" : "text-destructive"));
+  const deltaLabel =
+    delta == null ? null
+    : `${positive ? "+" : ""}${delta.toFixed(0)}% vs mês anterior`;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2 gap-3">
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <div className="flex items-baseline gap-3">
+          {deltaLabel && <span className={`text-xs ${deltaTone}`}>{deltaLabel}</span>}
+          <span className="font-display font-semibold tabular-nums">{formatMoney(value)}</span>
+        </div>
+      </div>
+      <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div className={`h-full ${color} transition-all`} style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function CommitmentList({
+  title, items, emptyText, tone, ctaTo, ctaLabel,
+}: {
+  title: string;
+  items: Array<{ id: string; descricao: string | null; valor: number | string; vencimento: string; status?: string | null }>;
+  emptyText: string;
+  tone: "success" | "danger";
+  ctaTo: string;
+  ctaLabel: string;
+}) {
+  const valueTone = tone === "success" ? "text-success" : "text-destructive";
+  return (
+    <div className="bg-card border rounded-2xl p-6 flex flex-col">
+      <h3 className="font-display font-semibold mb-4">{title}</h3>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-6 text-center flex-1">{emptyText}</p>
+      ) : (
+        <ul className="divide-y flex-1">
+          {items.map((item) => (
+            <li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+              <div className="min-w-0">
+                <p className="font-medium truncate">{item.descricao || "—"}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Vence em {formatDate(item.vencimento)}</p>
+              </div>
+              <span className={`font-display font-semibold tabular-nums ${valueTone}`}>{formatMoney(Number(item.valor))}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-4 pt-3 border-t">
+        <Button asChild variant="ghost" size="sm" className="w-full justify-between">
+          <Link to={ctaTo}>{ctaLabel} <ArrowRight className="size-4" /></Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function QuickAction({
-  icon: Icon,
-  label,
-  to,
-  tone,
+  icon: Icon, label, to, tone,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -806,9 +790,9 @@ function QuickAction({
   return (
     <Link
       to={to}
-      className="group bg-card border rounded-xl p-3 hover:border-primary/40 hover:shadow-card transition-all flex items-center gap-3"
+      className="group bg-card border rounded-xl p-3 hover:border-primary/40 transition-colors flex items-center gap-3"
     >
-      <div className={`size-9 rounded-lg grid place-items-center ${iconTone}`}>
+      <div className={`size-9 rounded-lg grid place-items-center shrink-0 ${iconTone}`}>
         <Icon className="size-4" />
       </div>
       <span className="text-sm font-medium leading-tight">{label}</span>
@@ -816,27 +800,21 @@ function QuickAction({
   );
 }
 
-function ProgressLine({ label, value, percent, color }: { label: string; value: string; percent: number; color: string }) {
+function SmallStat({
+  label, value, hint, tone = "default",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "default" | "warn";
+}) {
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <span className="font-display font-semibold tabular-nums">{value}</span>
-      </div>
-      <div className="h-2 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full ${color} transition-all`} style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ label, value, hint, tone = "default" }: { label: string; value: string; hint?: string; tone?: "default" | "warn" }) {
-  return (
-    <div>
+    <div className="bg-card border rounded-xl p-4">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={`mt-1 font-display font-bold text-lg tabular-nums ${tone === "warn" ? "text-warning-foreground" : ""}`}>{value}</div>
       {hint && <div className="text-[11px] text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }
+
 
