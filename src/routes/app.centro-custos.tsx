@@ -12,12 +12,13 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/centro-custos")({ component: CentroCustosPage });
 
-
 function CentroCustosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editClass, setEditClass] = useState("");
   const { selected } = useSelectedCompany();
   const [nome, setNome] = useState("");
+  const [novaClass, setNovaClass] = useState("");
   const [saving, setSaving] = useState(false);
 
   const { data: centers, refetch } = useQuery({
@@ -26,7 +27,7 @@ function CentroCustosPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("cost_centers")
-        .select("id, nome")
+        .select("id, nome, kpi_classification")
         .eq("company_id", selected!)
         .order("nome");
       return data ?? [];
@@ -52,6 +53,10 @@ function CentroCustosPage() {
     return { ...c, entradas, saidas, resultado: entradas - saidas };
   });
 
+  const classificacoesExistentes = Array.from(
+    new Set((centers ?? []).map((c: any) => c.kpi_classification).filter(Boolean) as string[]),
+  ).sort();
+
   const semCentro = (totals ?? []).filter((t) => !t.centro_custo_id);
   const semEntradas = semCentro.filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
   const semSaidas = semCentro.filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
@@ -60,19 +65,25 @@ function CentroCustosPage() {
     e.preventDefault();
     if (!selected || !nome.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from("cost_centers").insert({ company_id: selected, nome: nome.trim() });
+    const { error } = await supabase.from("cost_centers").insert({
+      company_id: selected,
+      nome: nome.trim(),
+      kpi_classification: novaClass.trim() || null,
+    });
     setSaving(false);
     if (error) toast.error(error.message);
-    else { toast.success("Centro de custo criado"); setNome(""); refetch(); }
+    else { toast.success("Centro de custo criado"); setNome(""); setNovaClass(""); refetch(); }
   }
 
   async function salvarEdicao(id: string) {
     if (!editValue.trim()) return;
-    const { error } = await supabase.from("cost_centers").update({ nome: editValue.trim() }).eq("id", id);
+    const { error } = await supabase
+      .from("cost_centers")
+      .update({ nome: editValue.trim(), kpi_classification: editClass.trim() || null })
+      .eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success("Centro atualizado"); setEditingId(null); refetch(); }
   }
-
 
   async function excluir(id: string, nome: string) {
     if (!confirm(`Excluir o centro "${nome}"? Lançamentos vinculados ficarão sem centro.`)) return;
@@ -82,27 +93,41 @@ function CentroCustosPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-6xl">
       <div>
         <h1 className="text-2xl font-display font-bold">Centro de Custos</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Agrupe receitas e despesas por área.
+          Agrupe receitas e despesas por área. A <strong>Classificação (DRE)</strong> define em que linha do relatório esse centro aparece — você pode reutilizar uma classificação existente ou criar uma nova linha digitando um nome novo.
         </p>
       </div>
 
-      <form onSubmit={adicionar} className="bg-card border rounded-2xl p-4 flex gap-3 items-end">
-        <div className="flex-1 space-y-1">
+      <form onSubmit={adicionar} className="bg-card border rounded-2xl p-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+        <div className="space-y-1">
           <Label>Novo centro de custo</Label>
-          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Custo Variável, Custo Fixo, Marketing" />
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Marketing, Operação" />
+        </div>
+        <div className="space-y-1">
+          <Label>Classificação DRE (opcional)</Label>
+          <Input
+            list="classificacoes-existentes"
+            value={novaClass}
+            onChange={(e) => setNovaClass(e.target.value)}
+            placeholder="Ex: Custo Variável, Despesa Operacional"
+          />
         </div>
         <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Adicionar"}</Button>
       </form>
+
+      <datalist id="classificacoes-existentes">
+        {classificacoesExistentes.map((c) => <option key={c} value={c} />)}
+      </datalist>
 
       <div className="bg-card border rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase">
             <tr>
               <th className="text-left p-3">Centro</th>
+              <th className="text-left p-3">Classificação (DRE)</th>
               <th className="text-right p-3">Entradas</th>
               <th className="text-right p-3">Saídas</th>
               <th className="text-right p-3">Resultado</th>
@@ -111,13 +136,24 @@ function CentroCustosPage() {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
+              <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
             ) : rows.map((r: any) => (
               <tr key={r.id} className="border-t">
                 <td className="p-3 font-medium">
                   {editingId === r.id ? (
                     <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus className="h-8" />
                   ) : r.nome}
+                </td>
+                <td className="p-3 text-muted-foreground">
+                  {editingId === r.id ? (
+                    <Input
+                      list="classificacoes-existentes"
+                      value={editClass}
+                      onChange={(e) => setEditClass(e.target.value)}
+                      placeholder="(sem classificação)"
+                      className="h-8"
+                    />
+                  ) : (r.kpi_classification || <span className="italic">—</span>)}
                 </td>
                 <td className="p-3 text-right text-success">{formatMoney(r.entradas)}</td>
                 <td className="p-3 text-right text-destructive">{formatMoney(r.saidas)}</td>
@@ -131,7 +167,7 @@ function CentroCustosPage() {
                       </>
                     ) : (
                       <>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditValue(r.nome); }} aria-label="Editar"><Pencil className="size-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditValue(r.nome); setEditClass(r.kpi_classification ?? ""); }} aria-label="Editar"><Pencil className="size-4" /></Button>
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => excluir(r.id, r.nome)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
                       </>
                     )}
@@ -142,6 +178,7 @@ function CentroCustosPage() {
             {(semEntradas > 0 || semSaidas > 0) && (
               <tr className="border-t bg-muted/30">
                 <td className="p-3 italic text-muted-foreground">Sem centro de custo</td>
+                <td className="p-3" />
                 <td className="p-3 text-right">{formatMoney(semEntradas)}</td>
                 <td className="p-3 text-right">{formatMoney(semSaidas)}</td>
                 <td className="p-3 text-right font-display font-semibold">{formatMoney(semEntradas - semSaidas)}</td>

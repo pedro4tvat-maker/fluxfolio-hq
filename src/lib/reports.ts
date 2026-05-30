@@ -187,6 +187,34 @@ export function buildDRE(data: ReportData, period: Period) {
 
   const semClassificacao = data.categories.filter((c) => !c.kpi_classification).length;
 
+  // Classificações customizadas: qualquer classificação que não seja um dos códigos fixos
+  // vira uma linha extra na DRE somando as transações vinculadas (saídas negativas).
+  const FIXED = new Set([
+    "outras_receitas",
+    "impostos",
+    "custos_variaveis",
+    "custos_fixos",
+    "despesas_operacionais",
+    "marketing",
+    "despesas_financeiras",
+  ]);
+  const customMap = new Map<string, number>();
+  realized.forEach((t) => {
+    const k = classOf(t);
+    if (!k || FIXED.has(k)) return;
+    const signed = t.tipo === "entrada" ? t.valor : -t.valor;
+    customMap.set(k, (customMap.get(k) ?? 0) + signed);
+  });
+  const customRows = Array.from(customMap.entries()).map(([k, v]) => ({
+    Linha: v >= 0 ? `(+) ${k}` : `(–) ${k}`,
+    Valor: v,
+  }));
+
+  // Recalcula lucro líquido incluindo linhas customizadas
+  const customTotal = Array.from(customMap.values()).reduce((s, v) => s + v, 0);
+  const lucroLiquidoFinal = lucroLiquido + customTotal;
+  const margemLiquidaFinal = receitaLiquida > 0 ? (lucroLiquidoFinal / receitaLiquida) * 100 : 0;
+
   return {
     rows: [
       { Linha: "Receita Bruta", Valor: receitaBruta },
@@ -199,10 +227,18 @@ export function buildDRE(data: ReportData, period: Period) {
       { Linha: "(–) Despesas Operacionais", Valor: -despesasOperacionais },
       { Linha: "= Resultado Operacional", Valor: resultadoOperacional },
       { Linha: "(–) Despesas Financeiras", Valor: -despesasFinanceiras },
-      { Linha: "= Lucro Líquido", Valor: lucroLiquido },
-      { Linha: "Margem Líquida (%)", Valor: margemLiquida },
+      ...customRows,
+      { Linha: "= Lucro Líquido", Valor: lucroLiquidoFinal },
+      { Linha: "Margem Líquida (%)", Valor: margemLiquidaFinal },
     ],
-    summary: { receitaBruta, receitaLiquida, margemContribuicao, resultadoOperacional, lucroLiquido, margemLiquida },
+    summary: {
+      receitaBruta,
+      receitaLiquida,
+      margemContribuicao,
+      resultadoOperacional,
+      lucroLiquido: lucroLiquidoFinal,
+      margemLiquida: margemLiquidaFinal,
+    },
     semClassificacao,
   };
 }
