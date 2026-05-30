@@ -31,6 +31,7 @@ type Tx = {
   forma_pagamento: string | null;
   categoria_id: string | null;
   conta_id: string | null;
+  centro_custo_id: string | null;
   payable_id: string | null;
   receivable_id: string | null;
   observacoes: string | null;
