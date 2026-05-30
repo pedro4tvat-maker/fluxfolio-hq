@@ -290,17 +290,20 @@ function ClientDashboard() {
       const last14 = new Date(today);
       last14.setDate(last14.getDate() - 13);
       const range = monthRange(today);
-      const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }, { data: categories }, { data: budgets }] = await Promise.all([
+      const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }, { data: categories }, { data: budgets }, { data: vendasVista }, { data: vendasPrazo }, { data: stockMovs }] = await Promise.all([
         withBranch(supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
         withBranch(supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado"), branchId),
         withBranch(supabase.from("transactions").select("tipo, valor, data").eq("company_id", selected).eq("status", "realizado").gte("data", last14.toISOString().slice(0, 10)).lte("data", formattedToday), branchId),
         withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }).limit(10), branchId),
         withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }).limit(10), branchId),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
-        withBranch(supabase.from("products").select("quantidade, estoque_minimo, preco_venda, custo_unitario").eq("company_id", selected), branchId),
+        withBranch(supabase.from("products").select("id, quantidade, estoque_minimo, preco_venda, custo_unitario").eq("company_id", selected), branchId),
         withBranch(supabase.from("transactions").select("id, descricao, tipo, valor, status, data").eq("company_id", selected).order("data", { ascending: false }).limit(5), branchId),
         supabase.from("categories").select("id, nome").eq("company_id", selected),
         withBranch(supabase.from("budgets").select("mes, ano, categoria_id, valor_orcado").eq("company_id", selected).eq("mes", today.getMonth() + 1).eq("ano", today.getFullYear()), branchId),
+        withBranch(supabase.from("transactions").select("id, valor, data").eq("company_id", selected).eq("tipo", "entrada").ilike("descricao", "Venda%").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("receivables").select("id, valor, created_at").eq("company_id", selected).ilike("descricao", "Venda%").gte("created_at", range.start).lte("created_at", range.end + "T23:59:59"), branchId),
+        withBranch(supabase.from("stock_movements").select("product_id, quantidade, custo_unitario, data").eq("company_id", selected).eq("tipo", "saida").gte("data", range.start).lte("data", range.end), branchId),
       ]);
 
       const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
@@ -340,20 +343,36 @@ function ClientDashboard() {
       });
       const trend = Array.from(trendMap.values());
 
-      // Vendas do mês: transactions with category named like 'venda' and tipo 'entrada'
-      const salesCategoryIds = (categories ?? []).filter((c) => typeof c.nome === "string" && c.nome.toLowerCase().includes("venda")).map((c) => c.id);
-      const vendasTx = (allTx ?? []).filter((t) => t.tipo === "entrada" && salesCategoryIds.includes((t as any).categoria_id));
-      const vendasMes = vendasTx.reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
-      const vendasCount = vendasTx.length;
+      // Vendas do mês: faturamento vem das vendas registradas (transações à vista + recebíveis a prazo
+      // com descrição iniciando em "Venda"). OS count = quantidade de vendas registradas no mês.
+      const vendasMes =
+        (vendasVista ?? []).reduce((s, t) => s + Number((t as any).valor ?? 0), 0) +
+        (vendasPrazo ?? []).reduce((s, r) => s + Number((r as any).valor ?? 0), 0);
+      const ordensServico = (vendasVista ?? []).length + (vendasPrazo ?? []).length;
+      const vendasCount = ordensServico;
 
-      // Inventory value and estimated average margin from products
-      const valorEstoque = (prods ?? []).reduce((s, p) => s + Number(p.quantidade ?? 0) * Number(p.custo_unitario ?? 0), 0);
-      const margemMedia = (() => {
-        const items = (prods ?? []).filter((p) => Number(p.preco_venda) > 0);
-        if (!items.length) return null;
-        const avg = items.reduce((acc, p) => acc + ((Number(p.preco_venda) - Number(p.custo_unitario)) / Number(p.preco_venda || 1)), 0) / items.length;
-        return avg;
-      })();
+      // Margem média do mês: baseada nas vendas reais (stock_movements de saída).
+      // Faturamento = qtd * preco_venda do produto. Custo = qtd * custo_unitario do
+      // momento da venda (snapshot do movimento), com fallback ao custo cadastrado.
+      const prodMap = new Map<string, { preco_venda: number; custo_unitario: number }>();
+      (prods ?? []).forEach((p: any) => {
+        prodMap.set(p.id, {
+          preco_venda: Number(p.preco_venda ?? 0),
+          custo_unitario: Number(p.custo_unitario ?? 0),
+        });
+      });
+      let faturamentoMovs = 0;
+      let custoMovs = 0;
+      (stockMovs ?? []).forEach((m: any) => {
+        const p = prodMap.get(m.product_id);
+        const qtd = Number(m.quantidade ?? 0);
+        const preco = Number(p?.preco_venda ?? 0);
+        const custoUnit =
+          m.custo_unitario != null ? Number(m.custo_unitario) : Number(p?.custo_unitario ?? 0);
+        faturamentoMovs += qtd * preco;
+        custoMovs += qtd * custoUnit;
+      });
+      const margemMedia = faturamentoMovs > 0 ? (faturamentoMovs - custoMovs) / faturamentoMovs : null;
 
       // Budget utilization for current month
       const totalOrcado = (budgets ?? []).reduce((s, b) => s + Number(b.valor_orcado ?? 0), 0);
@@ -380,7 +399,7 @@ function ClientDashboard() {
         trend,
         vendasMes,
         vendasCount,
-        valorEstoque,
+        ordensServico,
         margemMedia,
         orcamentoUtilizado,
       };
@@ -629,12 +648,7 @@ function ClientDashboard() {
           <div className="grid grid-cols-2 gap-4">
             <MiniStat label="Vendas do mês" value={formatMoney(data.vendasMes ?? 0)} hint={`${data.vendasCount ?? 0} pedidos`} />
             <MiniStat label="Margem média" value={data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(0)}%`} />
-            <MiniStat label="Valor em estoque" value={formatMoney(data.valorEstoque ?? 0)} />
-            <MiniStat
-              label="Produtos em alerta"
-              value={String(data.estoqueAlerta ?? 0)}
-              tone={data.estoqueAlerta > 0 ? "warn" : "default"}
-            />
+            <MiniStat label="OS do mês" value={String(data.ordensServico ?? 0)} hint="Ordens de serviço" />
           </div>
         </div>
       </section>
