@@ -538,10 +538,6 @@ function VendasPage() {
       const nome = m ? m[2].trim() : p;
       const precoSale = m && m[3] ? Number(m[3].replace(",", ".")) : NaN;
       const custoSale = m && m[4] ? Number(m[4].replace(",", ".")) : NaN;
-      const qtd = m ? Number(m[1].replace(",", ".")) : 1;
-      const nome = m ? m[2].trim() : p;
-      const precoSale = m && m[3] ? Number(m[3].replace(",", ".")) : NaN;
-      const custoSale = m && m[4] ? Number(m[4].replace(",", ".")) : NaN;
       const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
 
       // CUSTO: 1) custo registrado na venda (descrição); 2) stock_movement da venda; 3) custo atual do produto
