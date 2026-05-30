@@ -246,7 +246,13 @@ function VendasPage() {
     setSaving(true);
     try {
       const valor = total;
-      const partes = items.map((it) => `${it.quantidade}x ${it.nome}`).join(", ");
+      const partes = items
+        .map((it) => {
+          const preco = Number(it.preco_unitario) || 0;
+          const custo = Number(it.custo_unitario) || 0;
+          return `${it.quantidade}x ${it.nome} @${preco.toFixed(2)}|c${custo.toFixed(2)}`;
+        })
+        .join(", ");
       const descricao = `Venda${cliente?.name ? ` - ${cliente.name}` : ""} (${partes})`;
 
       for (const it of items) {
