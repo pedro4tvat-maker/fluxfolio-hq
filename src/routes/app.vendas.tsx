@@ -129,7 +129,7 @@ function VendasPage() {
       const [tx, rec] = await Promise.all([
         supabase
           .from("transactions")
-          .select("id, descricao, valor, data, status, forma_pagamento")
+          .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id")
           .eq("company_id", selected!)
           .eq("tipo", "entrada")
           .order("data", { ascending: false })
@@ -397,6 +397,113 @@ function VendasPage() {
     return html;
   }
 
+  function printPastSaleOS(row: {
+    id: string;
+    descricao: string | null;
+    valor: number | string | null;
+    data?: string | null;
+    vencimento?: string | null;
+    forma_pagamento?: string | null;
+    cliente?: string | null;
+  }, tipo: "vista" | "prazo") {
+    const orderNumber = `OS-${String(row.id).slice(0, 8).toUpperCase()}`;
+    const empresaDoc = company?.cnpj ?? company?.documento ?? "";
+    const empresaEnd = [company?.endereco, company?.bairro, company?.cidade, company?.estado, company?.cep]
+      .filter(Boolean)
+      .join(", ");
+    const dataRef = tipo === "vista" ? row.data : row.vencimento;
+    const valor = Number(row.valor) || 0;
+    const desc = row.descricao || "Venda";
+    // descricao salva no formato: "Venda - Cliente (2x Item A, 1x Item B)"
+    const matchItens = desc.match(/\(([^)]+)\)\s*$/);
+    const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
+    const clienteNome = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
+    const itensTxt = matchItens ? matchItens[1] : desc;
+    const itensArr = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+    const linhas = itensArr
+      .map((it) => `<tr><td>${escapeHtml(it)}</td></tr>`)
+      .join("");
+
+    const html = `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8" />
+<title>${orderNumber}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color:#111; margin: 32px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .muted { color:#666; font-size: 12px; }
+  .row { display:flex; justify-content:space-between; gap:16px; margin-top: 16px; }
+  .card { border:1px solid #ddd; border-radius:8px; padding:12px; flex:1; }
+  table { width:100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
+  th { background: #f7f7f7; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .totals { margin-top: 12px; text-align: right; font-size: 14px; }
+  .totals .grand { font-size: 20px; font-weight: 700; margin-top: 6px; }
+  .footer { margin-top: 32px; font-size: 11px; color:#666; text-align:center; }
+  .signs { display:flex; gap:24px; margin-top: 48px; }
+  .sign { flex:1; border-top:1px solid #333; padding-top:6px; text-align:center; font-size:12px; }
+  @media print { body { margin: 16mm; } .noprint { display:none; } }
+</style></head>
+<body>
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h1>${escapeHtml(company?.nome_fantasia || company?.nome || "")}</h1>
+      <div class="muted">${escapeHtml(company?.nome || "")}</div>
+      <div class="muted">${empresaDoc ? "CNPJ/CPF: " + escapeHtml(empresaDoc) : ""}</div>
+      <div class="muted">${escapeHtml(empresaEnd)}</div>
+      <div class="muted">${escapeHtml(company?.telefone || "")} ${company?.email ? "· " + escapeHtml(company.email) : ""}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#888">Ordem de Serviço / Venda</div>
+      <div style="font-size:20px; font-weight:700">${orderNumber}</div>
+      <div class="muted">Data: ${dataRef ? formatDate(dataRef) : "—"}</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <div style="font-size:11px; text-transform:uppercase; color:#888">Cliente</div>
+      <div style="font-weight:600; margin-top:4px">${escapeHtml(clienteNome)}</div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px; text-transform:uppercase; color:#888">Pagamento</div>
+      <div style="margin-top:4px"><b>Forma:</b> ${escapeHtml(row.forma_pagamento || "—")}</div>
+      <div><b>Condição:</b> ${tipo === "vista" ? "À vista" : "A prazo"}</div>
+      ${tipo === "prazo" && row.vencimento ? `<div><b>Vencimento:</b> ${formatDate(row.vencimento)}</div>` : ""}
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Descrição</th></tr></thead>
+    <tbody>${linhas}</tbody>
+  </table>
+
+  <div class="totals">
+    <div class="grand">TOTAL: ${formatMoney(valor)}</div>
+  </div>
+
+  <div class="signs">
+    <div class="sign">Empresa</div>
+    <div class="sign">Cliente</div>
+  </div>
+
+  <div class="footer">Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+  <div class="noprint" style="margin-top:16px; text-align:center">
+    <button onclick="window.print()" style="padding:8px 16px; cursor:pointer">Imprimir / Salvar PDF</button>
+  </div>
+</body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      toast.error("Pop-up bloqueado. Permita pop-ups para gerar a OS.");
+    }
+  }
+
+
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between">
@@ -642,11 +749,16 @@ function VendasPage() {
             <div className="space-y-2">
               {vendas?.tx.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-                  <div>
-                    <p className="font-medium">{row.descricao}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{row.descricao}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(row.data)} • {row.forma_pagamento ?? "—"}</p>
                   </div>
-                  <div className="font-display font-semibold text-success">{formatMoney(Number(row.valor))}</div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="font-display font-semibold text-success">{formatMoney(Number(row.valor))}</div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => printPastSaleOS(row, "vista")}>
+                      <FileText className="size-4" /> Baixar OS
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -663,11 +775,16 @@ function VendasPage() {
             <div className="space-y-2">
               {vendas?.rec.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-                  <div>
-                    <p className="font-medium">{row.descricao}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{row.descricao}</p>
                     <p className="text-xs text-muted-foreground">{row.cliente ?? "—"} • venc. {formatDate(row.vencimento)} • {row.status}</p>
                   </div>
-                  <div className="font-display font-semibold">{formatMoney(Number(row.valor))}</div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="font-display font-semibold">{formatMoney(Number(row.valor))}</div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => printPastSaleOS(row, "prazo")}>
+                      <FileText className="size-4" /> Baixar OS
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -675,7 +792,7 @@ function VendasPage() {
         </div>
       </section>
 
-      {selected && <MargemHistorica companyId={selected} products={products ?? []} />}
+      
 
       {selected && (
         <section className="space-y-3">
@@ -699,241 +816,3 @@ function escapeHtml(s: string | null | undefined): string {
     .replace(/'/g, "&#39;");
 }
 
-type ProdRef = { id: string; nome: string; preco_venda: number | null; custo_unitario: number | null };
-
-function MargemHistorica({ companyId, products }: { companyId: string; products: ProdRef[] }) {
-  const today = new Date();
-  const lastDay = today.toISOString().slice(0, 10);
-  const firstDay = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-  const [dataIni, setDataIni] = useState(firstDay);
-  const [dataFim, setDataFim] = useState(lastDay);
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [formaPag, setFormaPag] = useState<string>("__all__");
-  const [prodPickerOpen, setProdPickerOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-
-  // estados aplicados (só atualizam ao clicar em "Aplicar"). Default: últimos 7 dias.
-  const [applied, setApplied] = useState({
-    dataIni: firstDay,
-    dataFim: lastDay,
-    selectedProducts: [] as string[],
-    formaPag: "__all__",
-  });
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["margem-hist", companyId, applied.dataIni, applied.dataFim],
-    enabled: !!companyId && !!applied.dataIni && !!applied.dataFim,
-    queryFn: async () => {
-      const [mov, tx] = await Promise.all([
-        supabase
-          .from("stock_movements")
-          .select("id, product_id, quantidade, custo_unitario, data")
-          .eq("company_id", companyId)
-          .eq("tipo", "saida")
-          .gte("data", applied.dataIni)
-          .lte("data", applied.dataFim),
-        supabase
-          .from("transactions")
-          .select("data, forma_pagamento, valor")
-          .eq("company_id", companyId)
-          .eq("tipo", "entrada")
-          .gte("data", applied.dataIni)
-          .lte("data", applied.dataFim),
-      ]);
-      return {
-        movs: mov.data ?? [],
-        tx: tx.data ?? [],
-      };
-    },
-  });
-
-  const formasDisponiveis = useMemo(() => {
-    const set = new Set<string>();
-    (data?.tx ?? []).forEach((t: any) => t.forma_pagamento && set.add(t.forma_pagamento));
-    return Array.from(set).sort();
-  }, [data]);
-
-  const prodMap = useMemo(() => {
-    const m = new Map<string, ProdRef>();
-    products.forEach((p) => m.set(p.id, p));
-    return m;
-  }, [products]);
-
-  // Transações filtradas por forma de pagamento (faturamento real)
-  const txFiltered = useMemo(() => {
-    return (data?.tx ?? []).filter((t: any) => {
-      if (applied.formaPag !== "__all__" && t.forma_pagamento !== applied.formaPag) return false;
-      return true;
-    });
-  }, [data, applied.formaPag]);
-
-  // Datas em que houve faturamento com a forma filtrada (para amarrar o custo)
-  const datasFormaSet = useMemo(() => {
-    if (applied.formaPag === "__all__") return null;
-    const s = new Set<string>();
-    txFiltered.forEach((t: any) => t.data && s.add(String(t.data)));
-    return s;
-  }, [txFiltered, applied.formaPag]);
-
-  const movsFiltered = useMemo(() => {
-    return (data?.movs ?? []).filter((m: any) => {
-      if (applied.selectedProducts.length > 0 && !applied.selectedProducts.includes(m.product_id)) return false;
-      if (datasFormaSet && !datasFormaSet.has(String(m.data))) return false;
-      return true;
-    });
-  }, [data, applied.selectedProducts, datasFormaSet]);
-
-  const resumo = useMemo(() => {
-    // Faturamento de vendas: sempre soma qtd * preco_venda dos movimentos de saída
-    // (filtrados por produto e por forma de pagamento, quando aplicável).
-    const faturamento = movsFiltered.reduce((acc: number, m: any) => {
-      const p = prodMap.get(m.product_id);
-      const preco = Number(p?.preco_venda) || 0;
-      return acc + (Number(m.quantidade) || 0) * preco;
-    }, 0);
-
-    // Custo: usa o custo cadastrado do produto no momento da venda.
-    // Prioriza custo_unitario registrado no movimento (snapshot da venda),
-    // com fallback ao custo atual do cadastro do produto.
-    const custo = movsFiltered.reduce((acc: number, m: any) => {
-      const p = prodMap.get(m.product_id);
-      const custoUnit =
-        m.custo_unitario != null ? Number(m.custo_unitario) : Number(p?.custo_unitario) || 0;
-      return acc + (Number(m.quantidade) || 0) * custoUnit;
-    }, 0);
-
-    const lucro = faturamento - custo;
-    const pct = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
-    return { faturamento, custo, lucro, pct };
-  }, [movsFiltered, prodMap]);
-
-  function toggleProduct(id: string) {
-    setSelectedProducts((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
-
-  function aplicar() {
-    setApplied({ dataIni, dataFim, selectedProducts, formaPag });
-    setFilterOpen(false);
-  }
-
-  function limpar() {
-    setDataIni(firstDay);
-    setDataFim(lastDay);
-    setSelectedProducts([]);
-    setFormaPag("__all__");
-    setApplied({ dataIni: firstDay, dataFim: lastDay, selectedProducts: [], formaPag: "__all__" });
-  }
-
-  const filtrosAtivos =
-    (applied.formaPag !== "__all__" ? 1 : 0) +
-    (applied.selectedProducts.length > 0 ? 1 : 0) +
-    (applied.dataIni !== firstDay || applied.dataFim !== lastDay ? 1 : 0);
-
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-lg font-display font-semibold">Margem de Lucratividade</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {formatDate(applied.dataIni)} a {formatDate(applied.dataFim)}
-            {applied.formaPag !== "__all__" ? ` • ${applied.formaPag}` : ""}
-            {applied.selectedProducts.length > 0 ? ` • ${applied.selectedProducts.length} produto(s)` : ""}
-          </span>
-          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button type="button" variant="outline" size="sm">
-                <Filter className="size-4" />
-                Filtros{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ""}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[340px] p-4 space-y-3" align="end">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-xs">Data inicial</Label>
-                  <Input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Data final</Label>
-                  <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Forma de pagamento</Label>
-                <Select value={formaPag} onValueChange={setFormaPag}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">Todas</SelectItem>
-                    {formasDisponiveis.map((f) => (
-                      <SelectItem key={f} value={f}>{f}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Produtos</Label>
-                <Popover open={prodPickerOpen} onOpenChange={setProdPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="outline" className="w-full justify-between">
-                      {selectedProducts.length === 0 ? "Todos os produtos" : `${selectedProducts.length} selecionado(s)`}
-                      <ChevronsUpDown className="size-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Buscar produto..." />
-                      <CommandList>
-                        <CommandEmpty>Nenhum produto.</CommandEmpty>
-                        <CommandGroup>
-                          {selectedProducts.length > 0 && (
-                            <CommandItem onSelect={() => setSelectedProducts([])}>
-                              <X className="size-4 mr-2" /> Limpar seleção
-                            </CommandItem>
-                          )}
-                          {products.map((p) => (
-                            <CommandItem key={p.id} value={p.nome} onSelect={() => toggleProduct(p.id)}>
-                              <Check className={cn("size-4 mr-2", selectedProducts.includes(p.id) ? "opacity-100" : "opacity-0")} />
-                              {p.nome}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="flex justify-between gap-2 pt-1">
-                <Button type="button" variant="ghost" size="sm" onClick={limpar}>Limpar</Button>
-                <Button type="button" size="sm" onClick={aplicar}>Aplicar</Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
-      <div className="bg-card border rounded-2xl p-4">
-        {isLoading ? (
-          <div className="text-sm text-muted-foreground">Carregando...</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Faturamento</p>
-              <p className="text-2xl font-display font-bold">{formatMoney(resumo.faturamento)}</p>
-            </div>
-            <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Custo Total</p>
-              <p className="text-2xl font-display font-bold text-destructive">{formatMoney(resumo.custo)}</p>
-            </div>
-            <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Margem (Lucro)</p>
-              <p className={`text-2xl font-display font-bold ${resumo.lucro >= 0 ? "text-success" : "text-destructive"}`}>
-                {formatMoney(resumo.lucro)}
-              </p>
-              <p className="text-xs text-muted-foreground">{resumo.pct.toFixed(1)}% de margem</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
