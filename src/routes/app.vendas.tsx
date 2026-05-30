@@ -675,7 +675,7 @@ function VendasPage() {
         </div>
       </section>
 
-      {selected && <MargemHistorica companyId={selected} products={products ?? []} />}
+      
 
       {selected && (
         <section className="space-y-3">
