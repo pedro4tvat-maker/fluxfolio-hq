@@ -425,7 +425,7 @@ function TransactionDialog({
   };
 
   return (
-    <DialogContent className="max-w-lg">
+    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{tx ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
       </DialogHeader>
