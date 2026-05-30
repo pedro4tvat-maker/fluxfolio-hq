@@ -170,6 +170,7 @@ function slug(s: string): string {
 }
 
 type DreBucket =
+  | "receita_bruta"
   | "outras_receitas"
   | "impostos"
   | "custos_variaveis"
@@ -179,6 +180,18 @@ type DreBucket =
   | "despesas_financeiras";
 
 const BUCKET_ALIASES: Record<DreBucket, string[]> = {
+  receita_bruta: [
+    "receita_bruta",
+    "receita_operacional",
+    "receitas_operacionais",
+    "vendas",
+    "venda",
+    "faturamento",
+    "receita_de_vendas",
+    "receita_servicos",
+    "receita_de_servicos",
+    "servicos",
+  ],
   outras_receitas: ["outras_receitas", "outra_receita", "receita_nao_operacional", "receitas_nao_operacionais"],
   impostos: ["impostos", "imposto", "deducoes", "deducoes_e_impostos", "tributos"],
   custos_variaveis: ["custos_variaveis", "custo_variavel", "custos_variavel", "custo_variaveis", "cmv", "custo_mercadoria_vendida"],
@@ -225,12 +238,14 @@ export function buildDRE(data: ReportData, period: Period) {
   const sumByBucket = (bucket: DreBucket) =>
     realized.filter((t) => bucketOf(t) === bucket).reduce((s, t) => s + t.valor, 0);
 
-  // Receita bruta = entradas que NÃO se enquadram em outras_receitas/impostos
+  // Receita bruta: entradas classificadas como receita_bruta OU entradas
+  // sem classificação reconhecida (não caem em outras_receitas/impostos).
+  // Cada entrada é contada UMA única vez (não vira linha customizada também).
   const receitaBruta = realized
     .filter((t) => {
       if (t.tipo !== "entrada") return false;
       const b = bucketOf(t);
-      return b !== "outras_receitas" && b !== "impostos";
+      return b === "receita_bruta" || b === null;
     })
     .reduce((s, t) => s + t.valor, 0);
 
@@ -248,22 +263,23 @@ export function buildDRE(data: ReportData, period: Period) {
 
   const semClassificacao = data.categories.filter((c) => !c.kpi_classification).length;
 
-  // Classificações customizadas: classificação preenchida que não mapeia em nenhum bucket fixo
-  // vira uma linha extra na DRE somando as transações vinculadas (saídas negativas).
+  // Linhas customizadas: SAÍDAS com classificação preenchida que não mapeia
+  // em nenhum bucket fixo. Entradas sem bucket já foram contabilizadas em
+  // Receita Bruta — não viram linha extra para evitar duplicidade.
   const customMap = new Map<string, number>();
   realized.forEach((t) => {
+    if (t.tipo !== "saida") return;
     const raw = classOf(t);
     if (!raw) return;
     if (toBucket(raw)) return; // já contabilizado em bucket fixo
-    const signed = t.tipo === "entrada" ? t.valor : -t.valor;
-    customMap.set(raw, (customMap.get(raw) ?? 0) + signed);
+    customMap.set(raw, (customMap.get(raw) ?? 0) - t.valor);
   });
   const customRows = Array.from(customMap.entries()).map(([k, v]) => ({
-    Linha: v >= 0 ? `(+) ${k}` : `(–) ${k}`,
+    Linha: `(–) ${k}`,
     Valor: v,
   }));
 
-  // Recalcula lucro líquido incluindo linhas customizadas
+  // Recalcula lucro líquido incluindo linhas customizadas (todas negativas)
   const customTotal = Array.from(customMap.values()).reduce((s, v) => s + v, 0);
   const lucroLiquidoFinal = lucroLiquido + customTotal;
   const margemLiquidaFinal = receitaLiquida > 0 ? (lucroLiquidoFinal / receitaLiquida) * 100 : 0;
