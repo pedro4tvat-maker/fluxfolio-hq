@@ -145,10 +145,10 @@ function EstoquePage() {
       nome: p.nome,
       categoria: p.categoria ?? "",
       fornecedor: p.fornecedor ?? "",
-      custo_unitario: String(p.custo_unitario ?? 0),
-      preco_venda: String(p.preco_venda ?? 0),
-      estoque_minimo: String(p.estoque_minimo ?? 0),
-      quantidade_inicial: "0",
+      custo_unitario: p.custo_unitario ? String(p.custo_unitario) : "",
+      preco_venda: p.preco_venda ? String(p.preco_venda) : "",
+      estoque_minimo: p.estoque_minimo ? String(p.estoque_minimo) : "",
+      quantidade_inicial: "",
     });
     setProductOpen(true);
   }
