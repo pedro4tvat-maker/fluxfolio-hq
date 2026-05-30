@@ -715,7 +715,7 @@ function VendasPage() {
     openHtmlWindow(html);
   }
 
-  }
+
 
 
 
