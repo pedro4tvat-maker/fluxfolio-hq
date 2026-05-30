@@ -230,6 +230,49 @@ function EstoquePage() {
     qc.invalidateQueries({ queryKey: ["estoque-products"] });
   }
 
+  function openAdjustQuantity(p: Product) {
+    setAdjustForm({ product_id: p.id, nova_quantidade: String(p.quantidade) });
+    setAdjustOpen(true);
+  }
+
+  async function handleAdjustQuantity(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selected) return;
+    const p = productMap.get(adjustForm.product_id);
+    if (!p) return;
+    const novaQtd = Number(adjustForm.nova_quantidade);
+    if (isNaN(novaQtd) || novaQtd < 0) {
+      toast.error("Quantidade inválida");
+      return;
+    }
+    const diff = novaQtd - Number(p.quantidade);
+    if (diff === 0) {
+      setAdjustOpen(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("stock_movements").insert({
+        company_id: selected,
+        product_id: adjustForm.product_id,
+        tipo: diff > 0 ? "entrada" : "saida",
+        quantidade: Math.abs(diff),
+        custo_unitario: p.custo_unitario || null,
+        motivo: "Ajuste de estoque",
+        data: new Date().toISOString().slice(0, 10),
+      });
+      if (error) throw error;
+      toast.success("Quantidade ajustada");
+      setAdjustOpen(false);
+      qc.invalidateQueries({ queryKey: ["estoque-products"] });
+      qc.invalidateQueries({ queryKey: ["estoque-movements"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao ajustar quantidade");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function openNewMovement(productId?: string) {
     setMoveForm({ ...emptyMovement, product_id: productId ?? "" });
     setMoveOpen(true);
