@@ -132,7 +132,7 @@ export async function fetchReportData(
       supabase.from("budgets").select("mes, ano, valor_orcado, categoria_id").eq("company_id", companyId),
       branchId,
     ),
-    supabase.from("cost_centers").select("id, nome").eq("company_id", companyId),
+    supabase.from("cost_centers").select("id, nome, kpi_classification").eq("company_id", companyId),
   ]);
   return {
     transactions: ((tx as any).data ?? []).map((r: any) => ({ ...r, valor: Number(r.valor) })),
