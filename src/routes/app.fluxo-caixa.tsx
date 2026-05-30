@@ -511,7 +511,7 @@ function TransactionDialog({
         </div>
       </div>
       <DialogFooter>
-        <Button onClick={submit} disabled={saving}>{saving ? "Salvando..." : "Salvar lançamento"}</Button>
+        <Button onClick={submit} disabled={saving}>{saving ? "Salvando..." : tx ? "Atualizar lançamento" : "Salvar lançamento"}</Button>
       </DialogFooter>
     </DialogContent>
   );
