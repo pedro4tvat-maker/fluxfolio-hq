@@ -286,15 +286,14 @@ export function buildDRE(data: ReportData, period: Period) {
 
   const semClassificacao = data.categories.filter((c) => !c.kpi_classification).length;
 
-  // Linhas customizadas: SAÍDAS com classificação preenchida que não mapeia
-  // em nenhum bucket fixo. Entradas sem bucket já foram contabilizadas em
-  // Receita Bruta — não viram linha extra para evitar duplicidade.
+  // Linhas customizadas: SAÍDAS cujo classificador efetivo (qualquer fonte)
+  // NÃO mapeia em bucket fixo. Se bucketOf retorna algo, já foi contabilizado.
   const customMap = new Map<string, number>();
   realized.forEach((t) => {
     if (t.tipo !== "saida") return;
+    if (bucketOf(t)) return; // já contabilizado em bucket fixo
     const raw = classOf(t);
     if (!raw) return;
-    if (toBucket(raw)) return; // já contabilizado em bucket fixo
     customMap.set(raw, (customMap.get(raw) ?? 0) - t.valor);
   });
   const customRows = Array.from(customMap.entries()).map(([k, v]) => ({
