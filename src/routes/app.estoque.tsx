@@ -592,6 +592,35 @@ function EstoquePage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajustar quantidade em estoque</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAdjustQuantity} className="grid gap-3">
+            <div className="space-y-1">
+              <Label>Produto</Label>
+              <Select value={adjustForm.product_id} onValueChange={(v) => setAdjustForm({ ...adjustForm, product_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {(products ?? []).map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome} (estoque atual: {Number(p.quantidade)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Nova quantidade</Label>
+              <Input type="number" min="0" step="1" placeholder="0" value={adjustForm.nova_quantidade} onChange={(e) => setAdjustForm({ ...adjustForm, nova_quantidade: e.target.value })} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setAdjustOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Confirmar ajuste"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {selected && (
         <section className="space-y-2 max-w-5xl">
           <h2 className="font-display font-semibold">Documentos do estoque</h2>
