@@ -439,7 +439,7 @@ function VendasPage() {
     const itensTxt = matchItens ? matchItens[1] : desc;
     const itensArr = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
     const linhas = itensArr
-      .map((it) => `<tr><td>${escapeHtml(it)}</td></tr>`)
+      .map((it) => `<tr><td>${escapeHtml(it.replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?\s*$/, ""))}</td></tr>`)
       .join("");
 
     const html = `<!doctype html>
