@@ -30,7 +30,7 @@ const consultantNav: NavItem[] = [
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
   { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
   { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
-  { to: "/app/pendencias", label: "Central de Pendências", icon: Inbox },
+  
   { to: "/app/jornada", label: "Jornada da Consultoria", icon: RouteIcon },
   { to: "/app/atas", label: "Atas de Reunião", icon: NotebookPen },
   { to: "/app/biblioteca", label: "Biblioteca do Consultor", icon: BookOpen },
@@ -40,7 +40,7 @@ const consultantNav: NavItem[] = [
 
 const clientNav: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/app/pendencias", label: "Minhas Pendências", icon: Inbox },
+  
   { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
   { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },

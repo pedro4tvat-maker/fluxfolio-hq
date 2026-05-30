@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText } from "lucide-react";
+import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText, Filter } from "lucide-react";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { ContactForm } from "./app.crm";
 import { cn } from "@/lib/utils";
@@ -675,31 +675,6 @@ function VendasPage() {
         </div>
       </section>
 
-      {selected && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-display font-semibold">Margem da venda em edição</h2>
-          <div className="bg-card border rounded-2xl p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Faturamento</p>
-                <p className="text-2xl font-display font-bold">{formatMoney(total)}</p>
-              </div>
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Custo Total</p>
-                <p className="text-2xl font-display font-bold text-destructive">{formatMoney(totalCusto)}</p>
-              </div>
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Lucro</p>
-                <p className={`text-2xl font-display font-bold ${lucro >= 0 ? "text-success" : "text-destructive"}`}>
-                  {formatMoney(lucro)}
-                </p>
-                <p className="text-xs text-muted-foreground">{margemPct.toFixed(1)}% de margem</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {selected && <MargemHistorica companyId={selected} products={products ?? []} />}
 
       {selected && (
@@ -736,38 +711,39 @@ function MargemHistorica({ companyId, products }: { companyId: string; products:
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [formaPag, setFormaPag] = useState<string>("__all__");
   const [prodPickerOpen, setProdPickerOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // estados aplicados (só atualizam ao clicar em "Aplicar")
+  const [applied, setApplied] = useState({
+    dataIni: firstDay,
+    dataFim: lastDay,
+    selectedProducts: [] as string[],
+    formaPag: "__all__",
+  });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["margem-hist", companyId, dataIni, dataFim],
-    enabled: !!companyId && !!dataIni && !!dataFim,
+    queryKey: ["margem-hist", companyId, applied.dataIni, applied.dataFim],
+    enabled: !!companyId && !!applied.dataIni && !!applied.dataFim,
     queryFn: async () => {
-      const [mov, tx, rec] = await Promise.all([
+      const [mov, tx] = await Promise.all([
         supabase
           .from("stock_movements")
           .select("id, product_id, quantidade, custo_unitario, data")
           .eq("company_id", companyId)
           .eq("tipo", "saida")
-          .gte("data", dataIni)
-          .lte("data", dataFim)
-          .order("data", { ascending: false }),
+          .gte("data", applied.dataIni)
+          .lte("data", applied.dataFim),
         supabase
           .from("transactions")
           .select("data, forma_pagamento, valor")
           .eq("company_id", companyId)
           .eq("tipo", "entrada")
-          .gte("data", dataIni)
-          .lte("data", dataFim),
-        supabase
-          .from("receivables")
-          .select("vencimento, forma_pagamento, valor")
-          .eq("company_id", companyId)
-          .gte("vencimento", dataIni)
-          .lte("vencimento", dataFim),
+          .gte("data", applied.dataIni)
+          .lte("data", applied.dataFim),
       ]);
       return {
         movs: mov.data ?? [],
         tx: tx.data ?? [],
-        rec: rec.data ?? [],
       };
     },
   });
@@ -775,22 +751,8 @@ function MargemHistorica({ companyId, products }: { companyId: string; products:
   const formasDisponiveis = useMemo(() => {
     const set = new Set<string>();
     (data?.tx ?? []).forEach((t: any) => t.forma_pagamento && set.add(t.forma_pagamento));
-    (data?.rec ?? []).forEach((r: any) => r.forma_pagamento && set.add(r.forma_pagamento));
     return Array.from(set).sort();
   }, [data]);
-
-  // Datas em que houve venda com a forma selecionada
-  const datasFormaSet = useMemo(() => {
-    if (formaPag === "__all__") return null;
-    const s = new Set<string>();
-    (data?.tx ?? []).forEach((t: any) => {
-      if (t.forma_pagamento === formaPag && t.data) s.add(String(t.data));
-    });
-    (data?.rec ?? []).forEach((r: any) => {
-      if (r.forma_pagamento === formaPag && r.vencimento) s.add(String(r.vencimento));
-    });
-    return s;
-  }, [data, formaPag]);
 
   const prodMap = useMemo(() => {
     const m = new Map<string, ProdRef>();
@@ -798,166 +760,181 @@ function MargemHistorica({ companyId, products }: { companyId: string; products:
     return m;
   }, [products]);
 
-  const filteredMovs = useMemo(() => {
+  // Transações filtradas por forma de pagamento (faturamento real)
+  const txFiltered = useMemo(() => {
+    return (data?.tx ?? []).filter((t: any) => {
+      if (applied.formaPag !== "__all__" && t.forma_pagamento !== applied.formaPag) return false;
+      return true;
+    });
+  }, [data, applied.formaPag]);
+
+  // Datas em que houve faturamento com a forma filtrada (para amarrar o custo)
+  const datasFormaSet = useMemo(() => {
+    if (applied.formaPag === "__all__") return null;
+    const s = new Set<string>();
+    txFiltered.forEach((t: any) => t.data && s.add(String(t.data)));
+    return s;
+  }, [txFiltered, applied.formaPag]);
+
+  const movsFiltered = useMemo(() => {
     return (data?.movs ?? []).filter((m: any) => {
-      if (selectedProducts.length > 0 && !selectedProducts.includes(m.product_id)) return false;
+      if (applied.selectedProducts.length > 0 && !applied.selectedProducts.includes(m.product_id)) return false;
       if (datasFormaSet && !datasFormaSet.has(String(m.data))) return false;
       return true;
     });
-  }, [data, selectedProducts, datasFormaSet]);
+  }, [data, applied.selectedProducts, datasFormaSet]);
 
   const resumo = useMemo(() => {
+    // Faturamento real:
+    // - sem filtro de produto: soma das transações de entrada (com filtro de forma).
+    // - com filtro de produto: soma de qtd * preco_venda dos movimentos dos produtos selecionados.
     let faturamento = 0;
-    let custo = 0;
-    const porProduto = new Map<string, { nome: string; qtd: number; faturamento: number; custo: number }>();
-    filteredMovs.forEach((m: any) => {
+    if (applied.selectedProducts.length === 0) {
+      faturamento = txFiltered.reduce((acc: number, t: any) => acc + Number(t.valor || 0), 0);
+    } else {
+      faturamento = movsFiltered.reduce((acc: number, m: any) => {
+        const p = prodMap.get(m.product_id);
+        const preco = Number(p?.preco_venda) || 0;
+        return acc + (Number(m.quantidade) || 0) * preco;
+      }, 0);
+    }
+
+    // Custo real: usa custo_unitario registrado na venda; fallback ao custo do cadastro
+    const custo = movsFiltered.reduce((acc: number, m: any) => {
       const p = prodMap.get(m.product_id);
-      const qtd = Number(m.quantidade) || 0;
-      const preco = Number(p?.preco_venda) || 0;
       const custoUnit = m.custo_unitario != null ? Number(m.custo_unitario) : Number(p?.custo_unitario) || 0;
-      const rev = qtd * preco;
-      const cst = qtd * custoUnit;
-      faturamento += rev;
-      custo += cst;
-      const key = m.product_id;
-      const agg = porProduto.get(key) ?? { nome: p?.nome ?? "—", qtd: 0, faturamento: 0, custo: 0 };
-      agg.qtd += qtd;
-      agg.faturamento += rev;
-      agg.custo += cst;
-      porProduto.set(key, agg);
-    });
+      return acc + (Number(m.quantidade) || 0) * custoUnit;
+    }, 0);
+
     const lucro = faturamento - custo;
     const pct = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
-    return {
-      faturamento,
-      custo,
-      lucro,
-      pct,
-      itens: Array.from(porProduto.values()).sort((a, b) => b.faturamento - a.faturamento),
-    };
-  }, [filteredMovs, prodMap]);
+    return { faturamento, custo, lucro, pct };
+  }, [txFiltered, movsFiltered, prodMap, applied.selectedProducts]);
 
   function toggleProduct(id: string) {
     setSelectedProducts((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
+  function aplicar() {
+    setApplied({ dataIni, dataFim, selectedProducts, formaPag });
+    setFilterOpen(false);
+  }
+
+  function limpar() {
+    setDataIni(firstDay);
+    setDataFim(lastDay);
+    setSelectedProducts([]);
+    setFormaPag("__all__");
+    setApplied({ dataIni: firstDay, dataFim: lastDay, selectedProducts: [], formaPag: "__all__" });
+  }
+
+  const filtrosAtivos =
+    (applied.formaPag !== "__all__" ? 1 : 0) +
+    (applied.selectedProducts.length > 0 ? 1 : 0) +
+    (applied.dataIni !== firstDay || applied.dataFim !== lastDay ? 1 : 0);
+
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-display font-semibold">Margem de Lucratividade (histórico)</h2>
-      <div className="bg-card border rounded-2xl p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="space-y-1">
-            <Label>Data inicial</Label>
-            <Input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Data final</Label>
-            <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Forma de pagamento</Label>
-            <Select value={formaPag} onValueChange={setFormaPag}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas</SelectItem>
-                {formasDisponiveis.map((f) => (
-                  <SelectItem key={f} value={f}>{f}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Produtos</Label>
-            <Popover open={prodPickerOpen} onOpenChange={setProdPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button type="button" variant="outline" className="w-full justify-between">
-                  {selectedProducts.length === 0 ? "Todos os produtos" : `${selectedProducts.length} selecionado(s)`}
-                  <ChevronsUpDown className="size-4 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Buscar produto..." />
-                  <CommandList>
-                    <CommandEmpty>Nenhum produto.</CommandEmpty>
-                    <CommandGroup>
-                      {selectedProducts.length > 0 && (
-                        <CommandItem onSelect={() => setSelectedProducts([])}>
-                          <X className="size-4 mr-2" /> Limpar seleção
-                        </CommandItem>
-                      )}
-                      {products.map((p) => (
-                        <CommandItem key={p.id} value={p.nome} onSelect={() => toggleProduct(p.id)}>
-                          <Check className={cn("size-4 mr-2", selectedProducts.includes(p.id) ? "opacity-100" : "opacity-0")} />
-                          {p.nome}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h2 className="text-lg font-display font-semibold">Margem de Lucratividade</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {formatDate(applied.dataIni)} a {formatDate(applied.dataFim)}
+            {applied.formaPag !== "__all__" ? ` • ${applied.formaPag}` : ""}
+            {applied.selectedProducts.length > 0 ? ` • ${applied.selectedProducts.length} produto(s)` : ""}
+          </span>
+          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" size="sm">
+                <Filter className="size-4" />
+                Filtros{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ""}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[340px] p-4 space-y-3" align="end">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Data inicial</Label>
+                  <Input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Data final</Label>
+                  <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Forma de pagamento</Label>
+                <Select value={formaPag} onValueChange={setFormaPag}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Todas</SelectItem>
+                    {formasDisponiveis.map((f) => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Produtos</Label>
+                <Popover open={prodPickerOpen} onOpenChange={setProdPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" className="w-full justify-between">
+                      {selectedProducts.length === 0 ? "Todos os produtos" : `${selectedProducts.length} selecionado(s)`}
+                      <ChevronsUpDown className="size-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar produto..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum produto.</CommandEmpty>
+                        <CommandGroup>
+                          {selectedProducts.length > 0 && (
+                            <CommandItem onSelect={() => setSelectedProducts([])}>
+                              <X className="size-4 mr-2" /> Limpar seleção
+                            </CommandItem>
+                          )}
+                          {products.map((p) => (
+                            <CommandItem key={p.id} value={p.nome} onSelect={() => toggleProduct(p.id)}>
+                              <Check className={cn("size-4 mr-2", selectedProducts.includes(p.id) ? "opacity-100" : "opacity-0")} />
+                              {p.nome}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex justify-between gap-2 pt-1">
+                <Button type="button" variant="ghost" size="sm" onClick={limpar}>Limpar</Button>
+                <Button type="button" size="sm" onClick={aplicar}>Aplicar</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
+      </div>
 
+      <div className="bg-card border rounded-2xl p-4">
         {isLoading ? (
           <div className="text-sm text-muted-foreground">Carregando...</div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Faturamento</p>
-                <p className="text-2xl font-display font-bold">{formatMoney(resumo.faturamento)}</p>
-              </div>
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Custo Total</p>
-                <p className="text-2xl font-display font-bold text-destructive">{formatMoney(resumo.custo)}</p>
-              </div>
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Lucro</p>
-                <p className={`text-2xl font-display font-bold ${resumo.lucro >= 0 ? "text-success" : "text-destructive"}`}>
-                  {formatMoney(resumo.lucro)}
-                </p>
-                <p className="text-xs text-muted-foreground">{resumo.pct.toFixed(1)}% de margem</p>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1 rounded-lg border border-border p-4 text-center">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Faturamento</p>
+              <p className="text-2xl font-display font-bold">{formatMoney(resumo.faturamento)}</p>
             </div>
-
-            {resumo.itens.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr className="text-left">
-                      <th className="p-2">Produto</th>
-                      <th className="p-2 text-right">Qtd</th>
-                      <th className="p-2 text-right">Faturamento</th>
-                      <th className="p-2 text-right">Custo</th>
-                      <th className="p-2 text-right">Lucro</th>
-                      <th className="p-2 text-right">Margem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {resumo.itens.map((it, i) => {
-                      const lucro = it.faturamento - it.custo;
-                      const pct = it.faturamento > 0 ? (lucro / it.faturamento) * 100 : 0;
-                      return (
-                        <tr key={i} className="border-t">
-                          <td className="p-2">{it.nome}</td>
-                          <td className="p-2 text-right">{it.qtd}</td>
-                          <td className="p-2 text-right">{formatMoney(it.faturamento)}</td>
-                          <td className="p-2 text-right text-destructive">{formatMoney(it.custo)}</td>
-                          <td className={`p-2 text-right ${lucro >= 0 ? "text-success" : "text-destructive"}`}>{formatMoney(lucro)}</td>
-                          <td className="p-2 text-right">{pct.toFixed(1)}%</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              * Faturamento calculado com o preço de venda atual cadastrado no produto. Custo usa o custo registrado na venda (quando informado).
-            </p>
-          </>
+            <div className="space-y-1 rounded-lg border border-border p-4 text-center">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Custo Total</p>
+              <p className="text-2xl font-display font-bold text-destructive">{formatMoney(resumo.custo)}</p>
+            </div>
+            <div className="space-y-1 rounded-lg border border-border p-4 text-center">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Margem (Lucro)</p>
+              <p className={`text-2xl font-display font-bold ${resumo.lucro >= 0 ? "text-success" : "text-destructive"}`}>
+                {formatMoney(resumo.lucro)}
+              </p>
+              <p className="text-xs text-muted-foreground">{resumo.pct.toFixed(1)}% de margem</p>
+            </div>
+          </div>
         )}
       </div>
     </section>
