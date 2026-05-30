@@ -130,7 +130,7 @@ function VendasPage() {
     queryKey: ["vendas-list", selected],
     enabled: !!selected,
     queryFn: async () => {
-      const [tx, rec] = await Promise.all([
+      const [tx, rec, movs] = await Promise.all([
         supabase
           .from("transactions")
           .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id")
@@ -144,8 +144,16 @@ function VendasPage() {
           .eq("company_id", selected!)
           .order("vencimento", { ascending: false })
           .limit(50),
+        supabase
+          .from("stock_movements")
+          .select("id, product_id, quantidade, custo_unitario, data, motivo")
+          .eq("company_id", selected!)
+          .eq("tipo", "saida")
+          .eq("motivo", "Venda")
+          .order("data", { ascending: false })
+          .limit(500),
       ]);
-      return { tx: tx.data ?? [], rec: rec.data ?? [] };
+      return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [] };
     },
   });
 
@@ -509,27 +517,47 @@ function VendasPage() {
 
 
   type ParsedItem = { nome: string; qtd: number; preco: number; custo: number; subtotal: number; custoTotal: number; margem: number };
-  function parseSaleItems(descricao: string | null, valorTotal: number): ParsedItem[] {
+  type SaleMov = { id: string; product_id: string | null; quantidade: number | string; custo_unitario: number | string | null; data: string | null };
+  function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[]): ParsedItem[] {
     const desc = descricao || "";
     const matchItens = desc.match(/\(([^)]+)\)\s*$/);
     const itensTxt = matchItens ? matchItens[1] : "";
     const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+    const dateKey = (saleDate || "").slice(0, 10);
     const parsed: ParsedItem[] = partes.map((p) => {
       const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+)$/i);
       const qtd = m ? Number(m[1].replace(",", ".")) : 1;
       const nome = m ? m[2].trim() : p;
       const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
+      // Procura movimento de estoque correspondente (custo registrado NO MOMENTO da venda)
+      let custo = Number(prod?.custo_unitario ?? 0);
+      if (prod) {
+        // Match exato: produto + qtd + mesma data
+        let idx = movsPool.findIndex((mv) =>
+          mv.product_id === prod.id &&
+          Number(mv.quantidade) === qtd &&
+          String(mv.data || "").slice(0, 10) === dateKey,
+        );
+        // Fallback: produto + mesma data (ignora qtd)
+        if (idx < 0) idx = movsPool.findIndex((mv) =>
+          mv.product_id === prod.id && String(mv.data || "").slice(0, 10) === dateKey,
+        );
+        // Fallback: qualquer movimento desse produto (mais recente)
+        if (idx < 0) idx = movsPool.findIndex((mv) => mv.product_id === prod.id);
+        if (idx >= 0) {
+          const movCusto = Number(movsPool[idx].custo_unitario);
+          if (Number.isFinite(movCusto) && movCusto > 0) custo = movCusto;
+          movsPool.splice(idx, 1);
+        }
+      }
       const preco = Number(prod?.preco_venda ?? 0);
-      const custo = Number(prod?.custo_unitario ?? 0);
       const subtotal = qtd * preco;
       const custoTotal = qtd * custo;
       return { nome, qtd, preco, custo, subtotal, custoTotal, margem: subtotal - custoTotal };
     });
-    // Se nada foi parseado, cria linha única usando o valor total
     if (parsed.length === 0) {
       return [{ nome: desc || "Venda", qtd: 1, preco: valorTotal, custo: 0, subtotal: valorTotal, custoTotal: 0, margem: valorTotal }];
     }
-    // Ajusta preço proporcionalmente se total parseado divergir do valor real
     const totalParsed = parsed.reduce((a, b) => a + b.subtotal, 0);
     if (totalParsed > 0 && Math.abs(totalParsed - valorTotal) > 0.5) {
       const factor = valorTotal / totalParsed;
@@ -545,9 +573,11 @@ function VendasPage() {
     id: string; descricao: string | null; valor: number | string | null;
     data?: string | null; vencimento?: string | null;
     forma_pagamento?: string | null; cliente?: string | null;
-  }, tipo: "vista" | "prazo") {
+  }, tipo: "vista" | "prazo", sharedPool?: SaleMov[]) {
     const valor = Number(row.valor) || 0;
-    const itens = parseSaleItems(row.descricao, valor);
+    const dataRefRaw = tipo === "vista" ? row.data : row.vencimento;
+    const pool: SaleMov[] = sharedPool ?? ((vendas?.movs ?? []).map((m) => ({ ...m })) as SaleMov[]);
+    const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool);
     const totalReceita = itens.reduce((a, b) => a + b.subtotal, 0);
     const totalCusto = itens.reduce((a, b) => a + b.custoTotal, 0);
     const margem = totalReceita - totalCusto;
@@ -646,12 +676,13 @@ function VendasPage() {
       const s = String(d).slice(0, 10);
       return s >= from && s <= to;
     };
+    const sharedPool: SaleMov[] = (vendas.movs ?? []).map((m) => ({ ...m })) as SaleMov[];
     const vistaRows = vendas.tx
       .filter((r) => inRange(r.data))
-      .map((r) => buildSaleMarginRows(r, "vista"));
+      .map((r) => buildSaleMarginRows(r, "vista", sharedPool));
     const prazoRows = vendas.rec
       .filter((r) => inRange(r.vencimento))
-      .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo"));
+      .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool));
     const all = [...vistaRows, ...prazoRows];
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
     const totalReceita = all.reduce((a, b) => a + b.totalReceita, 0);
