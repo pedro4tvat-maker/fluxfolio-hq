@@ -44,6 +44,7 @@ function FluxoCaixa() {
   const [categoria, setCategoria] = useState<string>("todas");
   const [search, setSearch] = useState("");
   const [openNew, setOpenNew] = useState(false);
+  const [editingTx, setEditingTx] = useState<Tx | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Tx | null>(null);
 
   const range = useMemo(() => {
