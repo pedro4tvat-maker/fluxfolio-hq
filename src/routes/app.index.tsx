@@ -542,7 +542,7 @@ function ClientDashboard() {
         )}
       </section>
 
-      {/* 4. Movimento do mês */}
+      {/* 5. Movimento do mês */}
       <section>
         <SectionTitle>Movimento do mês</SectionTitle>
         <div className="bg-card border rounded-2xl p-6">
