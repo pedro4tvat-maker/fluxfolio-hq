@@ -32,6 +32,8 @@ type SaleItem = {
   nome: string;
   quantidade: string;
   preco_unitario: string;
+  custo_unitario: string; // custo desta venda (pode sobrescrever o cadastrado)
+  custo_padrao: string;   // custo cadastrado no produto (referência)
 };
 
 type CompanyData = {
@@ -99,7 +101,7 @@ function VendasPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("id, nome, preco_venda, quantidade")
+        .select("id, nome, preco_venda, quantidade, custo_unitario")
         .eq("company_id", selected!)
         .order("nome");
       return data ?? [];
@@ -169,6 +171,8 @@ function VendasPage() {
           nome: p.nome,
           quantidade: "1",
           preco_unitario: String(p.preco_venda ?? ""),
+          custo_unitario: String(p.custo_unitario ?? ""),
+          custo_padrao: String(p.custo_unitario ?? ""),
         },
       ];
     });
@@ -178,7 +182,7 @@ function VendasPage() {
   function addServiceLine() {
     setItems((prev) => [
       ...prev,
-      { product_id: "", nome: "Serviço", quantidade: "1", preco_unitario: "" },
+      { product_id: "", nome: "Serviço", quantidade: "1", preco_unitario: "", custo_unitario: "", custo_padrao: "" },
     ]);
   }
 
@@ -227,11 +231,13 @@ function VendasPage() {
 
       for (const it of items) {
         if (it.product_id) {
+          const custoVenda = Number(it.custo_unitario);
           const { error: smErr } = await supabase.from("stock_movements").insert({
             company_id: selected,
             product_id: it.product_id,
             tipo: "saida",
             quantidade: Number(it.quantidade),
+            custo_unitario: Number.isFinite(custoVenda) && custoVenda > 0 ? custoVenda : null,
             motivo: "Venda",
           });
           if (smErr) throw smErr;
@@ -486,38 +492,66 @@ function VendasPage() {
               </div>
             ) : (
               <div className="border rounded-lg divide-y">
-                <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/40">
-                  <div className="col-span-5">Descrição</div>
-                  <div className="col-span-2 text-center">Qtd</div>
-                  <div className="col-span-2 text-right">Preço un.</div>
-                  <div className="col-span-2 text-right">Subtotal</div>
-                  <div className="col-span-1"></div>
-                </div>
-                {items.map((it, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center">
-                    <div className="col-span-5">
-                      <Input value={it.nome} onChange={(e) => updateItem(idx, { nome: e.target.value })} />
+                {items.map((it, idx) => {
+                  const qtd = Number(it.quantidade) || 0;
+                  const preco = Number(it.preco_unitario) || 0;
+                  const custo = Number(it.custo_unitario) || 0;
+                  const subtotal = qtd * preco;
+                  const margem = qtd * (preco - custo);
+                  const margemPct = preco > 0 ? ((preco - custo) / preco) * 100 : 0;
+                  const custoAlterado = it.product_id && it.custo_padrao && Number(it.custo_padrao) !== custo;
+                  return (
+                    <div key={idx} className="p-3 space-y-2">
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-5">
+                          <Label className="text-xs text-muted-foreground">Descrição</Label>
+                          <Input value={it.nome} onChange={(e) => updateItem(idx, { nome: e.target.value })} />
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs text-muted-foreground">Qtd</Label>
+                          <Input type="number" min="0" step="1" className="text-center"
+                            value={it.quantidade}
+                            onChange={(e) => updateItem(idx, { quantidade: e.target.value })} />
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs text-muted-foreground">Preço un.</Label>
+                          <Input type="number" min="0" step="0.01" className="text-right"
+                            value={it.preco_unitario}
+                            onChange={(e) => updateItem(idx, { preco_unitario: e.target.value })} />
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs text-muted-foreground">
+                            Custo un. {it.product_id && it.custo_padrao ? `(padrão ${formatMoney(Number(it.custo_padrao))})` : ""}
+                          </Label>
+                          <Input type="number" min="0" step="0.01" className="text-right"
+                            placeholder="Opcional"
+                            value={it.custo_unitario}
+                            onChange={(e) => updateItem(idx, { custo_unitario: e.target.value })} />
+                        </div>
+                        <div className="col-span-1 flex justify-end pt-5">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)}>
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pl-1">
+                        <div className="flex gap-3">
+                          <span>Subtotal: <b className="text-foreground">{formatMoney(subtotal)}</b></span>
+                          {custo > 0 && (
+                            <span>
+                              Margem: <b className={margem >= 0 ? "text-success" : "text-destructive"}>
+                                {formatMoney(margem)} ({margemPct.toFixed(1)}%)
+                              </b>
+                            </span>
+                          )}
+                        </div>
+                        {custoAlterado && (
+                          <span className="text-warning">Custo desta venda difere do cadastro (não altera o produto)</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="col-span-2">
-                      <Input type="number" min="0" step="1" className="text-center"
-                        value={it.quantidade}
-                        onChange={(e) => updateItem(idx, { quantidade: e.target.value })} />
-                    </div>
-                    <div className="col-span-2">
-                      <Input type="number" min="0" step="0.01" className="text-right"
-                        value={it.preco_unitario}
-                        onChange={(e) => updateItem(idx, { preco_unitario: e.target.value })} />
-                    </div>
-                    <div className="col-span-2 text-right font-medium">
-                      {formatMoney((Number(it.quantidade) || 0) * (Number(it.preco_unitario) || 0))}
-                    </div>
-                    <div className="col-span-1 text-right">
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)}>
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
