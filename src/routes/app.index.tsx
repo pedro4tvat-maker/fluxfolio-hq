@@ -337,7 +337,7 @@ function ClientDashboard() {
       const recOverdue = recOpen.filter((r) => r.vencimento < todayISO);
 
       const estoqueAlerta = (prods ?? []).filter((p) => Number(p.quantidade) <= Number(p.estoque_minimo)).length;
-      const clientesAtraso = new Set(recOverdue.map((r) => r.cliente_id).filter(Boolean)).size;
+      const clientesAtraso = new Set(recOverdue.map((r) => r.cliente).filter(Boolean)).size;
 
       const vendasMes = sum(vendasVista) + sum(vendasPrazo);
       const vendasCount = (vendasVista ?? []).length + (vendasPrazo ?? []).length;
