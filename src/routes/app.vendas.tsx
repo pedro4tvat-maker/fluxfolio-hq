@@ -503,7 +503,10 @@ function VendasPage() {
       w.document.close();
     } else {
       toast.error("Pop-up bloqueado. Permita pop-ups para gerar a OS.");
+    }
   }
+
+
 
   type ParsedItem = { nome: string; qtd: number; preco: number; custo: number; subtotal: number; custoTotal: number; margem: number };
   function parseSaleItems(descricao: string | null, valorTotal: number): ParsedItem[] {
