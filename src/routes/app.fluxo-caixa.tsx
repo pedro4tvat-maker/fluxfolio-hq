@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDownCircle, ArrowUpCircle, Download, Filter, PlusCircle, Search, Trash2, Lock, Building2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Download, Filter, PlusCircle, Search, Trash2, Pencil, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
@@ -31,6 +31,7 @@ type Tx = {
   forma_pagamento: string | null;
   categoria_id: string | null;
   conta_id: string | null;
+  centro_custo_id: string | null;
   payable_id: string | null;
   receivable_id: string | null;
   observacoes: string | null;
@@ -44,6 +45,7 @@ function FluxoCaixa() {
   const [categoria, setCategoria] = useState<string>("todas");
   const [search, setSearch] = useState("");
   const [openNew, setOpenNew] = useState(false);
+  const [editingTx, setEditingTx] = useState<Tx | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Tx | null>(null);
 
   const range = useMemo(() => {
@@ -171,12 +173,22 @@ function FluxoCaixa() {
             <DialogTrigger asChild>
               <Button><PlusCircle className="size-4" /> Novo lançamento</Button>
             </DialogTrigger>
-            <NewTransactionDialog
+            <TransactionDialog
               companyId={selected!}
               categorias={categorias}
               contas={contas}
               costCenters={costCenters}
               onDone={() => { setOpenNew(false); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
+            />
+          </Dialog>
+          <Dialog open={!!editingTx} onOpenChange={(o) => !o && setEditingTx(null)}>
+            <TransactionDialog
+              tx={editingTx ?? undefined}
+              companyId={selected!}
+              categorias={categorias}
+              contas={contas}
+              costCenters={costCenters}
+              onDone={() => { setEditingTx(null); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
             />
           </Dialog>
         </div>
@@ -296,14 +308,24 @@ function FluxoCaixa() {
                       {t.tipo === "entrada" ? "+" : "−"} {formatMoney(t.valor)}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost" size="icon"
-                        disabled={isAuto}
-                        title={isAuto ? "Lançamento automático. Edite em Contas a Pagar/Receber." : "Excluir"}
-                        onClick={() => setConfirmDelete(t)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost" size="icon"
+                          disabled={isAuto}
+                          title={isAuto ? "Lançamento automático. Edite em Contas a Pagar/Receber." : "Editar"}
+                          onClick={() => setEditingTx(t)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon"
+                          disabled={isAuto}
+                          title={isAuto ? "Lançamento automático. Edite em Contas a Pagar/Receber." : "Excluir"}
+                          onClick={() => setConfirmDelete(t)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -340,25 +362,26 @@ function FluxoCaixa() {
   );
 }
 
-function NewTransactionDialog({
-  companyId, categorias, contas, costCenters, onDone,
+function TransactionDialog({
+  tx, companyId, categorias, contas, costCenters, onDone,
 }: {
+  tx?: Tx;
   companyId: string;
   categorias: { id: string; nome: string; tipo: string }[];
   contas: { id: string; nome: string }[];
   costCenters: { id: string; nome: string }[];
   onDone: () => void;
 }) {
-  const [tipo, setTipo] = useState<"entrada" | "saida">("entrada");
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [categoriaId, setCategoriaId] = useState<string>("");
-  const [contaId, setContaId] = useState<string>("");
-  const [centroCustoId, setCentroCustoId] = useState<string>("");
-  const [forma, setForma] = useState<string>("");
-  const [status, setStatus] = useState<"realizado" | "previsto">("realizado");
-  const [observacoes, setObservacoes] = useState("");
+  const [tipo, setTipo] = useState<"entrada" | "saida">(tx?.tipo ?? "entrada");
+  const [data, setData] = useState(tx?.data ?? new Date().toISOString().slice(0, 10));
+  const [descricao, setDescricao] = useState(tx?.descricao ?? "");
+  const [valor, setValor] = useState(tx ? String(tx.valor).replace(".", ",") : "");
+  const [categoriaId, setCategoriaId] = useState<string>(tx?.categoria_id ?? "");
+  const [contaId, setContaId] = useState<string>(tx?.conta_id ?? "");
+  const [centroCustoId, setCentroCustoId] = useState<string>(tx?.centro_custo_id ?? "");
+  const [forma, setForma] = useState<string>(tx?.forma_pagamento ?? "");
+  const [status, setStatus] = useState<"realizado" | "previsto">(tx?.status === "cancelado" ? "realizado" : (tx?.status as any) ?? "realizado");
+  const [observacoes, setObservacoes] = useState(tx?.observacoes ?? "");
   const [saving, setSaving] = useState(false);
 
   const catFiltered = categorias.filter((c) => c.tipo === tipo);
@@ -368,26 +391,40 @@ function NewTransactionDialog({
     if (!descricao.trim()) return toast.error("Informe uma descrição");
     if (!v || v <= 0) return toast.error("Informe um valor válido");
     setSaving(true);
-    const { error } = await supabase.from("transactions").insert({
-      company_id: companyId,
-      data, tipo, descricao: descricao.trim(), valor: v, status,
-      categoria_id: categoriaId || null,
-      conta_id: contaId || null,
-      centro_custo_id: centroCustoId || null,
-      forma_pagamento: forma || null,
-      observacoes: observacoes.trim() || null,
-    });
-    setSaving(false);
-    if (error) return toast.error("Erro ao salvar", { description: error.message });
-    toast.success("Lançamento criado");
-    setDescricao(""); setValor(""); setObservacoes("");
+    if (tx) {
+      const { error } = await supabase.from("transactions").update({
+        data, tipo, descricao: descricao.trim(), valor: v, status,
+        categoria_id: categoriaId || null,
+        conta_id: contaId || null,
+        centro_custo_id: centroCustoId || null,
+        forma_pagamento: forma || null,
+        observacoes: observacoes.trim() || null,
+      }).eq("id", tx.id);
+      setSaving(false);
+      if (error) return toast.error("Erro ao atualizar", { description: error.message });
+      toast.success("Lançamento atualizado");
+    } else {
+      const { error } = await supabase.from("transactions").insert({
+        company_id: companyId,
+        data, tipo, descricao: descricao.trim(), valor: v, status,
+        categoria_id: categoriaId || null,
+        conta_id: contaId || null,
+        centro_custo_id: centroCustoId || null,
+        forma_pagamento: forma || null,
+        observacoes: observacoes.trim() || null,
+      });
+      setSaving(false);
+      if (error) return toast.error("Erro ao salvar", { description: error.message });
+      toast.success("Lançamento criado");
+      setDescricao(""); setValor(""); setObservacoes("");
+    }
     onDone();
   };
 
   return (
     <DialogContent className="max-w-lg">
       <DialogHeader>
-        <DialogTitle>Novo lançamento</DialogTitle>
+        <DialogTitle>{tx ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
       </DialogHeader>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
@@ -474,7 +511,7 @@ function NewTransactionDialog({
         </div>
       </div>
       <DialogFooter>
-        <Button onClick={submit} disabled={saving}>{saving ? "Salvando..." : "Salvar lançamento"}</Button>
+        <Button onClick={submit} disabled={saving}>{saving ? "Salvando..." : tx ? "Atualizar lançamento" : "Salvar lançamento"}</Button>
       </DialogFooter>
     </DialogContent>
   );
