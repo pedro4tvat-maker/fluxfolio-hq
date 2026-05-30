@@ -60,6 +60,10 @@ function VendasPage() {
   const [contactDialog, setContactDialog] = useState(false);
   const [cliente, setCliente] = useState<CrmContact | null>(null);
   const [items, setItems] = useState<SaleItem[]>([]);
+  const today = new Date().toISOString().slice(0, 10);
+  const sevenAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [reportFrom, setReportFrom] = useState(sevenAgo);
+  const [reportTo, setReportTo] = useState(today);
   const [form, setForm] = useState({
     forma: "vista" as "vista" | "prazo",
     forma_pagamento: "Pix",
