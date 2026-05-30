@@ -703,8 +703,8 @@ type ProdRef = { id: string; nome: string; preco_venda: number | null; custo_uni
 
 function MargemHistorica({ companyId, products }: { companyId: string; products: ProdRef[] }) {
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
+  const lastDay = today.toISOString().slice(0, 10);
+  const firstDay = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const [dataIni, setDataIni] = useState(firstDay);
   const [dataFim, setDataFim] = useState(lastDay);
@@ -713,7 +713,7 @@ function MargemHistorica({ companyId, products }: { companyId: string; products:
   const [prodPickerOpen, setProdPickerOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // estados aplicados (só atualizam ao clicar em "Aplicar")
+  // estados aplicados (só atualizam ao clicar em "Aplicar"). Default: últimos 7 dias.
   const [applied, setApplied] = useState({
     dataIni: firstDay,
     dataFim: lastDay,
