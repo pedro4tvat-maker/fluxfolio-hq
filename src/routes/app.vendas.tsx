@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ChevronsUpDown, Check, UserPlus, X } from "lucide-react";
+import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText } from "lucide-react";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { ContactForm } from "./app.crm";
 import { cn } from "@/lib/utils";
@@ -27,21 +27,56 @@ type CrmContact = {
   phone: string | null;
 };
 
+type SaleItem = {
+  product_id: string;
+  nome: string;
+  quantidade: string;
+  preco_unitario: string;
+};
+
+type CompanyData = {
+  nome: string | null;
+  nome_fantasia: string | null;
+  cnpj: string | null;
+  documento: string | null;
+  telefone: string | null;
+  email: string | null;
+  endereco: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+  cep: string | null;
+};
+
 function VendasPage() {
   const { selected } = useSelectedCompany();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [contactDialog, setContactDialog] = useState(false);
   const [cliente, setCliente] = useState<CrmContact | null>(null);
+  const [items, setItems] = useState<SaleItem[]>([]);
   const [form, setForm] = useState({
-    product_id: "",
-    quantidade: "1",
-    preco_unitario: "",
     forma: "vista" as "vista" | "prazo",
     forma_pagamento: "Pix",
+    data_venda: new Date().toISOString().slice(0, 10),
     vencimento: new Date().toISOString().slice(0, 10),
+    observacoes: "",
+  });
+
+  const { data: company } = useQuery({
+    queryKey: ["company-os", selected],
+    enabled: !!selected,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("nome, nome_fantasia, cnpj, documento, telefone, email, endereco, bairro, cidade, estado, cep")
+        .eq("id", selected!)
+        .maybeSingle();
+      return data as CompanyData | null;
+    },
   });
 
   const { data: contacts = [] } = useQuery({
@@ -108,33 +143,99 @@ function VendasPage() {
     },
   });
 
-  const total = (Number(form.quantidade) || 0) * (Number(form.preco_unitario) || 0);
+  const total = items.reduce(
+    (acc, it) => acc + (Number(it.quantidade) || 0) * (Number(it.preco_unitario) || 0),
+    0,
+  );
 
   const filteredContacts = useMemo(() => contacts, [contacts]);
+
+  function addProduct(productId: string) {
+    const p = products?.find((x) => x.id === productId);
+    if (!p) return;
+    setItems((prev) => {
+      const existing = prev.find((it) => it.product_id === productId);
+      if (existing) {
+        return prev.map((it) =>
+          it.product_id === productId
+            ? { ...it, quantidade: String((Number(it.quantidade) || 0) + 1) }
+            : it,
+        );
+      }
+      return [
+        ...prev,
+        {
+          product_id: p.id,
+          nome: p.nome,
+          quantidade: "1",
+          preco_unitario: String(p.preco_venda ?? ""),
+        },
+      ];
+    });
+    setProductPickerOpen(false);
+  }
+
+  function addServiceLine() {
+    setItems((prev) => [
+      ...prev,
+      { product_id: "", nome: "Serviço", quantidade: "1", preco_unitario: "" },
+    ]);
+  }
+
+  function updateItem(idx: number, patch: Partial<SaleItem>) {
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  }
+
+  function removeItem(idx: number) {
+    setItems((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function resetForm() {
+    setCliente(null);
+    setItems([]);
+    setForm({
+      forma: "vista",
+      forma_pagamento: "Pix",
+      data_venda: new Date().toISOString().slice(0, 10),
+      vencimento: new Date().toISOString().slice(0, 10),
+      observacoes: "",
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selected) return;
-    const qtd = Number(form.quantidade);
-    const preco = Number(form.preco_unitario);
-    if (!qtd || !preco) {
-      toast.error("Informe quantidade e preço");
+    if (items.length === 0) {
+      toast.error("Adicione pelo menos um item");
       return;
+    }
+    for (const it of items) {
+      if (!it.nome.trim()) {
+        toast.error("Informe o nome do item");
+        return;
+      }
+      if (!(Number(it.quantidade) > 0) || !(Number(it.preco_unitario) > 0)) {
+        toast.error(`Informe quantidade e preço para "${it.nome}"`);
+        return;
+      }
     }
     setSaving(true);
     try {
-      const descricao = `Venda${cliente?.name ? ` - ${cliente.name}` : ""}${form.product_id ? ` (${products?.find(p => p.id === form.product_id)?.nome ?? ""})` : ""}`;
-      const valor = qtd * preco;
+      const valor = total;
+      const partes = items.map((it) => `${it.quantidade}x ${it.nome}`).join(", ");
+      const descricao = `Venda${cliente?.name ? ` - ${cliente.name}` : ""} (${partes})`;
 
-      if (form.product_id) {
-        const { error: smErr } = await supabase.from("stock_movements").insert({
-          company_id: selected,
-          product_id: form.product_id,
-          tipo: "saida",
-          quantidade: qtd,
-          motivo: "Venda",
-        });
-        if (smErr) throw smErr;
+      for (const it of items) {
+        if (it.product_id) {
+          const { error: smErr } = await supabase.from("stock_movements").insert({
+            company_id: selected,
+            product_id: it.product_id,
+            tipo: "saida",
+            quantidade: Number(it.quantidade),
+            motivo: "Venda",
+          });
+          if (smErr) throw smErr;
+        }
       }
 
       if (form.forma === "vista") {
@@ -146,7 +247,7 @@ function VendasPage() {
           conta_id: account?.id,
           forma_pagamento: form.forma_pagamento,
           status: "realizado",
-          data: new Date().toISOString().slice(0, 10),
+          data: form.data_venda,
           crm_contact_id: cliente?.id ?? null,
         });
         if (error) throw error;
@@ -166,9 +267,9 @@ function VendasPage() {
       }
 
       toast.success("Venda registrada");
+      generateOrderHTML({ openPrint: true });
       setOpen(false);
-      setCliente(null);
-      setForm({ ...form, product_id: "", quantidade: "1", preco_unitario: "" });
+      resetForm();
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
       qc.invalidateQueries({ queryKey: ["products-sel"] });
     } catch (err: unknown) {
@@ -179,13 +280,107 @@ function VendasPage() {
     }
   }
 
-  function onPickProduct(id: string) {
-    const p = products?.find((x) => x.id === id);
-    setForm((f) => ({
-      ...f,
-      product_id: id,
-      preco_unitario: p ? String(p.preco_venda ?? "") : f.preco_unitario,
-    }));
+  function generateOrderHTML({ openPrint }: { openPrint: boolean }) {
+    const orderNumber = `OS-${Date.now().toString().slice(-8)}`;
+    const empresaDoc = company?.cnpj ?? company?.documento ?? "";
+    const empresaEnd = [company?.endereco, company?.bairro, company?.cidade, company?.estado, company?.cep]
+      .filter(Boolean)
+      .join(", ");
+    const linhas = items
+      .map(
+        (it) => `
+        <tr>
+          <td>${escapeHtml(it.nome)}</td>
+          <td style="text-align:center">${Number(it.quantidade)}</td>
+          <td style="text-align:right">${formatMoney(Number(it.preco_unitario))}</td>
+          <td style="text-align:right">${formatMoney(Number(it.quantidade) * Number(it.preco_unitario))}</td>
+        </tr>`,
+      )
+      .join("");
+
+    const html = `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8" />
+<title>${orderNumber}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color:#111; margin: 32px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .muted { color:#666; font-size: 12px; }
+  .row { display:flex; justify-content:space-between; gap:16px; margin-top: 16px; }
+  .card { border:1px solid #ddd; border-radius:8px; padding:12px; flex:1; }
+  table { width:100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
+  th { background: #f7f7f7; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .totals { margin-top: 12px; text-align: right; font-size: 14px; }
+  .totals .grand { font-size: 20px; font-weight: 700; margin-top: 6px; }
+  .footer { margin-top: 32px; font-size: 11px; color:#666; text-align:center; }
+  .signs { display:flex; gap:24px; margin-top: 48px; }
+  .sign { flex:1; border-top:1px solid #333; padding-top:6px; text-align:center; font-size:12px; }
+  @media print { body { margin: 16mm; } .noprint { display:none; } }
+</style></head>
+<body>
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h1>${escapeHtml(company?.nome_fantasia || company?.nome || "")}</h1>
+      <div class="muted">${escapeHtml(company?.nome || "")}</div>
+      <div class="muted">${empresaDoc ? "CNPJ/CPF: " + escapeHtml(empresaDoc) : ""}</div>
+      <div class="muted">${escapeHtml(empresaEnd)}</div>
+      <div class="muted">${escapeHtml(company?.telefone || "")} ${company?.email ? "· " + escapeHtml(company.email) : ""}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#888">Ordem de Serviço / Venda</div>
+      <div style="font-size:20px; font-weight:700">${orderNumber}</div>
+      <div class="muted">Data: ${formatDate(form.data_venda)}</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <div style="font-size:11px; text-transform:uppercase; color:#888">Cliente</div>
+      <div style="font-weight:600; margin-top:4px">${escapeHtml(cliente?.name || "Consumidor")}</div>
+      <div class="muted">${escapeHtml(cliente?.cpf_cnpj || "")}</div>
+      <div class="muted">${escapeHtml(cliente?.email || "")} ${cliente?.phone ? "· " + escapeHtml(cliente.phone) : ""}</div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px; text-transform:uppercase; color:#888">Pagamento</div>
+      <div style="margin-top:4px"><b>Forma:</b> ${escapeHtml(form.forma_pagamento)}</div>
+      <div><b>Condição:</b> ${form.forma === "vista" ? "À vista" : "A prazo"}</div>
+      ${form.forma === "prazo" ? `<div><b>Vencimento:</b> ${formatDate(form.vencimento)}</div>` : ""}
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Preço Un.</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>${linhas}</tbody>
+  </table>
+
+  <div class="totals">
+    <div class="grand">TOTAL: ${formatMoney(total)}</div>
+  </div>
+
+  ${form.observacoes ? `<div class="card" style="margin-top:16px"><b>Observações:</b><br/>${escapeHtml(form.observacoes)}</div>` : ""}
+
+  <div class="signs">
+    <div class="sign">Empresa</div>
+    <div class="sign">Cliente</div>
+  </div>
+
+  <div class="footer">Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+  <div class="noprint" style="margin-top:16px; text-align:center">
+    <button onclick="window.print()" style="padding:8px 16px; cursor:pointer">Imprimir / Salvar PDF</button>
+  </div>
+</body></html>`;
+
+    if (openPrint) {
+      const w = window.open("", "_blank");
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+      } else {
+        toast.error("Pop-up bloqueado. Permita pop-ups para gerar a OS.");
+      }
+    }
+    return html;
   }
 
   return (
@@ -194,25 +389,20 @@ function VendasPage() {
         <div>
           <h1 className="text-2xl font-display font-bold">Fluxo de Vendas</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Registre vendas com baixa automática de estoque, vínculo com o CRM e geração de entrada no caixa ou conta a receber.
+            Registre vendas com múltiplos itens, gere ordem de serviço imprimível e dê baixa automática no estoque.
           </p>
         </div>
         <Button onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Nova venda"}</Button>
       </div>
 
       {open && (
-        <form onSubmit={handleSubmit} className="bg-card border rounded-2xl p-4 grid gap-3 md:grid-cols-2">
+        <form onSubmit={handleSubmit} className="bg-card border rounded-2xl p-4 grid gap-4 md:grid-cols-2">
           <div className="space-y-1 md:col-span-2">
             <Label>Cliente (CRM)</Label>
             <div className="flex gap-2">
               <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    role="combobox"
-                    className="flex-1 justify-between font-normal"
-                  >
+                  <Button type="button" variant="outline" role="combobox" className="flex-1 justify-between font-normal">
                     {cliente
                       ? <span className="truncate">{cliente.name}{cliente.cpf_cnpj ? ` · ${cliente.cpf_cnpj}` : ""}</span>
                       : <span className="text-muted-foreground">Selecionar cliente do CRM (opcional)</span>}
@@ -226,11 +416,8 @@ function VendasPage() {
                       <CommandEmpty>Nenhum contato. Cadastre um novo cliente.</CommandEmpty>
                       <CommandGroup>
                         {filteredContacts.map((c) => (
-                          <CommandItem
-                            key={c.id}
-                            value={`${c.name} ${c.cpf_cnpj ?? ""} ${c.email ?? ""} ${c.phone ?? ""}`}
-                            onSelect={() => { setCliente(c); setPickerOpen(false); }}
-                          >
+                          <CommandItem key={c.id} value={`${c.name} ${c.cpf_cnpj ?? ""} ${c.email ?? ""} ${c.phone ?? ""}`}
+                            onSelect={() => { setCliente(c); setPickerOpen(false); }}>
                             <Check className={cn("mr-2 size-4", cliente?.id === c.id ? "opacity-100" : "opacity-0")} />
                             <div className="flex-1 min-w-0">
                               <div className="font-medium truncate">{c.name}</div>
@@ -255,27 +442,89 @@ function VendasPage() {
               </Button>
             </div>
           </div>
-          <div className="space-y-1">
-            <Label>Produto</Label>
-            <Select value={form.product_id || "none"} onValueChange={(v) => onPickProduct(v === "none" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Sem produto" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem produto (serviço)</SelectItem>
-                {products?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.nome} — estoque: {Number(p.quantidade)}
-                  </SelectItem>
+
+          <div className="md:col-span-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Itens da venda</Label>
+              <div className="flex gap-2">
+                <Popover open={productPickerOpen} onOpenChange={setProductPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" size="sm">
+                      <Plus className="size-4" /> Adicionar produto
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0 w-[320px]" align="end">
+                    <Command>
+                      <CommandInput placeholder="Buscar produto..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum produto.</CommandEmpty>
+                        <CommandGroup>
+                          {products?.map((p) => (
+                            <CommandItem key={p.id} value={p.nome} onSelect={() => addProduct(p.id)}>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate">{p.nome}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  Estoque: {Number(p.quantidade)} · {formatMoney(Number(p.preco_venda ?? 0))}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <Button type="button" variant="outline" size="sm" onClick={addServiceLine}>
+                  <Plus className="size-4" /> Serviço avulso
+                </Button>
+              </div>
+            </div>
+
+            {items.length === 0 ? (
+              <div className="text-sm text-muted-foreground border border-dashed rounded-lg p-6 text-center">
+                Adicione produtos do estoque ou um serviço avulso para iniciar a venda.
+              </div>
+            ) : (
+              <div className="border rounded-lg divide-y">
+                <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/40">
+                  <div className="col-span-5">Descrição</div>
+                  <div className="col-span-2 text-center">Qtd</div>
+                  <div className="col-span-2 text-right">Preço un.</div>
+                  <div className="col-span-2 text-right">Subtotal</div>
+                  <div className="col-span-1"></div>
+                </div>
+                {items.map((it, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center">
+                    <div className="col-span-5">
+                      <Input value={it.nome} onChange={(e) => updateItem(idx, { nome: e.target.value })} />
+                    </div>
+                    <div className="col-span-2">
+                      <Input type="number" min="0" step="1" className="text-center"
+                        value={it.quantidade}
+                        onChange={(e) => updateItem(idx, { quantidade: e.target.value })} />
+                    </div>
+                    <div className="col-span-2">
+                      <Input type="number" min="0" step="0.01" className="text-right"
+                        value={it.preco_unitario}
+                        onChange={(e) => updateItem(idx, { preco_unitario: e.target.value })} />
+                    </div>
+                    <div className="col-span-2 text-right font-medium">
+                      {formatMoney((Number(it.quantidade) || 0) * (Number(it.preco_unitario) || 0))}
+                    </div>
+                    <div className="col-span-1 text-right">
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)}>
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
           </div>
+
           <div className="space-y-1">
-            <Label>Quantidade</Label>
-            <Input type="number" min="0" step="0.01" value={form.quantidade} onChange={(e) => setForm({ ...form, quantidade: e.target.value })} />
-          </div>
-          <div className="space-y-1">
-            <Label>Preço unitário</Label>
-            <Input type="number" min="0" step="0.01" value={form.preco_unitario} onChange={(e) => setForm({ ...form, preco_unitario: e.target.value })} />
+            <Label>Data da venda</Label>
+            <Input type="date" value={form.data_venda} onChange={(e) => setForm({ ...form, data_venda: e.target.value })} />
           </div>
           <div className="space-y-1">
             <Label>Forma</Label>
@@ -304,9 +553,21 @@ function VendasPage() {
               <Input type="date" value={form.vencimento} onChange={(e) => setForm({ ...form, vencimento: e.target.value })} />
             </div>
           )}
-          <div className="md:col-span-2 flex items-center justify-between border-t pt-3">
+          <div className="space-y-1 md:col-span-2">
+            <Label>Observações</Label>
+            <Input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Opcional (aparece na OS)" />
+          </div>
+
+          <div className="md:col-span-2 flex items-center justify-between border-t pt-3 gap-3 flex-wrap">
             <div className="text-sm">Total: <span className="font-display font-bold text-lg">{formatMoney(total)}</span></div>
-            <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Registrar venda"}</Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" disabled={items.length === 0} onClick={() => generateOrderHTML({ openPrint: true })}>
+                <FileText className="size-4" /> Pré-visualizar OS
+              </Button>
+              <Button type="submit" disabled={saving || items.length === 0}>
+                {saving ? "Salvando..." : "Registrar venda e gerar OS"}
+              </Button>
+            </div>
           </div>
         </form>
       )}
@@ -382,4 +643,14 @@ function VendasPage() {
       )}
     </div>
   );
+}
+
+function escapeHtml(s: string | null | undefined): string {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
