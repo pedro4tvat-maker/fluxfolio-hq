@@ -585,7 +585,7 @@ function ClientDashboard() {
         </div>
       </section>
 
-      {/* 5. Próximos compromissos */}
+      {/* 6. Próximos compromissos */}
       <section>
         <SectionTitle>Próximos compromissos</SectionTitle>
         <div className="grid gap-4 lg:grid-cols-2">
