@@ -1057,7 +1057,7 @@ function VendasPage() {
               {vendas?.rec.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{row.descricao}</p>
+                    <p className="font-medium truncate">{(row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
                     <p className="text-xs text-muted-foreground">{row.cliente ?? "—"} • venc. {formatDate(row.vencimento)} • {row.status}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
