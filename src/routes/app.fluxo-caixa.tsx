@@ -182,14 +182,17 @@ function FluxoCaixa() {
             />
           </Dialog>
           <Dialog open={!!editingTx} onOpenChange={(o) => !o && setEditingTx(null)}>
-            <TransactionDialog
-              tx={editingTx ?? undefined}
-              companyId={selected!}
-              categorias={categorias}
-              contas={contas}
-              costCenters={costCenters}
-              onDone={() => { setEditingTx(null); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
-            />
+            {editingTx && (
+              <TransactionDialog
+                key={editingTx.id}
+                tx={editingTx}
+                companyId={selected!}
+                categorias={categorias}
+                contas={contas}
+                costCenters={costCenters}
+                onDone={() => { setEditingTx(null); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
+              />
+            )}
           </Dialog>
         </div>
       </div>
@@ -422,7 +425,7 @@ function TransactionDialog({
   };
 
   return (
-    <DialogContent className="max-w-lg">
+    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{tx ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
       </DialogHeader>
