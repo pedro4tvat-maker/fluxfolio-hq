@@ -573,11 +573,10 @@ function VendasPage() {
     id: string; descricao: string | null; valor: number | string | null;
     data?: string | null; vencimento?: string | null;
     forma_pagamento?: string | null; cliente?: string | null;
-  }, tipo: "vista" | "prazo") {
+  }, tipo: "vista" | "prazo", sharedPool?: SaleMov[]) {
     const valor = Number(row.valor) || 0;
     const dataRefRaw = tipo === "vista" ? row.data : row.vencimento;
-    // Cópia mutável do pool de movimentos para consumir por venda
-    const pool: SaleMov[] = (vendas?.movs ?? []).map((m) => ({ ...m })) as SaleMov[];
+    const pool: SaleMov[] = sharedPool ?? ((vendas?.movs ?? []).map((m) => ({ ...m })) as SaleMov[]);
     const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool);
     const totalReceita = itens.reduce((a, b) => a + b.subtotal, 0);
     const totalCusto = itens.reduce((a, b) => a + b.custoTotal, 0);
