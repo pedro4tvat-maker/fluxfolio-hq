@@ -226,14 +226,37 @@ export function buildDRE(data: ReportData, period: Period) {
   const catMap = new Map(data.categories.map((c) => [c.id, c]));
   const ccMap = new Map(data.costCenters.map((c) => [c.id, c]));
 
-  // Classificação efetiva: centro de custo prevalece sobre categoria quando preenchido
+  // Classificação efetiva: tenta múltiplas fontes em ordem de prioridade.
+  // 1) kpi_classification do centro de custo
+  // 2) NOME do centro de custo (ex: "CUSTOS VARIÁVEIS" → bucket custos_variaveis)
+  // 3) kpi_classification da categoria
+  // 4) NOME da categoria
+  // Isso garante que o lançamento entre no bucket correto da DRE mesmo
+  // quando o usuário não preencheu o campo de classificação explicitamente.
   const classOf = (t: Tx): string | null => {
     const cc = ccMap.get(t.centro_custo_id ?? "");
-    if (cc?.kpi_classification) return cc.kpi_classification;
-    return catMap.get(t.categoria_id ?? "")?.kpi_classification ?? null;
+    const cat = catMap.get(t.categoria_id ?? "");
+    return (
+      cc?.kpi_classification ||
+      cc?.nome ||
+      cat?.kpi_classification ||
+      cat?.nome ||
+      null
+    );
   };
 
-  const bucketOf = (t: Tx): DreBucket | null => toBucket(classOf(t));
+  // bucketOf tenta cada fonte de classificação independentemente,
+  // assim mesmo que a primeira não mapeie em bucket conhecido, a próxima é tentada.
+  const bucketOf = (t: Tx): DreBucket | null => {
+    const cc = ccMap.get(t.centro_custo_id ?? "");
+    const cat = catMap.get(t.categoria_id ?? "");
+    return (
+      toBucket(cc?.kpi_classification ?? null) ||
+      toBucket(cc?.nome ?? null) ||
+      toBucket(cat?.kpi_classification ?? null) ||
+      toBucket(cat?.nome ?? null)
+    );
+  };
 
   const sumByBucket = (bucket: DreBucket) =>
     realized.filter((t) => bucketOf(t) === bucket).reduce((s, t) => s + t.valor, 0);
