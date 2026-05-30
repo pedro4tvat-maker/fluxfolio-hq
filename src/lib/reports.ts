@@ -158,22 +158,30 @@ const inPeriod = (d: string, p: Period) => d >= p.start && d <= p.end;
 export function buildDRE(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
   const catMap = new Map(data.categories.map((c) => [c.id, c]));
+  const ccMap = new Map(data.costCenters.map((c) => [c.id, c]));
 
-  const sumBy = (filter: (c: Category | undefined, t: Tx) => boolean) =>
-    realized.filter((t) => filter(catMap.get(t.categoria_id ?? ""), t)).reduce((s, t) => s + t.valor, 0);
+  // Classificação efetiva: centro de custo prevalece sobre categoria quando preenchido
+  const classOf = (t: Tx): string | null => {
+    const cc = ccMap.get(t.centro_custo_id ?? "");
+    if (cc?.kpi_classification) return cc.kpi_classification;
+    return catMap.get(t.categoria_id ?? "")?.kpi_classification ?? null;
+  };
 
-  const receitaBruta = sumBy((c, t) => t.tipo === "entrada" && c?.kpi_classification !== "outras_receitas");
-  const outrasReceitas = sumBy((c) => c?.kpi_classification === "outras_receitas");
-  const deducoes = sumBy((c) => c?.kpi_classification === "impostos");
+  const sumBy = (pred: (kpi: string | null, t: Tx) => boolean) =>
+    realized.filter((t) => pred(classOf(t), t)).reduce((s, t) => s + t.valor, 0);
+
+  const receitaBruta = sumBy((k, t) => t.tipo === "entrada" && k !== "outras_receitas");
+  const outrasReceitas = sumBy((k) => k === "outras_receitas");
+  const deducoes = sumBy((k) => k === "impostos");
   const receitaLiquida = receitaBruta + outrasReceitas - deducoes;
-  const custosVariaveis = sumBy((c) => c?.kpi_classification === "custos_variaveis");
+  const custosVariaveis = sumBy((k) => k === "custos_variaveis");
   const margemContribuicao = receitaLiquida - custosVariaveis;
-  const custosFixos = sumBy((c) => c?.kpi_classification === "custos_fixos");
+  const custosFixos = sumBy((k) => k === "custos_fixos");
   const despesasOperacionais = sumBy(
-    (c) => c?.kpi_classification === "despesas_operacionais" || c?.kpi_classification === "marketing",
+    (k) => k === "despesas_operacionais" || k === "marketing",
   );
   const resultadoOperacional = margemContribuicao - custosFixos - despesasOperacionais;
-  const despesasFinanceiras = sumBy((c) => c?.kpi_classification === "despesas_financeiras");
+  const despesasFinanceiras = sumBy((k) => k === "despesas_financeiras");
   const lucroLiquido = resultadoOperacional - despesasFinanceiras;
   const margemLiquida = receitaLiquida > 0 ? (lucroLiquido / receitaLiquida) * 100 : 0;
 
