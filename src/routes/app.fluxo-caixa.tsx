@@ -297,14 +297,24 @@ function FluxoCaixa() {
                       {t.tipo === "entrada" ? "+" : "−"} {formatMoney(t.valor)}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost" size="icon"
-                        disabled={isAuto}
-                        title={isAuto ? "Lançamento automático. Edite em Contas a Pagar/Receber." : "Excluir"}
-                        onClick={() => setConfirmDelete(t)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost" size="icon"
+                          disabled={isAuto}
+                          title={isAuto ? "Lançamento automático. Edite em Contas a Pagar/Receber." : "Editar"}
+                          onClick={() => setEditingTx(t)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon"
+                          disabled={isAuto}
+                          title={isAuto ? "Lançamento automático. Edite em Contas a Pagar/Receber." : "Excluir"}
+                          onClick={() => setConfirmDelete(t)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
