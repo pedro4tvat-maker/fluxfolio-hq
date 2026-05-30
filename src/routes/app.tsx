@@ -24,13 +24,16 @@ export const Route = createFileRoute("/app")({
 });
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean };
+type NavGroup = { id: string; label: string; icon: React.ComponentType<{ className?: string }>; children: NavItem[] };
+type NavEntry = NavItem | NavGroup;
 
-const consultantNav: NavItem[] = [
+const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
+
+const consultantNav: NavEntry[] = [
   { to: "/app", label: "Painel do consultor", icon: LayoutDashboard, exact: true },
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
   { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
   { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
-  
   { to: "/app/jornada", label: "Jornada da Consultoria", icon: RouteIcon },
   { to: "/app/atas", label: "Atas de Reunião", icon: NotebookPen },
   { to: "/app/biblioteca", label: "Biblioteca do Consultor", icon: BookOpen },
@@ -38,21 +41,41 @@ const consultantNav: NavItem[] = [
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-const clientNav: NavItem[] = [
+const clientNav: NavEntry[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  
-  { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
-  { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
-  { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
-  { to: "/app/orcamento", label: "Orçamento", icon: Target },
-  { to: "/app/centro-custos", label: "Centro de Custos", icon: Layers },
-  { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
-  { to: "/app/crm", label: "CRM", icon: Users },
-  { to: "/app/estoque", label: "Controle de Estoque", icon: Package },
-  { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
-  { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
+  {
+    id: "fluxo",
+    label: "Fluxo",
+    icon: ArrowLeftRight,
+    children: [
+      { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
+      { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
+      { to: "/app/estoque", label: "Fluxo de Estoque", icon: Package },
+    ],
+  },
+  {
+    id: "gerenciamento",
+    label: "Gerenciamento",
+    icon: Tag,
+    children: [
+      { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
+      { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
+      { to: "/app/documentos", label: "Documentos e Anexos", icon: FolderArchive },
+      { to: "/app/centro-custos", label: "Centro de Custos", icon: Layers },
+    ],
+  },
+  {
+    id: "organizacao",
+    label: "Organização",
+    icon: Inbox,
+    children: [
+      { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
+      { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
+      { to: "/app/orcamento", label: "Orçamento", icon: Target },
+    ],
+  },
   { to: "/app/importacoes", label: "Importador de Dados", icon: Upload },
-  { to: "/app/documentos", label: "Documentos e Anexos", icon: FolderArchive },
+  { to: "/app/crm", label: "CRM", icon: Users },
   { to: "/app/configuracoes", label: "Configurações da Empresa", icon: Settings },
 ];
 
