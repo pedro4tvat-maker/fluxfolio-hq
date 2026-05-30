@@ -2939,6 +2939,10 @@ export type Database = {
           state: string
         }[]
       }
+      seed_default_cost_centers: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
       seed_demo_data: { Args: { _owner: string }; Returns: undefined }
       user_has_company_access: {
         Args: { _company_id: string; _user_id: string }
