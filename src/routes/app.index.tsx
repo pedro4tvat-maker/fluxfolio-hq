@@ -351,28 +351,10 @@ function ClientDashboard() {
       const ordensServico = (vendasVista ?? []).length + (vendasPrazo ?? []).length;
       const vendasCount = ordensServico;
 
-      // Margem média do mês: baseada nas vendas reais (stock_movements de saída).
-      // Faturamento = qtd * preco_venda do produto. Custo = qtd * custo_unitario do
-      // momento da venda (snapshot do movimento), com fallback ao custo cadastrado.
-      const prodMap = new Map<string, { preco_venda: number; custo_unitario: number }>();
-      (prods ?? []).forEach((p: any) => {
-        prodMap.set(p.id, {
-          preco_venda: Number(p.preco_venda ?? 0),
-          custo_unitario: Number(p.custo_unitario ?? 0),
-        });
-      });
-      let faturamentoMovs = 0;
-      let custoMovs = 0;
-      (stockMovs ?? []).forEach((m: any) => {
-        const p = prodMap.get(m.product_id);
-        const qtd = Number(m.quantidade ?? 0);
-        const preco = Number(p?.preco_venda ?? 0);
-        const custoUnit =
-          m.custo_unitario != null ? Number(m.custo_unitario) : Number(p?.custo_unitario ?? 0);
-        faturamentoMovs += qtd * preco;
-        custoMovs += qtd * custoUnit;
-      });
-      const margemMedia = faturamentoMovs > 0 ? (faturamentoMovs - custoMovs) / faturamentoMovs : null;
+      // Margem operacional do mês: (Receita - Custos/Despesas) / Receita.
+      // Usa as vendas do mês como receita e as saídas realizadas no fluxo de
+      // caixa do mês como custos/despesas, refletindo a operação real.
+      const margemMedia = vendasMes > 0 ? (vendasMes - saidas) / vendasMes : null;
 
       // Budget utilization for current month
       const totalOrcado = (budgets ?? []).reduce((s, b) => s + Number(b.valor_orcado ?? 0), 0);
