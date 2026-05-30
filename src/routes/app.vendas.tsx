@@ -675,31 +675,6 @@ function VendasPage() {
         </div>
       </section>
 
-      {selected && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-display font-semibold">Margem da venda em edição</h2>
-          <div className="bg-card border rounded-2xl p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Faturamento</p>
-                <p className="text-2xl font-display font-bold">{formatMoney(total)}</p>
-              </div>
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Custo Total</p>
-                <p className="text-2xl font-display font-bold text-destructive">{formatMoney(totalCusto)}</p>
-              </div>
-              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Lucro</p>
-                <p className={`text-2xl font-display font-bold ${lucro >= 0 ? "text-success" : "text-destructive"}`}>
-                  {formatMoney(lucro)}
-                </p>
-                <p className="text-xs text-muted-foreground">{margemPct.toFixed(1)}% de margem</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {selected && <MargemHistorica companyId={selected} products={products ?? []} />}
 
       {selected && (
