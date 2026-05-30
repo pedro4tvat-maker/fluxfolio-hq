@@ -373,6 +373,7 @@ function NewTransactionDialog({
       data, tipo, descricao: descricao.trim(), valor: v, status,
       categoria_id: categoriaId || null,
       conta_id: contaId || null,
+      centro_custo_id: centroCustoId || null,
       forma_pagamento: forma || null,
       observacoes: observacoes.trim() || null,
     });
