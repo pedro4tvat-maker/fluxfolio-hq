@@ -432,14 +432,26 @@ function VendasPage() {
     const dataRef = tipo === "vista" ? row.data : row.vencimento;
     const valor = Number(row.valor) || 0;
     const desc = row.descricao || "Venda";
-    // descricao salva no formato: "Venda - Cliente (2x Item A, 1x Item B)"
+    // descricao salva no formato: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B)"
     const matchItens = desc.match(/\(([^)]+)\)\s*$/);
     const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
     const clienteNome = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
     const itensTxt = matchItens ? matchItens[1] : desc;
     const itensArr = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
-    const linhas = itensArr
-      .map((it) => `<tr><td>${escapeHtml(it.replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?\s*$/, ""))}</td></tr>`)
+    const parsedLinhas = itensArr.map((it) => {
+      const m = it.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
+      const qtd = m ? Number(m[1].replace(",", ".")) : 1;
+      const nome = m ? m[2].trim() : it;
+      const preco = m && m[3] ? Number(m[3].replace(",", ".")) : 0;
+      return { nome, qtd, preco, total: qtd * preco };
+    });
+    const linhas = parsedLinhas
+      .map((p) => `<tr>
+        <td>${escapeHtml(p.nome)}</td>
+        <td style="text-align:center">${p.qtd}</td>
+        <td style="text-align:right">${formatMoney(p.preco)}</td>
+        <td style="text-align:right">${formatMoney(p.total)}</td>
+      </tr>`)
       .join("");
 
     const html = `<!doctype html>
@@ -492,9 +504,10 @@ function VendasPage() {
   </div>
 
   <table>
-    <thead><tr><th>Descrição</th></tr></thead>
+    <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Preço Un.</th><th style="text-align:right">Total</th></tr></thead>
     <tbody>${linhas}</tbody>
   </table>
+
 
   <div class="totals">
     <div class="grand">TOTAL: ${formatMoney(valor)}</div>
