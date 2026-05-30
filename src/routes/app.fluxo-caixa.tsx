@@ -182,14 +182,17 @@ function FluxoCaixa() {
             />
           </Dialog>
           <Dialog open={!!editingTx} onOpenChange={(o) => !o && setEditingTx(null)}>
-            <TransactionDialog
-              tx={editingTx ?? undefined}
-              companyId={selected!}
-              categorias={categorias}
-              contas={contas}
-              costCenters={costCenters}
-              onDone={() => { setEditingTx(null); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
-            />
+            {editingTx && (
+              <TransactionDialog
+                key={editingTx.id}
+                tx={editingTx}
+                companyId={selected!}
+                categorias={categorias}
+                contas={contas}
+                costCenters={costCenters}
+                onDone={() => { setEditingTx(null); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
+              />
+            )}
           </Dialog>
         </div>
       </div>
