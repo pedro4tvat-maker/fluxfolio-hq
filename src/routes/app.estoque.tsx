@@ -466,20 +466,20 @@ function EstoquePage() {
             </div>
             <div className="space-y-1">
               <Label>Custo unitário</Label>
-              <Input type="number" min="0" step="0.01" value={productForm.custo_unitario} onChange={(e) => setProductForm({ ...productForm, custo_unitario: e.target.value })} />
+              <CurrencyInput value={productForm.custo_unitario} onChange={(v) => setProductForm({ ...productForm, custo_unitario: v })} />
             </div>
             <div className="space-y-1">
               <Label>Preço de venda</Label>
-              <Input type="number" min="0" step="0.01" value={productForm.preco_venda} onChange={(e) => setProductForm({ ...productForm, preco_venda: e.target.value })} />
+              <CurrencyInput value={productForm.preco_venda} onChange={(v) => setProductForm({ ...productForm, preco_venda: v })} />
             </div>
             <div className="space-y-1">
               <Label>Estoque mínimo</Label>
-              <Input type="number" min="0" step="0.01" value={productForm.estoque_minimo} onChange={(e) => setProductForm({ ...productForm, estoque_minimo: e.target.value })} />
+              <Input type="number" min="0" step="1" placeholder="0" value={productForm.estoque_minimo} onChange={(e) => setProductForm({ ...productForm, estoque_minimo: e.target.value })} />
             </div>
             {!editing && (
               <div className="space-y-1">
                 <Label>Quantidade inicial</Label>
-                <Input type="number" min="0" step="0.01" value={productForm.quantidade_inicial} onChange={(e) => setProductForm({ ...productForm, quantidade_inicial: e.target.value })} />
+                <Input type="number" min="0" step="1" placeholder="0" value={productForm.quantidade_inicial} onChange={(e) => setProductForm({ ...productForm, quantidade_inicial: e.target.value })} />
               </div>
             )}
             <DialogFooter className="md:col-span-2">
