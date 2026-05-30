@@ -150,6 +150,14 @@ function VendasPage() {
     0,
   );
 
+  const totalCusto = items.reduce(
+    (acc, it) => acc + (Number(it.quantidade) || 0) * (Number(it.custo_unitario) || 0),
+    0,
+  );
+
+  const lucro = total - totalCusto;
+  const margemPct = total > 0 ? (lucro / total) * 100 : 0;
+
   const filteredContacts = useMemo(() => contacts, [contacts]);
 
   function addProduct(productId: string) {
@@ -666,6 +674,31 @@ function VendasPage() {
           )}
         </div>
       </section>
+
+      {selected && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-display font-semibold">Margem de Lucratividade</h2>
+          <div className="bg-card border rounded-2xl p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Faturamento</p>
+                <p className="text-2xl font-display font-bold">{formatMoney(total)}</p>
+              </div>
+              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Custo Total</p>
+                <p className="text-2xl font-display font-bold text-destructive">{formatMoney(totalCusto)}</p>
+              </div>
+              <div className="space-y-1 rounded-lg border border-border p-4 text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Lucro</p>
+                <p className={`text-2xl font-display font-bold ${lucro >= 0 ? "text-success" : "text-destructive"}`}>
+                  {formatMoney(lucro)}
+                </p>
+                <p className="text-xs text-muted-foreground">{margemPct.toFixed(1)}% de margem</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {selected && (
         <section className="space-y-3">
