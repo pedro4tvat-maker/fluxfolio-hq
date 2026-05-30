@@ -73,7 +73,7 @@ export type Budget = {
   categoria_id: string;
 };
 
-export type CostCenter = { id: string; nome: string };
+export type CostCenter = { id: string; nome: string; kpi_classification: string | null };
 
 export type ReportData = {
   transactions: Tx[];
