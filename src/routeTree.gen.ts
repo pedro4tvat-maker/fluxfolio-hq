@@ -20,7 +20,6 @@ import { Route as AppPrecificacaoRouteImport } from './routes/app.precificacao'
 import { Route as AppPlanoAcaoRouteImport } from './routes/app.plano-acao'
 import { Route as AppPendenciasRouteImport } from './routes/app.pendencias'
 import { Route as AppOrcamentoRouteImport } from './routes/app.orcamento'
-import { Route as AppKpisRouteImport } from './routes/app.kpis'
 import { Route as AppJornadaRouteImport } from './routes/app.jornada'
 import { Route as AppImportacoesRouteImport } from './routes/app.importacoes'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
@@ -98,11 +97,6 @@ const AppPendenciasRoute = AppPendenciasRouteImport.update({
 const AppOrcamentoRoute = AppOrcamentoRouteImport.update({
   id: '/orcamento',
   path: '/orcamento',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppKpisRoute = AppKpisRouteImport.update({
-  id: '/kpis',
-  path: '/kpis',
   getParentRoute: () => AppRoute,
 } as any)
 const AppJornadaRoute = AppJornadaRouteImport.update({
@@ -244,7 +238,6 @@ export interface FileRoutesByFullPath {
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/jornada': typeof AppJornadaRouteWithChildren
-  '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/pendencias': typeof AppPendenciasRoute
   '/app/plano-acao': typeof AppPlanoAcaoRoute
@@ -280,7 +273,6 @@ export interface FileRoutesByTo {
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/jornada': typeof AppJornadaRouteWithChildren
-  '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/pendencias': typeof AppPendenciasRoute
   '/app/plano-acao': typeof AppPlanoAcaoRoute
@@ -318,7 +310,6 @@ export interface FileRoutesById {
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/jornada': typeof AppJornadaRouteWithChildren
-  '/app/kpis': typeof AppKpisRoute
   '/app/orcamento': typeof AppOrcamentoRoute
   '/app/pendencias': typeof AppPendenciasRoute
   '/app/plano-acao': typeof AppPlanoAcaoRoute
@@ -357,7 +348,6 @@ export interface FileRouteTypes {
     | '/app/fluxo-caixa'
     | '/app/importacoes'
     | '/app/jornada'
-    | '/app/kpis'
     | '/app/orcamento'
     | '/app/pendencias'
     | '/app/plano-acao'
@@ -393,7 +383,6 @@ export interface FileRouteTypes {
     | '/app/fluxo-caixa'
     | '/app/importacoes'
     | '/app/jornada'
-    | '/app/kpis'
     | '/app/orcamento'
     | '/app/pendencias'
     | '/app/plano-acao'
@@ -430,7 +419,6 @@ export interface FileRouteTypes {
     | '/app/fluxo-caixa'
     | '/app/importacoes'
     | '/app/jornada'
-    | '/app/kpis'
     | '/app/orcamento'
     | '/app/pendencias'
     | '/app/plano-acao'
@@ -530,13 +518,6 @@ declare module '@tanstack/react-router' {
       path: '/orcamento'
       fullPath: '/app/orcamento'
       preLoaderRoute: typeof AppOrcamentoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/kpis': {
-      id: '/app/kpis'
-      path: '/kpis'
-      fullPath: '/app/kpis'
-      preLoaderRoute: typeof AppKpisRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/jornada': {
@@ -760,7 +741,6 @@ interface AppRouteChildren {
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
   AppImportacoesRoute: typeof AppImportacoesRoute
   AppJornadaRoute: typeof AppJornadaRouteWithChildren
-  AppKpisRoute: typeof AppKpisRoute
   AppOrcamentoRoute: typeof AppOrcamentoRoute
   AppPendenciasRoute: typeof AppPendenciasRoute
   AppPlanoAcaoRoute: typeof AppPlanoAcaoRoute
@@ -789,7 +769,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
   AppImportacoesRoute: AppImportacoesRoute,
   AppJornadaRoute: AppJornadaRouteWithChildren,
-  AppKpisRoute: AppKpisRoute,
   AppOrcamentoRoute: AppOrcamentoRoute,
   AppPendenciasRoute: AppPendenciasRoute,
   AppPlanoAcaoRoute: AppPlanoAcaoRoute,
@@ -811,3 +790,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
