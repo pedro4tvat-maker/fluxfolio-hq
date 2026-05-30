@@ -77,6 +77,16 @@ function FluxoCaixa() {
     enabled: !!selected,
   });
 
+  const { data: costCenters = [] } = useQuery({
+    queryKey: ["cost_centers", selected],
+    queryFn: async () => {
+      if (!selected) return [];
+      const { data } = await supabase.from("cost_centers").select("id, nome").eq("company_id", selected).order("nome");
+      return data ?? [];
+    },
+    enabled: !!selected,
+  });
+
   const { data: tx = [], isLoading } = useQuery({
     queryKey: ["transactions", selected, range.start, range.end],
     queryFn: async (): Promise<Tx[]> => {
