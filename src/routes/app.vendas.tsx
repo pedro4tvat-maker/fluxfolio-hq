@@ -231,11 +231,13 @@ function VendasPage() {
 
       for (const it of items) {
         if (it.product_id) {
+          const custoVenda = Number(it.custo_unitario);
           const { error: smErr } = await supabase.from("stock_movements").insert({
             company_id: selected,
             product_id: it.product_id,
             tipo: "saida",
             quantidade: Number(it.quantidade),
+            custo_unitario: Number.isFinite(custoVenda) && custoVenda > 0 ? custoVenda : null,
             motivo: "Venda",
           });
           if (smErr) throw smErr;
