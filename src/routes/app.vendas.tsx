@@ -995,6 +995,9 @@ function VendasPage() {
                     <Button type="button" variant="outline" size="sm" onClick={() => printPastSaleOS(row, "vista")}>
                       <FileText className="size-4" /> Baixar OS
                     </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => printSaleMarginReport(row, "vista")}>
+                      <TrendingUp className="size-4" /> Margem
+                    </Button>
                   </div>
                 </div>
               ))}
