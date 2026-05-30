@@ -703,8 +703,8 @@ type ProdRef = { id: string; nome: string; preco_venda: number | null; custo_uni
 
 function MargemHistorica({ companyId, products }: { companyId: string; products: ProdRef[] }) {
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
+  const lastDay = today.toISOString().slice(0, 10);
+  const firstDay = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const [dataIni, setDataIni] = useState(firstDay);
   const [dataFim, setDataFim] = useState(lastDay);
@@ -713,7 +713,7 @@ function MargemHistorica({ companyId, products }: { companyId: string; products:
   const [prodPickerOpen, setProdPickerOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // estados aplicados (só atualizam ao clicar em "Aplicar")
+  // estados aplicados (só atualizam ao clicar em "Aplicar"). Default: últimos 7 dias.
   const [applied, setApplied] = useState({
     dataIni: firstDay,
     dataFim: lastDay,
@@ -785,32 +785,28 @@ function MargemHistorica({ companyId, products }: { companyId: string; products:
   }, [data, applied.selectedProducts, datasFormaSet]);
 
   const resumo = useMemo(() => {
-    // Faturamento real:
-    // - sem filtro de produto: soma das transações de entrada (com filtro de forma).
-    // - com filtro de produto: soma de qtd * preco_venda dos movimentos dos produtos selecionados.
-    let faturamento = 0;
-    if (applied.selectedProducts.length === 0) {
-      faturamento = txFiltered.reduce((acc: number, t: any) => acc + Number(t.valor || 0), 0);
-    } else {
-      faturamento = movsFiltered.reduce((acc: number, m: any) => {
-        const p = prodMap.get(m.product_id);
-        const preco = Number(p?.preco_venda) || 0;
-        return acc + (Number(m.quantidade) || 0) * preco;
-      }, 0);
-    }
+    // Faturamento de vendas: sempre soma qtd * preco_venda dos movimentos de saída
+    // (filtrados por produto e por forma de pagamento, quando aplicável).
+    const faturamento = movsFiltered.reduce((acc: number, m: any) => {
+      const p = prodMap.get(m.product_id);
+      const preco = Number(p?.preco_venda) || 0;
+      return acc + (Number(m.quantidade) || 0) * preco;
+    }, 0);
 
-    // Custo: usa o custo cadastrado do produto (referência atual no cadastro).
-    // Fallback ao custo_unitario registrado no movimento caso o produto não exista mais.
+    // Custo: usa o custo cadastrado do produto no momento da venda.
+    // Prioriza custo_unitario registrado no movimento (snapshot da venda),
+    // com fallback ao custo atual do cadastro do produto.
     const custo = movsFiltered.reduce((acc: number, m: any) => {
       const p = prodMap.get(m.product_id);
-      const custoUnit = Number(p?.custo_unitario) || (m.custo_unitario != null ? Number(m.custo_unitario) : 0);
+      const custoUnit =
+        m.custo_unitario != null ? Number(m.custo_unitario) : Number(p?.custo_unitario) || 0;
       return acc + (Number(m.quantidade) || 0) * custoUnit;
     }, 0);
 
     const lucro = faturamento - custo;
     const pct = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
     return { faturamento, custo, lucro, pct };
-  }, [txFiltered, movsFiltered, prodMap, applied.selectedProducts]);
+  }, [movsFiltered, prodMap]);
 
   function toggleProduct(id: string) {
     setSelectedProducts((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
