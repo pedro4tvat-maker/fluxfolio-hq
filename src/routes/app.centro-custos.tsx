@@ -93,7 +93,7 @@ function CentroCustosPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold">Centro de Custos</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -123,70 +123,72 @@ function CentroCustosPage() {
       </datalist>
 
       <div className="bg-card border rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-xs uppercase">
-            <tr>
-              <th className="text-left p-3">Centro</th>
-              <th className="text-left p-3">Classificação (DRE)</th>
-              <th className="text-right p-3">Entradas</th>
-              <th className="text-right p-3">Saídas</th>
-              <th className="text-right p-3">Resultado</th>
-              <th className="text-right p-3 w-32">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
-            ) : rows.map((r: any) => (
-              <tr key={r.id} className="border-t">
-                <td className="p-3 font-medium">
-                  {editingId === r.id ? (
-                    <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus className="h-8" />
-                  ) : r.nome}
-                </td>
-                <td className="p-3 text-muted-foreground">
-                  {editingId === r.id ? (
-                    <Input
-                      list="classificacoes-existentes"
-                      value={editClass}
-                      onChange={(e) => setEditClass(e.target.value)}
-                      placeholder="(sem classificação)"
-                      className="h-8"
-                    />
-                  ) : (r.kpi_classification || <span className="italic">—</span>)}
-                </td>
-                <td className="p-3 text-right text-success">{formatMoney(r.entradas)}</td>
-                <td className="p-3 text-right text-destructive">{formatMoney(r.saidas)}</td>
-                <td className={`p-3 text-right font-display font-semibold ${r.resultado >= 0 ? "text-success" : "text-destructive"}`}>{formatMoney(r.resultado)}</td>
-                <td className="p-3 text-right">
-                  <div className="flex justify-end gap-1">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
+            <thead className="bg-muted/50 text-xs uppercase">
+              <tr>
+                <th className="text-left p-3">Centro</th>
+                <th className="text-left p-3">Classificação (DRE)</th>
+                <th className="text-right p-3">Entradas</th>
+                <th className="text-right p-3">Saídas</th>
+                <th className="text-right p-3">Resultado</th>
+                <th className="text-right p-3 w-32">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
+              ) : rows.map((r: any) => (
+                <tr key={r.id} className="border-t">
+                  <td className="p-3 font-medium">
                     {editingId === r.id ? (
-                      <>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => salvarEdicao(r.id)} aria-label="Salvar"><Check className="size-4" /></Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)} aria-label="Cancelar"><X className="size-4" /></Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditValue(r.nome); setEditClass(r.kpi_classification ?? ""); }} aria-label="Editar"><Pencil className="size-4" /></Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => excluir(r.id, r.nome)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {(semEntradas > 0 || semSaidas > 0) && (
-              <tr className="border-t bg-muted/30">
-                <td className="p-3 italic text-muted-foreground">Sem centro de custo</td>
-                <td className="p-3" />
-                <td className="p-3 text-right">{formatMoney(semEntradas)}</td>
-                <td className="p-3 text-right">{formatMoney(semSaidas)}</td>
-                <td className="p-3 text-right font-display font-semibold">{formatMoney(semEntradas - semSaidas)}</td>
-                <td className="p-3" />
-              </tr>
-            )}
-          </tbody>
-        </table>
+                      <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus className="h-8" />
+                    ) : r.nome}
+                  </td>
+                  <td className="p-3 text-muted-foreground">
+                    {editingId === r.id ? (
+                      <Input
+                        list="classificacoes-existentes"
+                        value={editClass}
+                        onChange={(e) => setEditClass(e.target.value)}
+                        placeholder="(sem classificação)"
+                        className="h-8"
+                      />
+                    ) : (r.kpi_classification || <span className="italic">—</span>)}
+                  </td>
+                  <td className="p-3 text-right text-success">{formatMoney(r.entradas)}</td>
+                  <td className="p-3 text-right text-destructive">{formatMoney(r.saidas)}</td>
+                  <td className={`p-3 text-right font-display font-semibold ${r.resultado >= 0 ? "text-success" : "text-destructive"}`}>{formatMoney(r.resultado)}</td>
+                  <td className="p-3 text-right">
+                    <div className="flex justify-end gap-1">
+                      {editingId === r.id ? (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => salvarEdicao(r.id)} aria-label="Salvar"><Check className="size-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)} aria-label="Cancelar"><X className="size-4" /></Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditValue(r.nome); setEditClass(r.kpi_classification ?? ""); }} aria-label="Editar"><Pencil className="size-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => excluir(r.id, r.nome)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {(semEntradas > 0 || semSaidas > 0) && (
+                <tr className="border-t bg-muted/30">
+                  <td className="p-3 italic text-muted-foreground">Sem centro de custo</td>
+                  <td className="p-3" />
+                  <td className="p-3 text-right">{formatMoney(semEntradas)}</td>
+                  <td className="p-3 text-right">{formatMoney(semSaidas)}</td>
+                  <td className="p-3 text-right font-display font-semibold">{formatMoney(semEntradas - semSaidas)}</td>
+                  <td className="p-3" />
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
