@@ -1185,18 +1185,20 @@ function VendasPage() {
                     <p className="font-medium truncate">{(row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(row.data)} • {row.forma_pagamento ?? "—"}</p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="font-display font-semibold text-success">{formatMoney(Number(row.valor))}</div>
-                    <Button type="button" variant="outline" size="sm" onClick={() => printPastSaleOS(row, "vista")}>
-                      <FileText className="size-4" /> Baixar OS
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="font-display font-semibold text-success mr-1">{formatMoney(Number(row.valor))}</div>
+                    <Button type="button" variant="outline" size="icon" title="Editar venda" onClick={() => editSale(row, "vista")}>
+                      <Pencil className="size-4" />
                     </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => printSaleMarginReport(row, "vista")}>
-                      <TrendingUp className="size-4" /> Margem
+                    <Button type="button" variant="outline" size="icon" title="Baixar OS" onClick={() => printPastSaleOS(row, "vista")}>
+                      <FileText className="size-4" />
                     </Button>
-                    <Button type="button" variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => cancelSale(row, "vista")}>
-                      <Ban className="size-4" /> Cancelar
+                    <Button type="button" variant="outline" size="icon" title="Relatório de margem" onClick={() => printSaleMarginReport(row, "vista")}>
+                      <TrendingUp className="size-4" />
                     </Button>
-
+                    <Button type="button" variant="outline" size="icon" title="Cancelar venda" className="text-destructive hover:text-destructive" onClick={() => cancelSale(row, "vista")}>
+                      <Ban className="size-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
