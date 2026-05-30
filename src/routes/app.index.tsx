@@ -595,18 +595,6 @@ function ClientDashboard() {
         </div>
       </section>
 
-      {/* 6. Ações rápidas */}
-      <section>
-        <SectionTitle>Ações rápidas</SectionTitle>
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-          <QuickAction icon={ArrowDownCircle} label="Lançar entrada" to="/app/fluxo-caixa" tone="success" />
-          <QuickAction icon={ArrowUpCircle} label="Lançar saída" to="/app/fluxo-caixa" tone="danger" />
-          <QuickAction icon={ArrowUpCircle} label="Nova conta a pagar" to="/app/contas-pagar" />
-          <QuickAction icon={ArrowDownCircle} label="Nova conta a receber" to="/app/contas-receber" />
-          <QuickAction icon={ShoppingCart} label="Nova venda" to="/app/vendas" />
-          <QuickAction icon={FileText} label="Importar extrato" to="/app/importacoes" />
-        </div>
-      </section>
 
       {/* 7. Resumo operacional */}
       <section>
