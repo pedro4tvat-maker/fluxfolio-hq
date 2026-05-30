@@ -202,6 +202,18 @@ function Relatorios() {
         <Field label="Data final">
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background" />
         </Field>
+        <Field label="Centro de custo">
+          <select
+            value={costCenterId}
+            onChange={(e) => setCostCenterId(e.target.value)}
+            className="rounded-lg border px-3 py-2 text-sm bg-background min-w-[180px]"
+          >
+            <option value="">Todos</option>
+            {costCenters.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        </Field>
         <div className="ml-auto"><BranchSwitcher /></div>
       </div>
 
