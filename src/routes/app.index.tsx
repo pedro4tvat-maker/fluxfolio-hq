@@ -649,11 +649,6 @@ function ClientDashboard() {
             <MiniStat label="Vendas do mês" value={formatMoney(data.vendasMes ?? 0)} hint={`${data.vendasCount ?? 0} pedidos`} />
             <MiniStat label="Margem média" value={data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(0)}%`} />
             <MiniStat label="OS do mês" value={String(data.ordensServico ?? 0)} hint="Ordens de serviço" />
-            <MiniStat
-              label="Produtos em alerta"
-              value={String(data.estoqueAlerta ?? 0)}
-              tone={data.estoqueAlerta > 0 ? "warn" : "default"}
-            />
           </div>
         </div>
       </section>
