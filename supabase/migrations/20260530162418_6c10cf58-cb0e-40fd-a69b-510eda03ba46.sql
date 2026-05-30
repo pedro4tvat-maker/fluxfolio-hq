@@ -1,0 +1,1 @@
+ALTER TABLE public.cost_centers ADD COLUMN IF NOT EXISTS kpi_classification text;
