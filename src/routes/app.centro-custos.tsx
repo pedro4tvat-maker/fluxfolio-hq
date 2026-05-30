@@ -26,7 +26,7 @@ function CentroCustosPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("cost_centers")
-        .select("id, nome, kpi_classification")
+        .select("id, nome")
         .eq("company_id", selected!)
         .order("nome");
       return data ?? [];
@@ -73,12 +73,6 @@ function CentroCustosPage() {
     else { toast.success("Centro atualizado"); setEditingId(null); refetch(); }
   }
 
-  async function setClassificacao(id: string, value: string) {
-    const v = value === "none" ? null : value;
-    const { error } = await supabase.from("cost_centers").update({ kpi_classification: v }).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success("Classificação atualizada"); refetch(); }
-  }
 
   async function excluir(id: string, nome: string) {
     if (!confirm(`Excluir o centro "${nome}"? Lançamentos vinculados ficarão sem centro.`)) return;
@@ -92,7 +86,7 @@ function CentroCustosPage() {
       <div>
         <h1 className="text-2xl font-display font-bold">Centro de Custos</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Agrupe receitas e despesas por área. A classificação define em qual linha o lançamento aparece na DRE e demais relatórios gerenciais.
+          Agrupe receitas e despesas por área.
         </p>
       </div>
 
@@ -109,7 +103,6 @@ function CentroCustosPage() {
           <thead className="bg-muted/50 text-xs uppercase">
             <tr>
               <th className="text-left p-3">Centro</th>
-              <th className="text-left p-3">Classificação (DRE)</th>
               <th className="text-right p-3">Entradas</th>
               <th className="text-right p-3">Saídas</th>
               <th className="text-right p-3">Resultado</th>
@@ -118,25 +111,13 @@ function CentroCustosPage() {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
+              <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
             ) : rows.map((r: any) => (
               <tr key={r.id} className="border-t">
                 <td className="p-3 font-medium">
                   {editingId === r.id ? (
                     <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus className="h-8" />
                   ) : r.nome}
-                </td>
-                <td className="p-3">
-                  <Select value={r.kpi_classification ?? "none"} onValueChange={(v) => setClassificacao(r.id, v)}>
-                    <SelectTrigger className="h-8 w-[230px]">
-                      <SelectValue>{kpiLabel(r.kpi_classification)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {KPI_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </td>
                 <td className="p-3 text-right text-success">{formatMoney(r.entradas)}</td>
                 <td className="p-3 text-right text-destructive">{formatMoney(r.saidas)}</td>
@@ -161,7 +142,6 @@ function CentroCustosPage() {
             {(semEntradas > 0 || semSaidas > 0) && (
               <tr className="border-t bg-muted/30">
                 <td className="p-3 italic text-muted-foreground">Sem centro de custo</td>
-                <td className="p-3 italic text-muted-foreground">—</td>
                 <td className="p-3 text-right">{formatMoney(semEntradas)}</td>
                 <td className="p-3 text-right">{formatMoney(semSaidas)}</td>
                 <td className="p-3 text-right font-display font-semibold">{formatMoney(semEntradas - semSaidas)}</td>
