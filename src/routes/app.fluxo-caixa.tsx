@@ -172,12 +172,22 @@ function FluxoCaixa() {
             <DialogTrigger asChild>
               <Button><PlusCircle className="size-4" /> Novo lançamento</Button>
             </DialogTrigger>
-            <NewTransactionDialog
+            <TransactionDialog
               companyId={selected!}
               categorias={categorias}
               contas={contas}
               costCenters={costCenters}
               onDone={() => { setOpenNew(false); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
+            />
+          </Dialog>
+          <Dialog open={!!editingTx} onOpenChange={(o) => !o && setEditingTx(null)}>
+            <TransactionDialog
+              tx={editingTx ?? undefined}
+              companyId={selected!}
+              categorias={categorias}
+              contas={contas}
+              costCenters={costCenters}
+              onDone={() => { setEditingTx(null); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
             />
           </Dialog>
         </div>
