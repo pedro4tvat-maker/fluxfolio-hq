@@ -32,6 +32,8 @@ type SaleItem = {
   nome: string;
   quantidade: string;
   preco_unitario: string;
+  custo_unitario: string; // custo desta venda (pode sobrescrever o cadastrado)
+  custo_padrao: string;   // custo cadastrado no produto (referência)
 };
 
 type CompanyData = {
