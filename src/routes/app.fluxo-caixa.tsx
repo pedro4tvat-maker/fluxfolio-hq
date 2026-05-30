@@ -361,9 +361,10 @@ function FluxoCaixa() {
   );
 }
 
-function NewTransactionDialog({
-  companyId, categorias, contas, costCenters, onDone,
+function TransactionDialog({
+  tx, companyId, categorias, contas, costCenters, onDone,
 }: {
+  tx?: Tx;
   companyId: string;
   categorias: { id: string; nome: string; tipo: string }[];
   contas: { id: string; nome: string }[];
