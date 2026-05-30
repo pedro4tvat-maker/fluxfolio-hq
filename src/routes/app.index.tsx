@@ -290,17 +290,20 @@ function ClientDashboard() {
       const last14 = new Date(today);
       last14.setDate(last14.getDate() - 13);
       const range = monthRange(today);
-      const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }, { data: categories }, { data: budgets }] = await Promise.all([
+      const [{ data: tx }, { data: allTx }, { data: trendTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }, { data: latestTx }, { data: categories }, { data: budgets }, { data: vendasVista }, { data: vendasPrazo }, { data: stockMovs }] = await Promise.all([
         withBranch(supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
         withBranch(supabase.from("transactions").select("tipo, valor, categoria_id, data").eq("company_id", selected).eq("status", "realizado"), branchId),
         withBranch(supabase.from("transactions").select("tipo, valor, data").eq("company_id", selected).eq("status", "realizado").gte("data", last14.toISOString().slice(0, 10)).lte("data", formattedToday), branchId),
         withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }).limit(10), branchId),
         withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }).limit(10), branchId),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
-        withBranch(supabase.from("products").select("quantidade, estoque_minimo, preco_venda, custo_unitario").eq("company_id", selected), branchId),
+        withBranch(supabase.from("products").select("id, quantidade, estoque_minimo, preco_venda, custo_unitario").eq("company_id", selected), branchId),
         withBranch(supabase.from("transactions").select("id, descricao, tipo, valor, status, data").eq("company_id", selected).order("data", { ascending: false }).limit(5), branchId),
         supabase.from("categories").select("id, nome").eq("company_id", selected),
         withBranch(supabase.from("budgets").select("mes, ano, categoria_id, valor_orcado").eq("company_id", selected).eq("mes", today.getMonth() + 1).eq("ano", today.getFullYear()), branchId),
+        withBranch(supabase.from("transactions").select("id, valor, data").eq("company_id", selected).eq("tipo", "entrada").ilike("descricao", "Venda%").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("receivables").select("id, valor, created_at").eq("company_id", selected).ilike("descricao", "Venda%").gte("created_at", range.start).lte("created_at", range.end + "T23:59:59"), branchId),
+        withBranch(supabase.from("stock_movements").select("product_id, quantidade, custo_unitario, data").eq("company_id", selected).eq("tipo", "saida").gte("data", range.start).lte("data", range.end), branchId),
       ]);
 
       const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
