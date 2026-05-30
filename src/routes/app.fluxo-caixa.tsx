@@ -371,16 +371,16 @@ function TransactionDialog({
   costCenters: { id: string; nome: string }[];
   onDone: () => void;
 }) {
-  const [tipo, setTipo] = useState<"entrada" | "saida">("entrada");
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [categoriaId, setCategoriaId] = useState<string>("");
-  const [contaId, setContaId] = useState<string>("");
-  const [centroCustoId, setCentroCustoId] = useState<string>("");
-  const [forma, setForma] = useState<string>("");
-  const [status, setStatus] = useState<"realizado" | "previsto">("realizado");
-  const [observacoes, setObservacoes] = useState("");
+  const [tipo, setTipo] = useState<"entrada" | "saida">(tx?.tipo ?? "entrada");
+  const [data, setData] = useState(tx?.data ?? new Date().toISOString().slice(0, 10));
+  const [descricao, setDescricao] = useState(tx?.descricao ?? "");
+  const [valor, setValor] = useState(tx ? String(tx.valor).replace(".", ",") : "");
+  const [categoriaId, setCategoriaId] = useState<string>(tx?.categoria_id ?? "");
+  const [contaId, setContaId] = useState<string>(tx?.conta_id ?? "");
+  const [centroCustoId, setCentroCustoId] = useState<string>(tx?.centro_custo_id ?? "");
+  const [forma, setForma] = useState<string>(tx?.forma_pagamento ?? "");
+  const [status, setStatus] = useState<"realizado" | "previsto">(tx?.status === "cancelado" ? "realizado" : (tx?.status as any) ?? "realizado");
+  const [observacoes, setObservacoes] = useState(tx?.observacoes ?? "");
   const [saving, setSaving] = useState(false);
 
   const catFiltered = categorias.filter((c) => c.tipo === tipo);
