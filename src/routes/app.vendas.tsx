@@ -150,6 +150,14 @@ function VendasPage() {
     0,
   );
 
+  const totalCusto = items.reduce(
+    (acc, it) => acc + (Number(it.quantidade) || 0) * (Number(it.custo_unitario) || 0),
+    0,
+  );
+
+  const lucro = total - totalCusto;
+  const margemPct = total > 0 ? (lucro / total) * 100 : 0;
+
   const filteredContacts = useMemo(() => contacts, [contacts]);
 
   function addProduct(productId: string) {
