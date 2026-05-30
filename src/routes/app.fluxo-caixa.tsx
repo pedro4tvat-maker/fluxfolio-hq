@@ -459,6 +459,16 @@ function NewTransactionDialog({
         </div>
 
         <div>
+          <Label>Centro de custo</Label>
+          <Select value={centroCustoId} onValueChange={setCentroCustoId}>
+            <SelectTrigger><SelectValue placeholder={costCenters.length ? "Selecionar" : "Nenhum cadastrado"} /></SelectTrigger>
+            <SelectContent>
+              {costCenters.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
           <Label>Observações</Label>
           <Textarea rows={2} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
         </div>
