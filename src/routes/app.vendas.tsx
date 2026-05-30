@@ -129,7 +129,7 @@ function VendasPage() {
       const [tx, rec] = await Promise.all([
         supabase
           .from("transactions")
-          .select("id, descricao, valor, data, status, forma_pagamento")
+          .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id")
           .eq("company_id", selected!)
           .eq("tipo", "entrada")
           .order("data", { ascending: false })
