@@ -101,6 +101,16 @@ function Relatorios() {
   const [inicio, setInicio] = useState(range.start);
   const [fim, setFim] = useState(range.end);
   const [active, setActive] = useState<ReportKey | null>(null);
+  const [costCenterId, setCostCenterId] = useState<string>("");
+
+  const { data: costCenters = [] } = useQuery({
+    queryKey: ["cost_centers", currentCompanyId],
+    enabled: !!currentCompanyId,
+    queryFn: async () => {
+      const { data } = await supabase.from("cost_centers").select("id, nome").eq("company_id", currentCompanyId!).order("nome");
+      return data ?? [];
+    },
+  });
 
   // período anterior automático
   const prevPeriod = useMemo(() => {
@@ -114,15 +124,15 @@ function Relatorios() {
   }, [inicio, fim]);
 
   const { data, isFetching } = useQuery({
-    queryKey: ["report-data", currentCompanyId, branchId, inicio, fim],
+    queryKey: ["report-data", currentCompanyId, branchId, inicio, fim, costCenterId],
     enabled: !!currentCompanyId,
-    queryFn: () => fetchReportData(currentCompanyId!, branchId, { start: inicio, end: fim }),
+    queryFn: () => fetchReportData(currentCompanyId!, branchId, { start: inicio, end: fim }, costCenterId || null),
   });
 
   const { data: dataPrev } = useQuery({
-    queryKey: ["report-data-prev", currentCompanyId, branchId, prevPeriod.start, prevPeriod.end],
+    queryKey: ["report-data-prev", currentCompanyId, branchId, prevPeriod.start, prevPeriod.end, costCenterId],
     enabled: !!currentCompanyId && active === "comparativo_periodos",
-    queryFn: () => fetchReportData(currentCompanyId!, branchId, prevPeriod),
+    queryFn: () => fetchReportData(currentCompanyId!, branchId, prevPeriod, costCenterId || null),
   });
 
   const { data: filiaisData } = useQuery({
@@ -191,6 +201,18 @@ function Relatorios() {
         </Field>
         <Field label="Data final">
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background" />
+        </Field>
+        <Field label="Centro de custo">
+          <select
+            value={costCenterId}
+            onChange={(e) => setCostCenterId(e.target.value)}
+            className="rounded-lg border px-3 py-2 text-sm bg-background min-w-[180px]"
+          >
+            <option value="">Todos</option>
+            {costCenters.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
         </Field>
         <div className="ml-auto"><BranchSwitcher /></div>
       </div>

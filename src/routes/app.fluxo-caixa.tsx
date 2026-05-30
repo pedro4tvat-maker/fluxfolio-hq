@@ -77,6 +77,16 @@ function FluxoCaixa() {
     enabled: !!selected,
   });
 
+  const { data: costCenters = [] } = useQuery({
+    queryKey: ["cost_centers", selected],
+    queryFn: async () => {
+      if (!selected) return [];
+      const { data } = await supabase.from("cost_centers").select("id, nome").eq("company_id", selected).order("nome");
+      return data ?? [];
+    },
+    enabled: !!selected,
+  });
+
   const { data: tx = [], isLoading } = useQuery({
     queryKey: ["transactions", selected, range.start, range.end],
     queryFn: async (): Promise<Tx[]> => {
@@ -165,6 +175,7 @@ function FluxoCaixa() {
               companyId={selected!}
               categorias={categorias}
               contas={contas}
+              costCenters={costCenters}
               onDone={() => { setOpenNew(false); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
             />
           </Dialog>
@@ -330,11 +341,12 @@ function FluxoCaixa() {
 }
 
 function NewTransactionDialog({
-  companyId, categorias, contas, onDone,
+  companyId, categorias, contas, costCenters, onDone,
 }: {
   companyId: string;
   categorias: { id: string; nome: string; tipo: string }[];
   contas: { id: string; nome: string }[];
+  costCenters: { id: string; nome: string }[];
   onDone: () => void;
 }) {
   const [tipo, setTipo] = useState<"entrada" | "saida">("entrada");
@@ -343,6 +355,7 @@ function NewTransactionDialog({
   const [valor, setValor] = useState("");
   const [categoriaId, setCategoriaId] = useState<string>("");
   const [contaId, setContaId] = useState<string>("");
+  const [centroCustoId, setCentroCustoId] = useState<string>("");
   const [forma, setForma] = useState<string>("");
   const [status, setStatus] = useState<"realizado" | "previsto">("realizado");
   const [observacoes, setObservacoes] = useState("");
@@ -360,6 +373,7 @@ function NewTransactionDialog({
       data, tipo, descricao: descricao.trim(), valor: v, status,
       categoria_id: categoriaId || null,
       conta_id: contaId || null,
+      centro_custo_id: centroCustoId || null,
       forma_pagamento: forma || null,
       observacoes: observacoes.trim() || null,
     });
@@ -442,6 +456,16 @@ function NewTransactionDialog({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div>
+          <Label>Centro de custo</Label>
+          <Select value={centroCustoId} onValueChange={setCentroCustoId}>
+            <SelectTrigger><SelectValue placeholder={costCenters.length ? "Selecionar" : "Nenhum cadastrado"} /></SelectTrigger>
+            <SelectContent>
+              {costCenters.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>

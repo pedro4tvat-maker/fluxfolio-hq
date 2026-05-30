@@ -94,23 +94,25 @@ export async function fetchReportData(
   companyId: string,
   branchId: string | null,
   period: Period,
+  costCenterId?: string | null,
 ): Promise<ReportData> {
+  const applyCC = (q: any) => (costCenterId ? q.eq("centro_custo_id", costCenterId) : q);
   const [tx, cats, pay, rec, prods, accs, budgets, ccs] = await Promise.all([
-    applyBranch(
+    applyCC(applyBranch(
       supabase
         .from("transactions")
         .select("id, data, tipo, valor, descricao, status, categoria_id, centro_custo_id, conta_id, forma_pagamento")
         .eq("company_id", companyId),
       branchId,
-    ),
+    )),
     supabase.from("categories").select("id, nome, tipo, kpi_classification").eq("company_id", companyId),
-    applyBranch(
+    applyCC(applyBranch(
       supabase
         .from("payables")
         .select("id, descricao, fornecedor, valor, vencimento, data_pagamento, status, forma_pagamento, categoria_id, centro_custo_id")
         .eq("company_id", companyId),
       branchId,
-    ),
+    )),
     applyBranch(
       supabase
         .from("receivables")
