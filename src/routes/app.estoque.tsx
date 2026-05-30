@@ -443,6 +443,9 @@ function EstoquePage() {
                           <Button size="icon" variant="ghost" title="Saída" onClick={() => { setMoveForm({ ...emptyMovement, product_id: p.id, tipo: "saida" }); setMoveOpen(true); }}>
                             <ArrowUpFromLine className="size-4" />
                           </Button>
+                          <Button size="icon" variant="ghost" title="Ajustar quantidade" onClick={() => openAdjustQuantity(p)}>
+                            <Scale className="size-4" />
+                          </Button>
                           <Button size="icon" variant="ghost" title="Editar" onClick={() => openEditProduct(p)}>
                             <Pencil className="size-4" />
                           </Button>
