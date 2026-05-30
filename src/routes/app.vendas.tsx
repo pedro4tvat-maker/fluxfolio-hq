@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText, TrendingUp, Download } from "lucide-react";
+import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText, TrendingUp, Download, Ban } from "lucide-react";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { ContactForm } from "./app.crm";
 import { cn } from "@/lib/utils";
@@ -769,6 +769,67 @@ function VendasPage() {
     openHtmlWindow(html);
   }
 
+  async function cancelSale(row: {
+    id: string;
+    descricao: string | null;
+    valor: number | string | null;
+    data?: string | null;
+    vencimento?: string | null;
+  }, tipo: "vista" | "prazo") {
+    if (!selected) return;
+    const ok = window.confirm(
+      `Cancelar esta venda?\n\nIsso irá:\n• Remover o ${tipo === "vista" ? "lançamento de entrada" : "título a receber"}\n• Estornar a baixa de estoque dos produtos vendidos\n\nEsta ação não pode ser desfeita.`,
+    );
+    if (!ok) return;
+    try {
+      // 1) Estorna estoque: para cada item parseado, insere uma "entrada" compensatória
+      const desc = row.descricao || "";
+      const matchItens = desc.match(/\(([^)]+)\)\s*$/);
+      const itensTxt = matchItens ? matchItens[1] : "";
+      const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+      const dataRef = (tipo === "vista" ? row.data : row.vencimento) || new Date().toISOString().slice(0, 10);
+
+      for (const p of partes) {
+        const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
+        if (!m) continue;
+        const qtd = Number(m[1].replace(",", "."));
+        const nome = m[2].trim();
+        const custo = m[4] ? Number(m[4].replace(",", ".")) : NaN;
+        const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
+        if (!prod || !(qtd > 0)) continue;
+        const { error: smErr } = await supabase.from("stock_movements").insert({
+          company_id: selected,
+          product_id: prod.id,
+          tipo: "entrada",
+          quantidade: qtd,
+          custo_unitario: Number.isFinite(custo) && custo > 0 ? custo : Number(prod.custo_unitario ?? 0) || null,
+          motivo: "Estorno de venda",
+          data: dataRef,
+        });
+        if (smErr) throw smErr;
+      }
+
+      // 2) Remove o lançamento financeiro
+      if (tipo === "vista") {
+        const { error } = await supabase.from("transactions").delete().eq("id", row.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("receivables").delete().eq("id", row.id);
+        if (error) throw error;
+      }
+
+      toast.success("Venda cancelada e estoque estornado");
+      qc.invalidateQueries({ queryKey: ["vendas-list"] });
+      qc.invalidateQueries({ queryKey: ["products-sel"] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(msg || "Erro ao cancelar venda");
+    }
+  }
+
+
+
+
 
 
 
@@ -1052,6 +1113,10 @@ function VendasPage() {
                     <Button type="button" variant="outline" size="sm" onClick={() => printSaleMarginReport(row, "vista")}>
                       <TrendingUp className="size-4" /> Margem
                     </Button>
+                    <Button type="button" variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => cancelSale(row, "vista")}>
+                      <Ban className="size-4" /> Cancelar
+                    </Button>
+
                   </div>
                 </div>
               ))}
@@ -1081,6 +1146,10 @@ function VendasPage() {
                     <Button type="button" variant="outline" size="sm" onClick={() => printSaleMarginReport({ ...row, data: null, forma_pagamento: null }, "prazo")}>
                       <TrendingUp className="size-4" /> Margem
                     </Button>
+                    <Button type="button" variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => cancelSale(row, "prazo")}>
+                      <Ban className="size-4" /> Cancelar
+                    </Button>
+
                   </div>
                 </div>
               ))}
