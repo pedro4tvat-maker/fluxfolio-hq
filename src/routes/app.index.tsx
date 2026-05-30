@@ -343,20 +343,36 @@ function ClientDashboard() {
       });
       const trend = Array.from(trendMap.values());
 
-      // Vendas do mês: transactions with category named like 'venda' and tipo 'entrada'
-      const salesCategoryIds = (categories ?? []).filter((c) => typeof c.nome === "string" && c.nome.toLowerCase().includes("venda")).map((c) => c.id);
-      const vendasTx = (allTx ?? []).filter((t) => t.tipo === "entrada" && salesCategoryIds.includes((t as any).categoria_id));
-      const vendasMes = vendasTx.reduce((s, t) => s + Number((t as any).valor ?? 0), 0);
-      const vendasCount = vendasTx.length;
+      // Vendas do mês: faturamento vem das vendas registradas (transações à vista + recebíveis a prazo
+      // com descrição iniciando em "Venda"). OS count = quantidade de vendas registradas no mês.
+      const vendasMes =
+        (vendasVista ?? []).reduce((s, t) => s + Number((t as any).valor ?? 0), 0) +
+        (vendasPrazo ?? []).reduce((s, r) => s + Number((r as any).valor ?? 0), 0);
+      const ordensServico = (vendasVista ?? []).length + (vendasPrazo ?? []).length;
+      const vendasCount = ordensServico;
 
-      // Inventory value and estimated average margin from products
-      const valorEstoque = (prods ?? []).reduce((s, p) => s + Number(p.quantidade ?? 0) * Number(p.custo_unitario ?? 0), 0);
-      const margemMedia = (() => {
-        const items = (prods ?? []).filter((p) => Number(p.preco_venda) > 0);
-        if (!items.length) return null;
-        const avg = items.reduce((acc, p) => acc + ((Number(p.preco_venda) - Number(p.custo_unitario)) / Number(p.preco_venda || 1)), 0) / items.length;
-        return avg;
-      })();
+      // Margem média do mês: baseada nas vendas reais (stock_movements de saída).
+      // Faturamento = qtd * preco_venda do produto. Custo = qtd * custo_unitario do
+      // momento da venda (snapshot do movimento), com fallback ao custo cadastrado.
+      const prodMap = new Map<string, { preco_venda: number; custo_unitario: number }>();
+      (prods ?? []).forEach((p: any) => {
+        prodMap.set(p.id, {
+          preco_venda: Number(p.preco_venda ?? 0),
+          custo_unitario: Number(p.custo_unitario ?? 0),
+        });
+      });
+      let faturamentoMovs = 0;
+      let custoMovs = 0;
+      (stockMovs ?? []).forEach((m: any) => {
+        const p = prodMap.get(m.product_id);
+        const qtd = Number(m.quantidade ?? 0);
+        const preco = Number(p?.preco_venda ?? 0);
+        const custoUnit =
+          m.custo_unitario != null ? Number(m.custo_unitario) : Number(p?.custo_unitario ?? 0);
+        faturamentoMovs += qtd * preco;
+        custoMovs += qtd * custoUnit;
+      });
+      const margemMedia = faturamentoMovs > 0 ? (faturamentoMovs - custoMovs) / faturamentoMovs : null;
 
       // Budget utilization for current month
       const totalOrcado = (budgets ?? []).reduce((s, b) => s + Number(b.valor_orcado ?? 0), 0);
@@ -383,7 +399,7 @@ function ClientDashboard() {
         trend,
         vendasMes,
         vendasCount,
-        valorEstoque,
+        ordensServico,
         margemMedia,
         orcamentoUtilizado,
       };
