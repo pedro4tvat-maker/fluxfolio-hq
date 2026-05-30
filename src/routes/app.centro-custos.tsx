@@ -7,10 +7,25 @@ import { formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/centro-custos")({ component: CentroCustosPage });
+
+const KPI_OPTIONS: { value: string; label: string }[] = [
+  { value: "none", label: "Sem classificação (usar categoria)" },
+  { value: "outras_receitas", label: "Outras Receitas" },
+  { value: "impostos", label: "Deduções / Impostos" },
+  { value: "custos_variaveis", label: "Custos Variáveis" },
+  { value: "custos_fixos", label: "Custos Fixos" },
+  { value: "despesas_operacionais", label: "Despesas Operacionais" },
+  { value: "marketing", label: "Marketing" },
+  { value: "despesas_financeiras", label: "Despesas Financeiras" },
+];
+
+const kpiLabel = (v: string | null | undefined) =>
+  KPI_OPTIONS.find((o) => o.value === v)?.label ?? "—";
 
 function CentroCustosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,7 +40,7 @@ function CentroCustosPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("cost_centers")
-        .select("id, nome")
+        .select("id, nome, kpi_classification")
         .eq("company_id", selected!)
         .order("nome");
       return data ?? [];
@@ -44,7 +59,7 @@ function CentroCustosPage() {
     },
   });
 
-  const rows = (centers ?? []).map((c) => {
+  const rows = (centers ?? []).map((c: any) => {
     const linked = (totals ?? []).filter((t) => t.centro_custo_id === c.id);
     const entradas = linked.filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
     const saidas = linked.filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
@@ -72,6 +87,13 @@ function CentroCustosPage() {
     else { toast.success("Centro atualizado"); setEditingId(null); refetch(); }
   }
 
+  async function setClassificacao(id: string, value: string) {
+    const v = value === "none" ? null : value;
+    const { error } = await supabase.from("cost_centers").update({ kpi_classification: v }).eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Classificação atualizada"); refetch(); }
+  }
+
   async function excluir(id: string, nome: string) {
     if (!confirm(`Excluir o centro "${nome}"? Lançamentos vinculados ficarão sem centro.`)) return;
     const { error } = await supabase.from("cost_centers").delete().eq("id", id);
@@ -80,16 +102,18 @@ function CentroCustosPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-display font-bold">Centro de Custos</h1>
-        <p className="text-sm text-muted-foreground mt-1">Agrupe receitas e despesas por área. Veja totais por centro.</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Agrupe receitas e despesas por área. A classificação define em qual linha o lançamento aparece na DRE e demais relatórios gerenciais.
+        </p>
       </div>
 
       <form onSubmit={adicionar} className="bg-card border rounded-2xl p-4 flex gap-3 items-end">
         <div className="flex-1 space-y-1">
           <Label>Novo centro de custo</Label>
-          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Comercial, Produção, Administrativo" />
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Custo Variável, Custo Fixo, Marketing" />
         </div>
         <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Adicionar"}</Button>
       </form>
@@ -99,6 +123,7 @@ function CentroCustosPage() {
           <thead className="bg-muted/50 text-xs uppercase">
             <tr>
               <th className="text-left p-3">Centro</th>
+              <th className="text-left p-3">Classificação (DRE)</th>
               <th className="text-right p-3">Entradas</th>
               <th className="text-right p-3">Saídas</th>
               <th className="text-right p-3">Resultado</th>
@@ -107,13 +132,25 @@ function CentroCustosPage() {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
-            ) : rows.map((r) => (
+              <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">Nenhum centro cadastrado.</td></tr>
+            ) : rows.map((r: any) => (
               <tr key={r.id} className="border-t">
                 <td className="p-3 font-medium">
                   {editingId === r.id ? (
                     <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus className="h-8" />
                   ) : r.nome}
+                </td>
+                <td className="p-3">
+                  <Select value={r.kpi_classification ?? "none"} onValueChange={(v) => setClassificacao(r.id, v)}>
+                    <SelectTrigger className="h-8 w-[230px]">
+                      <SelectValue>{kpiLabel(r.kpi_classification)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KPI_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </td>
                 <td className="p-3 text-right text-success">{formatMoney(r.entradas)}</td>
                 <td className="p-3 text-right text-destructive">{formatMoney(r.saidas)}</td>
@@ -138,6 +175,7 @@ function CentroCustosPage() {
             {(semEntradas > 0 || semSaidas > 0) && (
               <tr className="border-t bg-muted/30">
                 <td className="p-3 italic text-muted-foreground">Sem centro de custo</td>
+                <td className="p-3 italic text-muted-foreground">—</td>
                 <td className="p-3 text-right">{formatMoney(semEntradas)}</td>
                 <td className="p-3 text-right">{formatMoney(semSaidas)}</td>
                 <td className="p-3 text-right font-display font-semibold">{formatMoney(semEntradas - semSaidas)}</td>
