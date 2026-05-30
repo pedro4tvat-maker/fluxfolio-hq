@@ -524,11 +524,11 @@ function EstoquePage() {
               </div>
               <div className="space-y-1">
                 <Label>Quantidade</Label>
-                <Input type="number" min="0" step="0.01" value={moveForm.quantidade} onChange={(e) => setMoveForm({ ...moveForm, quantidade: e.target.value })} />
+                <Input type="number" min="0" step="1" placeholder="0" value={moveForm.quantidade} onChange={(e) => setMoveForm({ ...moveForm, quantidade: e.target.value })} />
               </div>
               <div className="space-y-1">
                 <Label>Custo unitário (opcional)</Label>
-                <Input type="number" min="0" step="0.01" value={moveForm.custo_unitario} onChange={(e) => setMoveForm({ ...moveForm, custo_unitario: e.target.value })} />
+                <CurrencyInput value={moveForm.custo_unitario} onChange={(v) => setMoveForm({ ...moveForm, custo_unitario: v })} />
               </div>
             </div>
             <div className="space-y-1">
