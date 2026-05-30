@@ -769,6 +769,49 @@ function VendasPage() {
     openHtmlWindow(html);
   }
 
+  async function performCancel(row: {
+    id: string;
+    descricao: string | null;
+    valor: number | string | null;
+    data?: string | null;
+    vencimento?: string | null;
+  }, tipo: "vista" | "prazo") {
+    if (!selected) return;
+    const desc = row.descricao || "";
+    const matchItens = desc.match(/\(([^)]+)\)\s*$/);
+    const itensTxt = matchItens ? matchItens[1] : "";
+    const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+    const dataRef = (tipo === "vista" ? row.data : row.vencimento) || new Date().toISOString().slice(0, 10);
+
+    for (const p of partes) {
+      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
+      if (!m) continue;
+      const qtd = Number(m[1].replace(",", "."));
+      const nome = m[2].trim();
+      const custo = m[4] ? Number(m[4].replace(",", ".")) : NaN;
+      const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
+      if (!prod || !(qtd > 0)) continue;
+      const { error: smErr } = await supabase.from("stock_movements").insert({
+        company_id: selected,
+        product_id: prod.id,
+        tipo: "entrada",
+        quantidade: qtd,
+        custo_unitario: Number.isFinite(custo) && custo > 0 ? custo : Number(prod.custo_unitario ?? 0) || null,
+        motivo: "Estorno de venda",
+        data: dataRef,
+      });
+      if (smErr) throw smErr;
+    }
+
+    if (tipo === "vista") {
+      const { error } = await supabase.from("transactions").delete().eq("id", row.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("receivables").delete().eq("id", row.id);
+      if (error) throw error;
+    }
+  }
+
   async function cancelSale(row: {
     id: string;
     descricao: string | null;
@@ -782,48 +825,85 @@ function VendasPage() {
     );
     if (!ok) return;
     try {
-      // 1) Estorna estoque: para cada item parseado, insere uma "entrada" compensatória
-      const desc = row.descricao || "";
-      const matchItens = desc.match(/\(([^)]+)\)\s*$/);
-      const itensTxt = matchItens ? matchItens[1] : "";
-      const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
-      const dataRef = (tipo === "vista" ? row.data : row.vencimento) || new Date().toISOString().slice(0, 10);
-
-      for (const p of partes) {
-        const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-        if (!m) continue;
-        const qtd = Number(m[1].replace(",", "."));
-        const nome = m[2].trim();
-        const custo = m[4] ? Number(m[4].replace(",", ".")) : NaN;
-        const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
-        if (!prod || !(qtd > 0)) continue;
-        const { error: smErr } = await supabase.from("stock_movements").insert({
-          company_id: selected,
-          product_id: prod.id,
-          tipo: "entrada",
-          quantidade: qtd,
-          custo_unitario: Number.isFinite(custo) && custo > 0 ? custo : Number(prod.custo_unitario ?? 0) || null,
-          motivo: "Estorno de venda",
-          data: dataRef,
-        });
-        if (smErr) throw smErr;
-      }
-
-      // 2) Remove o lançamento financeiro
-      if (tipo === "vista") {
-        const { error } = await supabase.from("transactions").delete().eq("id", row.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("receivables").delete().eq("id", row.id);
-        if (error) throw error;
-      }
-
+      await performCancel(row, tipo);
       toast.success("Venda cancelada e estoque estornado");
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
       qc.invalidateQueries({ queryKey: ["products-sel"] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg || "Erro ao cancelar venda");
+    }
+  }
+
+  async function editSale(row: {
+    id: string;
+    descricao: string | null;
+    valor: number | string | null;
+    data?: string | null;
+    vencimento?: string | null;
+    forma_pagamento?: string | null;
+    cliente?: string | null;
+    crm_contact_id?: string | null;
+  }, tipo: "vista" | "prazo") {
+    if (!selected) return;
+    const ok = window.confirm(
+      "Editar esta venda?\n\nA venda atual será cancelada (com estorno de estoque) e os dados serão carregados no formulário para você ajustar e salvar novamente.",
+    );
+    if (!ok) return;
+    try {
+      const desc = row.descricao || "";
+      const matchItens = desc.match(/\(([^)]+)\)\s*$/);
+      const itensTxt = matchItens ? matchItens[1] : "";
+      const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+      const parsedItems: SaleItem[] = partes.map((p) => {
+        const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
+        const qtd = m ? m[1].replace(",", ".") : "1";
+        const nome = m ? m[2].trim() : p;
+        const preco = m && m[3] ? m[3].replace(",", ".") : "";
+        const custo = m && m[4] ? m[4].replace(",", ".") : "";
+        const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
+        return {
+          product_id: prod?.id ?? "",
+          nome,
+          quantidade: qtd,
+          preco_unitario: preco || String(prod?.preco_venda ?? ""),
+          custo_unitario: custo || String(prod?.custo_unitario ?? ""),
+          custo_padrao: String(prod?.custo_unitario ?? ""),
+        };
+      });
+
+      let clienteFound: CrmContact | null = null;
+      if (row.crm_contact_id) {
+        clienteFound = contacts.find((c) => c.id === row.crm_contact_id) ?? null;
+      }
+      if (!clienteFound) {
+        const descLimpa = desc.replace(/\s*\([^)]*\)\s*$/, "");
+        const matchCliente = descLimpa.match(/Venda\s*-\s*(.+)$/);
+        const nomeCliente = row.cliente || (matchCliente ? matchCliente[1].trim() : null);
+        if (nomeCliente) {
+          clienteFound = contacts.find((c) => c.name.toLowerCase() === nomeCliente.toLowerCase()) ?? null;
+        }
+      }
+
+      await performCancel(row, tipo);
+
+      setItems(parsedItems);
+      setCliente(clienteFound);
+      setForm({
+        forma: tipo,
+        forma_pagamento: row.forma_pagamento || "Pix",
+        data_venda: (row.data || new Date().toISOString().slice(0, 10)).slice(0, 10),
+        vencimento: (row.vencimento || new Date().toISOString().slice(0, 10)).slice(0, 10),
+        observacoes: "",
+      });
+      setOpen(true);
+      qc.invalidateQueries({ queryKey: ["vendas-list"] });
+      qc.invalidateQueries({ queryKey: ["products-sel"] });
+      toast.success("Venda carregada para edição. Ajuste e salve novamente.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(msg || "Erro ao editar venda");
     }
   }
 
