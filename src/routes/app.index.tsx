@@ -629,7 +629,7 @@ function ClientDashboard() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <MiniStat label="Vendas do mês" value={formatMoney(data.vendasMes ?? 0)} hint={`${data.vendasCount ?? 0} pedidos`} />
-            <MiniStat label="Margem média" value={data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(0)}%`} />
+            <MiniStat label="Margem operacional" value={data.margemMedia == null ? "—" : `${(data.margemMedia * 100).toFixed(1)}%`} />
             <MiniStat label="OS do mês" value={String(data.ordensServico ?? 0)} hint="Ordens de serviço" />
           </div>
         </div>
