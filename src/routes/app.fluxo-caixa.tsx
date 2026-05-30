@@ -175,6 +175,7 @@ function FluxoCaixa() {
               companyId={selected!}
               categorias={categorias}
               contas={contas}
+              costCenters={costCenters}
               onDone={() => { setOpenNew(false); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
             />
           </Dialog>
