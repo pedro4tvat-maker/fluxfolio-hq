@@ -193,7 +193,7 @@ const BUCKET_ALIASES: Record<DreBucket, string[]> = {
     "servicos",
   ],
   outras_receitas: ["outras_receitas", "outra_receita", "receita_nao_operacional", "receitas_nao_operacionais"],
-  impostos: ["impostos", "imposto", "deducoes", "deducoes_e_impostos", "tributos"],
+  impostos: ["impostos", "imposto", "deducoes", "deducoes_e_impostos", "deducoes_impostos", "tributos"],
   custos_variaveis: ["custos_variaveis", "custo_variavel", "custos_variavel", "custo_variaveis", "cmv", "custo_mercadoria_vendida"],
   custos_fixos: ["custos_fixos", "custo_fixo"],
   despesas_operacionais: [
