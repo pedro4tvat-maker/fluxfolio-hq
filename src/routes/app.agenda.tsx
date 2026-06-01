@@ -259,7 +259,7 @@ function Inner() {
     });
   };
 
-  const sectionLabel = AGENDA_SECTIONS.find((s) => s.id === section)?.label ?? "Lista";
+  const sectionLabel = AGENDA_SECTIONS.find((s) => s.id === section)?.label ?? "Calendário";
 
   return (
     <div className="space-y-6">
