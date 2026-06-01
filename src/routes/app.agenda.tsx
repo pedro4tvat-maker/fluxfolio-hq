@@ -30,7 +30,7 @@ export const Route = createFileRoute("/app/agenda")({
   validateSearch: (s: Record<string, unknown>): { section: AgendaSection; company?: string } => {
     const v = String(s.section ?? "");
     return {
-      section: (AGENDA_SECTION_IDS.includes(v) ? v : "lista") as AgendaSection,
+      section: (AGENDA_SECTION_IDS.includes(v) ? v : "calendario") as AgendaSection,
       company: typeof s.company === "string" ? s.company : undefined,
     };
   },
