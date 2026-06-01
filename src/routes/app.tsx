@@ -154,7 +154,7 @@ function AppLayout() {
       return renderSubmenu(n, CONSULTORIA_SECTIONS, consultoriaOpen, () => setConsultoriaOpen((v) => !v), "dashboard");
     }
     if (n.to === "/app/agenda") {
-      return renderSubmenu(n, AGENDA_SECTIONS, agendaOpen, () => setAgendaOpen((v) => !v), "lista");
+      return renderSubmenu(n, AGENDA_SECTIONS, agendaOpen, () => setAgendaOpen((v) => !v), "calendario");
     }
     return (
       <Link key={n.to} to={n.to} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>

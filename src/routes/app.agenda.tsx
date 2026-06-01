@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays, Plus, Pencil, Trash2, Check, X, Clock, AlertTriangle,
-  ListChecks, Package as PackageIcon, Users as UsersIcon, FileText, ChevronLeft, ChevronRight,
-  Video, MapPin, ExternalLink, Search, Building2, ChevronDown, ChevronUp, RotateCcw,
+  ChevronLeft, ChevronRight,
+  Video, MapPin, ExternalLink, Building2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,11 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export const AGENDA_SECTIONS = [
-  { id: "lista", label: "Lista" },
   { id: "calendario", label: "Calendário" },
-  { id: "entregas", label: "Entregas pendentes" },
   { id: "reunioes", label: "Reuniões" },
-  { id: "prazos", label: "Prazos importantes" },
   { id: "por-cliente", label: "Por cliente" },
 ] as const;
 type AgendaSection = typeof AGENDA_SECTIONS[number]["id"];
@@ -33,7 +30,7 @@ export const Route = createFileRoute("/app/agenda")({
   validateSearch: (s: Record<string, unknown>): { section: AgendaSection; company?: string } => {
     const v = String(s.section ?? "");
     return {
-      section: (AGENDA_SECTION_IDS.includes(v) ? v : "lista") as AgendaSection,
+      section: (AGENDA_SECTION_IDS.includes(v) ? v : "calendario") as AgendaSection,
       company: typeof s.company === "string" ? s.company : undefined,
     };
   },
@@ -262,7 +259,7 @@ function Inner() {
     });
   };
 
-  const sectionLabel = AGENDA_SECTIONS.find((s) => s.id === section)?.label ?? "Lista";
+  const sectionLabel = AGENDA_SECTIONS.find((s) => s.id === section)?.label ?? "Calendário";
 
   return (
     <div className="space-y-6">
@@ -275,27 +272,14 @@ function Inner() {
         <Button onClick={() => openNew()}><Plus className="size-4" /> Nova Atividade</Button>
       </div>
 
-      {section === "lista" && (
-        <ListaTab activities={activities} companyMap={companyMap} companies={companies}
-          onEdit={openEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar} onNew={openNew} />
-      )}
       {section === "calendario" && (
         <CalendarTab activities={activities} companyMap={companyMap}
           onSelect={openEdit} onNewOnDate={(d) => openNew({ activity_date: d })} />
-      )}
-      {section === "entregas" && (
-        <EntregasTab activities={activities} companyMap={companyMap} companies={companies}
-          onEdit={openEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar}
-          onNew={() => openNew({ activity_type: "entrega_relatorio" })} />
       )}
       {section === "reunioes" && (
         <ReunioesTab activities={activities} companyMap={companyMap} companies={companies}
           onEdit={openEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar}
           onNew={() => openNew({ activity_type: "reuniao" })} />
-      )}
-      {section === "prazos" && (
-        <PrazosTab activities={activities} companyMap={companyMap} companies={companies}
-          onEdit={openEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar} />
       )}
       {section === "por-cliente" && (
         <PorClienteTab activities={activities} companies={companies}
@@ -341,130 +325,6 @@ function KpiCard({ icon, title, value, tone, onClick, active }: {
 }
 
 // ---------- LISTA TAB ----------
-function ListaTab({ activities, companyMap, companies, onEdit, onDelete, onStatus, onReagendar, onNew }: {
-  activities: Activity[]; companyMap: Map<string, string>; companies: Array<{ id: string; nome: string }>;
-  onEdit: (a: Activity) => void; onDelete: (id: string) => void;
-  onStatus: (id: string, s: string) => void; onReagendar: (a: Activity) => void;
-  onNew: (pf?: Partial<Activity>) => void;
-}) {
-  const [fStatus, setFStatus] = useState("");
-  const [fPriority, setFPriority] = useState("");
-  const [fType, setFType] = useState("");
-  const [fCompany, setFCompany] = useState("");
-  const [fSearch, setFSearch] = useState("");
-  const [fFrom, setFFrom] = useState("");
-  const [fTo, setFTo] = useState("");
-  const [quickFilter, setQuickFilter] = useState<"" | "hoje" | "atrasadas" | "semana">("");
-
-  const t = today();
-  const semanaFim = iso(addDays(new Date(), 7));
-
-  const filtered = useMemo(() => activities.filter((a) => {
-    if (fStatus && a.status !== fStatus) return false;
-    if (fPriority && a.priority !== fPriority) return false;
-    if (fType && a.activity_type !== fType) return false;
-    if (fCompany) {
-      if (fCompany === "_interna" && a.company_id) return false;
-      if (fCompany !== "_interna" && a.company_id !== fCompany) return false;
-    }
-    if (fSearch && !a.title.toLowerCase().includes(fSearch.toLowerCase())) return false;
-    if (fFrom && a.activity_date < fFrom) return false;
-    if (fTo && a.activity_date > fTo) return false;
-    if (quickFilter === "hoje" && a.activity_date !== t) return false;
-    if (quickFilter === "atrasadas" && !isOverdue(a)) return false;
-    if (quickFilter === "semana" && (a.activity_date < t || a.activity_date > semanaFim)) return false;
-    return true;
-  }).sort((a, b) => {
-    const pOrder = ["urgente", "alta", "media", "baixa"];
-    const pd = pOrder.indexOf(a.priority) - pOrder.indexOf(b.priority);
-    if (pd !== 0) return pd;
-    return a.activity_date.localeCompare(b.activity_date);
-  }), [activities, fStatus, fPriority, fType, fCompany, fSearch, fFrom, fTo, quickFilter, t, semanaFim]);
-
-  const kpis = useMemo(() => {
-    const open = activities.filter((a) => a.status !== "concluida" && a.status !== "cancelada");
-    return {
-      hoje: open.filter((a) => a.activity_date === t).length,
-      atrasadas: open.filter(isOverdue).length,
-      reunioes: open.filter((a) => a.activity_type === "reuniao" && a.activity_date >= t && a.activity_date <= semanaFim).length,
-      entregas: open.filter((a) => ENTREGA_TYPES.includes(a.activity_type)).length,
-      relatorios: open.filter((a) => a.activity_type === "entrega_relatorio").length,
-      precificacoes: open.filter((a) => a.activity_type === "entrega_precificacao").length,
-      clientesAtivos: new Set(open.filter((a) => a.company_id).map((a) => a.company_id)).size,
-      concluidasMes: activities.filter((a) => a.status === "concluida" && a.activity_date.slice(0, 7) === t.slice(0, 7)).length,
-    };
-  }, [activities, t, semanaFim]);
-
-  const clear = () => { setFStatus(""); setFPriority(""); setFType(""); setFCompany(""); setFSearch(""); setFFrom(""); setFTo(""); setQuickFilter(""); };
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard icon={<Clock className="size-4" />} title="Tarefas de hoje" value={kpis.hoje} tone="blue"
-          onClick={() => setQuickFilter(quickFilter === "hoje" ? "" : "hoje")} active={quickFilter === "hoje"} />
-        <KpiCard icon={<AlertTriangle className="size-4" />} title="Tarefas atrasadas" value={kpis.atrasadas} tone="red"
-          onClick={() => setQuickFilter(quickFilter === "atrasadas" ? "" : "atrasadas")} active={quickFilter === "atrasadas"} />
-        <KpiCard icon={<CalendarDays className="size-4" />} title="Reuniões na semana" value={kpis.reunioes} tone="violet"
-          onClick={() => { setFType("reuniao"); setQuickFilter("semana"); }} />
-        <KpiCard icon={<PackageIcon className="size-4" />} title="Entregas pendentes" value={kpis.entregas} tone="amber" />
-        <KpiCard icon={<FileText className="size-4" />} title="Relatórios a entregar" value={kpis.relatorios} tone="slate"
-          onClick={() => setFType("entrega_relatorio")} />
-        <KpiCard icon={<FileText className="size-4" />} title="Precificações pendentes" value={kpis.precificacoes} tone="slate"
-          onClick={() => setFType("entrega_precificacao")} />
-        <KpiCard icon={<UsersIcon className="size-4" />} title="Clientes com atividades" value={kpis.clientesAtivos} tone="emerald" />
-        <KpiCard icon={<ListChecks className="size-4" />} title="Concluídas no mês" value={kpis.concluidasMes} tone="emerald" />
-      </div>
-
-      <div className="bg-card border rounded-xl p-3 space-y-2">
-        <div className="flex flex-wrap gap-2 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <Label className="text-xs">Buscar</Label>
-            <div className="relative">
-              <Search className="size-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-8" placeholder="Buscar título..." value={fSearch} onChange={(e) => setFSearch(e.target.value)} />
-            </div>
-          </div>
-          <FilterSelect label="Status" value={fStatus} onChange={setFStatus} options={STATUSES} />
-          <FilterSelect label="Prioridade" value={fPriority} onChange={setFPriority} options={PRIORITIES} />
-          <FilterSelect label="Tipo" value={fType} onChange={setFType}
-            options={Object.entries(ACTIVITY_TYPES).map(([id, label]) => ({ id, label }))} className="w-56" />
-          <div>
-            <Label className="text-xs">Empresa</Label>
-            <Select value={fCompany || "all"} onValueChange={(v) => setFCompany(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="_interna">Internas</SelectItem>
-                {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">De</Label>
-            <Input type="date" value={fFrom} onChange={(e) => setFFrom(e.target.value)} className="w-36" />
-          </div>
-          <div>
-            <Label className="text-xs">Até</Label>
-            <Input type="date" value={fTo} onChange={(e) => setFTo(e.target.value)} className="w-36" />
-          </div>
-          <Button variant="outline" size="sm" onClick={clear}><RotateCcw className="size-3" /> Limpar</Button>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <QuickChip active={quickFilter === "hoje"} onClick={() => setQuickFilter(quickFilter === "hoje" ? "" : "hoje")}>Hoje</QuickChip>
-          <QuickChip active={quickFilter === "semana"} onClick={() => setQuickFilter(quickFilter === "semana" ? "" : "semana")}>Esta semana</QuickChip>
-          <QuickChip active={quickFilter === "atrasadas"} onClick={() => setQuickFilter(quickFilter === "atrasadas" ? "" : "atrasadas")}>Atrasadas</QuickChip>
-        </div>
-      </div>
-
-      <ActivityTable
-        items={filtered} companyMap={companyMap}
-        onEdit={onEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar}
-        emptyMsg="Nenhuma atividade encontrada. Crie uma nova atividade para começar."
-        onNew={() => onNew()}
-      />
-    </div>
-  );
-}
 
 function FilterSelect({ label, value, onChange, options, className }: {
   label: string; value: string; onChange: (v: string) => void;
@@ -574,98 +434,6 @@ function ActivityTable({ items, companyMap, onEdit, onDelete, onStatus, onReagen
   );
 }
 
-// ---------- ENTREGAS TAB ----------
-function EntregasTab({ activities, companyMap, companies, onEdit, onDelete, onStatus, onReagendar, onNew }: {
-  activities: Activity[]; companyMap: Map<string, string>; companies: Array<{ id: string; nome: string }>;
-  onEdit: (a: Activity) => void; onDelete: (id: string) => void;
-  onStatus: (id: string, s: string) => void; onReagendar: (a: Activity) => void; onNew: () => void;
-}) {
-  const t = today();
-  const semanaFim = iso(addDays(new Date(), 7));
-  const [fCompany, setFCompany] = useState("");
-  const [fType, setFType] = useState("");
-  const [fStatus, setFStatus] = useState("");
-  const [quick, setQuick] = useState<"" | "atrasadas" | "semana">("");
-
-  const base = activities.filter((a) => ENTREGA_TYPES.includes(a.activity_type));
-  const open = base.filter((a) => a.status !== "concluida" && a.status !== "cancelada");
-  const kpis = {
-    aberto: open.length,
-    atrasadas: open.filter(isOverdue).length,
-    semana: open.filter((a) => (a.due_date ?? a.activity_date) >= t && (a.due_date ?? a.activity_date) <= semanaFim).length,
-    mes: base.filter((a) => a.status === "concluida" && a.activity_date.slice(0, 7) === t.slice(0, 7)).length,
-  };
-
-  const filtered = base.filter((a) => {
-    if (fCompany && a.company_id !== fCompany) return false;
-    if (fType && a.activity_type !== fType) return false;
-    if (fStatus && a.status !== fStatus) return false;
-    if (quick === "atrasadas" && !isOverdue(a)) return false;
-    if (quick === "semana") {
-      const ref = a.due_date ?? a.activity_date;
-      if (ref < t || ref > semanaFim) return false;
-    }
-    return true;
-  }).sort((a, b) => (a.due_date ?? a.activity_date).localeCompare(b.due_date ?? b.activity_date));
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard icon={<PackageIcon className="size-4" />} title="Entregas em aberto" value={kpis.aberto} tone="amber" />
-        <KpiCard icon={<AlertTriangle className="size-4" />} title="Entregas atrasadas" value={kpis.atrasadas} tone="red"
-          onClick={() => setQuick(quick === "atrasadas" ? "" : "atrasadas")} active={quick === "atrasadas"} />
-        <KpiCard icon={<Clock className="size-4" />} title="Vencem esta semana" value={kpis.semana} tone="blue"
-          onClick={() => setQuick(quick === "semana" ? "" : "semana")} active={quick === "semana"} />
-        <KpiCard icon={<Check className="size-4" />} title="Concluídas no mês" value={kpis.mes} tone="emerald" />
-      </div>
-
-      <div className="bg-card border rounded-xl p-3 flex flex-wrap gap-2 items-end justify-between">
-        <div className="flex flex-wrap gap-2 items-end">
-          <div>
-            <Label className="text-xs">Empresa</Label>
-            <Select value={fCompany || "all"} onValueChange={(v) => setFCompany(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Tipo de entrega</Label>
-            <Select value={fType || "all"} onValueChange={(v) => setFType(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {ENTREGA_TYPES.map((k) => <SelectItem key={k} value={k}>{ACTIVITY_TYPES[k]}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <FilterSelect label="Status" value={fStatus} onChange={setFStatus} options={STATUSES} />
-        </div>
-        <Button onClick={onNew}><Plus className="size-4" /> Nova entrega</Button>
-      </div>
-
-      <ActivityTable items={filtered} companyMap={companyMap}
-        onEdit={onEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar}
-        emptyMsg="Sem entregas para mostrar." onNew={onNew}
-        extraCols={{
-          header: "Dias",
-          render: (a) => {
-            const ref = a.due_date ?? a.activity_date;
-            const diff = daysBetween(ref, t);
-            if (a.status === "concluida" || a.status === "cancelada") return <span className="text-muted-foreground">—</span>;
-            if (diff < 0) return <span className="text-red-600 font-medium">{Math.abs(diff)}d atraso</span>;
-            if (diff === 0) return <span className="text-red-600 font-medium">vence hoje</span>;
-            if (diff <= 3) return <span className="text-amber-700 font-medium">em {diff}d</span>;
-            return <span className="text-muted-foreground">em {diff}d</span>;
-          },
-        }}
-      />
-    </div>
-  );
-}
-
 // ---------- REUNIÕES TAB ----------
 function ReunioesTab({ activities, companyMap, companies, onEdit, onDelete, onStatus, onReagendar, onNew }: {
   activities: Activity[]; companyMap: Map<string, string>; companies: Array<{ id: string; nome: string }>;
@@ -770,92 +538,6 @@ function ReunioesTab({ activities, companyMap, companies, onEdit, onDelete, onSt
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-// ---------- PRAZOS TAB ----------
-function PrazosTab({ activities, companyMap, companies, onEdit, onDelete, onStatus, onReagendar }: {
-  activities: Activity[]; companyMap: Map<string, string>; companies: Array<{ id: string; nome: string }>;
-  onEdit: (a: Activity) => void; onDelete: (id: string) => void;
-  onStatus: (id: string, s: string) => void; onReagendar: (a: Activity) => void;
-}) {
-  const t = today();
-  const d7 = iso(addDays(new Date(), 7));
-  const d30 = iso(addDays(new Date(), 30));
-  const [fCompany, setFCompany] = useState("");
-  const [fType, setFType] = useState("");
-  const [fPriority, setFPriority] = useState("");
-  const [quick, setQuick] = useState<"" | "vencidos" | "hoje" | "7d" | "30d">("");
-
-  const base = activities.filter((a) => (a.due_date || PRAZO_TYPES.includes(a.activity_type)) && a.status !== "cancelada");
-  const open = base.filter((a) => a.status !== "concluida");
-  const kpis = {
-    vencidos: open.filter(isOverdue).length,
-    hoje: open.filter((a) => (a.due_date ?? a.activity_date) === t).length,
-    sete: open.filter((a) => { const r = a.due_date ?? a.activity_date; return r >= t && r <= d7; }).length,
-    criticos: open.filter((a) => a.priority === "urgente" || isOverdue(a)).length,
-  };
-
-  const filtered = base.filter((a) => {
-    if (fCompany && a.company_id !== fCompany) return false;
-    if (fType && a.activity_type !== fType) return false;
-    if (fPriority && a.priority !== fPriority) return false;
-    const ref = a.due_date ?? a.activity_date;
-    if (quick === "vencidos" && !isOverdue(a)) return false;
-    if (quick === "hoje" && ref !== t) return false;
-    if (quick === "7d" && (ref < t || ref > d7)) return false;
-    if (quick === "30d" && (ref < t || ref > d30)) return false;
-    return true;
-  }).sort((a, b) => (a.due_date ?? a.activity_date).localeCompare(b.due_date ?? b.activity_date));
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard icon={<AlertTriangle className="size-4" />} title="Prazos vencidos" value={kpis.vencidos} tone="red"
-          onClick={() => setQuick(quick === "vencidos" ? "" : "vencidos")} active={quick === "vencidos"} />
-        <KpiCard icon={<Clock className="size-4" />} title="Vencem hoje" value={kpis.hoje} tone="amber"
-          onClick={() => setQuick(quick === "hoje" ? "" : "hoje")} active={quick === "hoje"} />
-        <KpiCard icon={<CalendarDays className="size-4" />} title="Próximos 7 dias" value={kpis.sete} tone="blue"
-          onClick={() => setQuick(quick === "7d" ? "" : "7d")} active={quick === "7d"} />
-        <KpiCard icon={<AlertTriangle className="size-4" />} title="Prazos críticos" value={kpis.criticos} tone="red" />
-      </div>
-
-      <div className="bg-card border rounded-xl p-3 flex flex-wrap gap-2 items-end">
-        <div>
-          <Label className="text-xs">Empresa</Label>
-          <Select value={fCompany || "all"} onValueChange={(v) => setFCompany(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <FilterSelect label="Tipo" value={fType} onChange={setFType}
-          options={PRAZO_TYPES.map((id) => ({ id, label: ACTIVITY_TYPES[id] }))} className="w-52" />
-        <FilterSelect label="Prioridade" value={fPriority} onChange={setFPriority} options={PRIORITIES} />
-        <div className="flex gap-2">
-          <QuickChip active={quick === "30d"} onClick={() => setQuick(quick === "30d" ? "" : "30d")}>Próximos 30d</QuickChip>
-        </div>
-      </div>
-
-      <ActivityTable items={filtered} companyMap={companyMap}
-        onEdit={onEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar}
-        emptyMsg="Sem prazos cadastrados."
-        extraCols={{
-          header: "Dias restantes",
-          render: (a) => {
-            const ref = a.due_date ?? a.activity_date;
-            const diff = daysBetween(ref, t);
-            if (a.status === "concluida") return <span className="text-muted-foreground">—</span>;
-            if (diff < 0) return <span className="text-red-600 font-medium">{Math.abs(diff)}d atraso</span>;
-            if (diff === 0) return <span className="text-red-600 font-medium">hoje</span>;
-            if (diff <= 7) return <span className="text-amber-700 font-medium">{diff}d</span>;
-            return <span className="text-muted-foreground">{diff}d</span>;
-          },
-        }}
-      />
     </div>
   );
 }
