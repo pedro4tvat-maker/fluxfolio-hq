@@ -191,50 +191,45 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <aside className="hidden md:flex w-64 shrink-0 bg-sidebar text-sidebar-foreground flex-col">
-        <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
-          <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
-            <Wallet className="size-4" />
-          </div>
-          <div>
-            <div className="font-display font-semibold leading-tight">SISTEMAFP PJ</div>
-            <div className="text-[11px] text-sidebar-foreground/60">{isConsultant ? "Painel do consultor" : "Gestão da empresa"}</div>
-          </div>
-        </div>
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {nav.map((n) => renderEntry(n))}
-        </nav>
-        <div className="p-3 border-t border-sidebar-border">
-          <div className="px-3 py-2 text-xs text-sidebar-foreground/60 truncate">
-            {user?.email}
-            <span className="ml-2 px-1.5 py-0.5 rounded bg-sidebar-primary/20 text-sidebar-primary text-[10px] font-medium">
-              {isConsultant ? "CONSULTOR" : "CLIENTE"}
-            </span>
-          </div>
-          <Button onClick={logout} variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent">
-            <LogOut className="size-4" /> Sair
-          </Button>
-        </div>
-      </aside>
-
       {open && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
           <aside className="relative w-64 bg-sidebar text-sidebar-foreground flex flex-col">
-            <div className="p-5 border-b border-sidebar-border font-display font-semibold">SISTEMAFP PJ</div>
+            <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
+              <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
+                <Wallet className="size-4" />
+              </div>
+              <div className="flex-1">
+                <div className="font-display font-semibold leading-tight">SISTEMAFP PJ</div>
+                <div className="text-[11px] text-sidebar-foreground/60">{isConsultant ? "Painel do consultor" : "Gestão da empresa"}</div>
+              </div>
+              <button onClick={() => setOpen(false)} className="p-1.5 -mr-1 rounded hover:bg-sidebar-accent/50" aria-label="Fechar menu">
+                <Menu className="size-4" />
+              </button>
+            </div>
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
               {nav.map((n) => renderEntry(n))}
             </nav>
             <div className="p-3 border-t border-sidebar-border">
-              <Button onClick={logout} variant="ghost" className="w-full justify-start"><LogOut className="size-4" /> Sair</Button>
+              <div className="px-3 py-2 text-xs text-sidebar-foreground/60 truncate">
+                {user?.email}
+                <span className="ml-2 px-1.5 py-0.5 rounded bg-sidebar-primary/20 text-sidebar-primary text-[10px] font-medium">
+                  {isConsultant ? "CONSULTOR" : "CLIENTE"}
+                </span>
+              </div>
+              <Button onClick={logout} variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+                <LogOut className="size-4" /> Sair
+              </Button>
             </div>
           </aside>
         </div>
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="md:hidden h-14 border-b flex items-center px-4 gap-3 bg-card">
-          <button onClick={() => setOpen(true)} className="p-2 -ml-2"><Menu className="size-5" /></button>
+        <header className="h-14 border-b flex items-center px-4 gap-3 bg-card">
+          <button onClick={() => setOpen(true)} className="p-2 -ml-2 rounded hover:bg-muted" aria-label="Abrir menu">
+            <Menu className="size-5" />
+          </button>
           <span className="font-display font-semibold">SISTEMAFP PJ</span>
         </header>
         <main className="flex-1 p-4 md:p-8 overflow-x-auto">
