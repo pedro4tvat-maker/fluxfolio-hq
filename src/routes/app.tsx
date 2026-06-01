@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { createFileRoute, Outlet, redirect, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -121,7 +122,7 @@ function AppLayout() {
         <button
           type="button"
           onClick={toggle}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}
+          className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors", active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground")}
         >
           <n.icon className="size-4" />
           <span className="flex-1 text-left">{n.label}</span>
@@ -136,7 +137,7 @@ function AppLayout() {
                   key={s.id}
                   to={n.to}
                   search={{ section: s.id }}
-                  className={`block px-3 py-1.5 rounded-md text-[13px] transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}
+                  className={cn("block px-3 py-1.5 rounded-md text-[13px] transition-colors", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground")}
                 >
                   {s.label}
                 </Link>
@@ -157,7 +158,7 @@ function AppLayout() {
       return renderSubmenu(n, AGENDA_SECTIONS, agendaOpen, () => setAgendaOpen((v) => !v), "calendario");
     }
     return (
-      <Link key={n.to} to={n.to} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>
+      <Link key={n.to} to={n.to} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors", active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground")}>
         <n.icon className="size-4" />
         {n.label}
       </Link>
@@ -172,7 +173,7 @@ function AppLayout() {
         <button
           type="button"
           onClick={() => toggleGroup(g.id)}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors ${groupActive ? "text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground"}`}
+          className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors", groupActive ? "text-sidebar-foreground" : "text-sidebar-foreground/60 hover:text-sidebar-foreground")}
         >
           <g.icon className="size-4" />
           <span className="flex-1 text-left">{g.label}</span>
@@ -191,13 +192,25 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <div className={`fixed inset-0 z-50 flex pointer-events-none transition-all duration-300 ease-out ${'
+      <div
+        className={cn(
+          "fixed inset-0 z-50 flex pointer-events-none transition-all duration-300 ease-out",
+          open && "pointer-events-auto"
+        )}
       >
         <div
-          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out ${open ? "opacity-100 pointer-events-auto" : "opacity-0"}`}
+          className={cn(
+            "absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out",
+            open ? "opacity-100 pointer-events-auto" : "opacity-0"
+          )}
           onClick={() => setOpen(false)}
         />
-        <aside className={`relative w-64 bg-sidebar text-sidebar-foreground flex flex-col transition-transform duration-300 ease-out ${open ? "translate-x-0 pointer-events-auto" : "-translate-x-full"}`}>
+        <aside
+          className={cn(
+            "relative w-64 bg-sidebar text-sidebar-foreground flex flex-col transition-transform duration-300 ease-out",
+            open ? "translate-x-0 pointer-events-auto" : "-translate-x-full"
+          )}
+        >
           <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
             <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
               <Wallet className="size-4" />
