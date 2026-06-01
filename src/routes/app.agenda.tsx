@@ -19,11 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export const AGENDA_SECTIONS = [
-  { id: "lista", label: "Lista" },
   { id: "calendario", label: "Calendário" },
-  { id: "entregas", label: "Entregas pendentes" },
   { id: "reunioes", label: "Reuniões" },
-  { id: "prazos", label: "Prazos importantes" },
   { id: "por-cliente", label: "Por cliente" },
 ] as const;
 type AgendaSection = typeof AGENDA_SECTIONS[number]["id"];
