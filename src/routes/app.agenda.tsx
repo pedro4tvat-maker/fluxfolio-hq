@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays, Plus, Pencil, Trash2, Check, X, Clock, AlertTriangle,
-  ListChecks, Package as PackageIcon, Users as UsersIcon, FileText, ChevronLeft, ChevronRight,
-  Video, MapPin, ExternalLink, Search, Building2, ChevronDown, ChevronUp, RotateCcw,
+  ChevronLeft, ChevronRight,
+  Video, MapPin, ExternalLink, Building2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
