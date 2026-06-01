@@ -272,27 +272,14 @@ function Inner() {
         <Button onClick={() => openNew()}><Plus className="size-4" /> Nova Atividade</Button>
       </div>
 
-      {section === "lista" && (
-        <ListaTab activities={activities} companyMap={companyMap} companies={companies}
-          onEdit={openEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar} onNew={openNew} />
-      )}
       {section === "calendario" && (
         <CalendarTab activities={activities} companyMap={companyMap}
           onSelect={openEdit} onNewOnDate={(d) => openNew({ activity_date: d })} />
-      )}
-      {section === "entregas" && (
-        <EntregasTab activities={activities} companyMap={companyMap} companies={companies}
-          onEdit={openEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar}
-          onNew={() => openNew({ activity_type: "entrega_relatorio" })} />
       )}
       {section === "reunioes" && (
         <ReunioesTab activities={activities} companyMap={companyMap} companies={companies}
           onEdit={openEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar}
           onNew={() => openNew({ activity_type: "reuniao" })} />
-      )}
-      {section === "prazos" && (
-        <PrazosTab activities={activities} companyMap={companyMap} companies={companies}
-          onEdit={openEdit} onDelete={onDelete} onStatus={onStatus} onReagendar={onReagendar} />
       )}
       {section === "por-cliente" && (
         <PorClienteTab activities={activities} companies={companies}
