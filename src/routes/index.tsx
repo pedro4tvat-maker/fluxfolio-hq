@@ -116,7 +116,7 @@ function LandingPage() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-9 brightness-0 invert-[.95] saturate-0" />
+            <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-10 w-auto object-contain" />
             <span className="sr-only">SISTEMAFP PJ</span>
           </Link>
 
