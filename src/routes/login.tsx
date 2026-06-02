@@ -58,11 +58,8 @@ function LoginPage() {
 
       <div className="flex items-center justify-center p-6 md:p-12">
         <form onSubmit={onSubmit} className="w-full max-w-sm space-y-6">
-          <div className="md:hidden flex items-center gap-2">
-            <div className="size-9 rounded-xl bg-primary grid place-items-center text-primary-foreground">
-              <Wallet className="size-4" />
-            </div>
-            <span className="font-display font-semibold">SISTEMAFP PJ</span>
+        <div className="md:hidden flex items-center gap-2">
+            <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-8" />
           </div>
           <div>
             <h2 className="text-2xl font-display font-bold">Acessar sua conta</h2>
