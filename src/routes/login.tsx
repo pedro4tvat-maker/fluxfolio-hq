@@ -43,7 +43,7 @@ function LoginPage() {
     <div className="min-h-screen grid md:grid-cols-2 bg-background">
       <div className="hidden md:flex flex-col justify-between p-12 bg-sidebar text-sidebar-foreground">
         <div className="flex items-center gap-3">
-          <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-10 brightness-0 invert" />
+          <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-12 w-auto object-contain" />
         </div>
         <div className="space-y-3">
           <h1 className="text-3xl font-display font-bold leading-tight">
