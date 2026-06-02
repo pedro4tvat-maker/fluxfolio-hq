@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Wallet } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import logoAsset from "@/assets/sistemafp-logo.png.asset.json";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar — SISTEMAFP PJ" }] }),
@@ -42,10 +43,7 @@ function LoginPage() {
     <div className="min-h-screen grid md:grid-cols-2 bg-background">
       <div className="hidden md:flex flex-col justify-between p-12 bg-sidebar text-sidebar-foreground">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
-            <Wallet className="size-5" />
-          </div>
-          <span className="font-display text-lg font-semibold">SISTEMAFP PJ</span>
+          <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-10 brightness-0 invert" />
         </div>
         <div className="space-y-3">
           <h1 className="text-3xl font-display font-bold leading-tight">
@@ -60,11 +58,8 @@ function LoginPage() {
 
       <div className="flex items-center justify-center p-6 md:p-12">
         <form onSubmit={onSubmit} className="w-full max-w-sm space-y-6">
-          <div className="md:hidden flex items-center gap-2">
-            <div className="size-9 rounded-xl bg-primary grid place-items-center text-primary-foreground">
-              <Wallet className="size-4" />
-            </div>
-            <span className="font-display font-semibold">SISTEMAFP PJ</span>
+        <div className="md:hidden flex items-center gap-2">
+            <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-8" />
           </div>
           <div>
             <h2 className="text-2xl font-display font-bold">Acessar sua conta</h2>
