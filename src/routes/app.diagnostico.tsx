@@ -83,7 +83,7 @@ function DiagnosticoPage() {
 }
 
 function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: (id: string) => void }) {
-  const { user } = useAuth();
+  const { user, isConsultant } = useAuth();
   const { data: list, refetch } = useQuery({
     queryKey: ["diagnostics", companyId],
     queryFn: async () => {
