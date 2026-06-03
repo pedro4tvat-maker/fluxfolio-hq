@@ -156,6 +156,14 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
   const [step, setStep] = useState(0);
   const qc = useQueryClient();
   const { data: diag } = useQuery({ queryKey: ["diag", id], queryFn: async () => await supabase.from("financial_diagnostics").select("*").eq("id", id).single() });
+  const { data: existingAnswers } = useQuery({ 
+    queryKey: ["diag-answers", id], 
+    queryFn: async () => {
+      const { data } = await supabase.from("financial_diagnostic_answers").select("*").eq("diagnostic_id", id);
+      return data || [];
+    }
+  });
+
   const [formData, setFormData] = useState<any>({ business_segment: "", employee_count: "", avg_monthly_revenue: "", business_city: "", business_phone: "", business_email: "" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
@@ -171,6 +179,16 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
       });
     }
   }, [diag]);
+
+  useEffect(() => {
+    if (existingAnswers?.length) {
+      const map: Record<string, string> = {};
+      existingAnswers.forEach(a => {
+        map[a.question_key] = a.answer || "";
+      });
+      setAnswers(map);
+    }
+  }, [existingAnswers]);
 
   const saveMut = useMutation({
     mutationFn: async (finalize: boolean) => {
