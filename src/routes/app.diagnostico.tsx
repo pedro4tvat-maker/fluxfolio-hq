@@ -227,9 +227,29 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
             status: finalize ? "finalizado" : "em_andamento" 
         }).eq("id", id);
         if (error) throw error;
+
+        // Save individual answers
+        const answerRows = Object.entries(answers).map(([key, ans]) => {
+          const section = SECTIONS.find(s => s.questions?.find(q => q.key === key));
+          const q = section?.questions?.find(q => q.key === key);
+          return {
+            diagnostic_id: id,
+            section: section?.key || "",
+            question_key: key,
+            question: q?.text || "",
+            answer: ans,
+            score: (q?.points as any)[ans] || 0
+          };
+        });
+
+        if (answerRows.length > 0) {
+          const { error: err2 } = await supabase.from("financial_diagnostic_answers").upsert(answerRows, { onConflict: "diagnostic_id,question_key" });
+          if (err2) throw err2;
+        }
     },
     onSuccess: () => { 
         qc.invalidateQueries({ queryKey: ["diag", id] }); 
+        qc.invalidateQueries({ queryKey: ["diag-answers", id] });
         toast.success("Diagnóstico salvo com sucesso!");
         if (step === SECTIONS.length - 1) onBack();
     },
