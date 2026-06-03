@@ -300,10 +300,6 @@ export function buildDRE(data: ReportData, period: Period) {
   };
 }
 
-    },
-    semClassificacao,
-  };
-}
 
 // ============ FLUXO DE CAIXA REALIZADO ============
 export function buildFluxoRealizado(data: ReportData, period: Period) {
