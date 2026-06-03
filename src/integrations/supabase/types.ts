@@ -1824,12 +1824,18 @@ export type Database = {
       financial_diagnostics: {
         Row: {
           allow_client_view: boolean
+          avg_monthly_revenue: string | null
           branch_id: string | null
+          business_city: string | null
+          business_email: string | null
+          business_phone: string | null
+          business_segment: string | null
           classification: string | null
           company_id: string
           consultant_id: string
           created_at: string
           diagnostic_date: string
+          employee_count: string | null
           finalized_at: string | null
           id: string
           next_steps: string | null
@@ -1839,17 +1845,24 @@ export type Database = {
           responsible_name: string | null
           status: string
           strengths: string | null
+          total_points: number | null
           updated_at: string
           weaknesses: string | null
         }
         Insert: {
           allow_client_view?: boolean
+          avg_monthly_revenue?: string | null
           branch_id?: string | null
+          business_city?: string | null
+          business_email?: string | null
+          business_phone?: string | null
+          business_segment?: string | null
           classification?: string | null
           company_id: string
           consultant_id: string
           created_at?: string
           diagnostic_date?: string
+          employee_count?: string | null
           finalized_at?: string | null
           id?: string
           next_steps?: string | null
@@ -1859,17 +1872,24 @@ export type Database = {
           responsible_name?: string | null
           status?: string
           strengths?: string | null
+          total_points?: number | null
           updated_at?: string
           weaknesses?: string | null
         }
         Update: {
           allow_client_view?: boolean
+          avg_monthly_revenue?: string | null
           branch_id?: string | null
+          business_city?: string | null
+          business_email?: string | null
+          business_phone?: string | null
+          business_segment?: string | null
           classification?: string | null
           company_id?: string
           consultant_id?: string
           created_at?: string
           diagnostic_date?: string
+          employee_count?: string | null
           finalized_at?: string | null
           id?: string
           next_steps?: string | null
@@ -1879,6 +1899,7 @@ export type Database = {
           responsible_name?: string | null
           status?: string
           strengths?: string | null
+          total_points?: number | null
           updated_at?: string
           weaknesses?: string | null
         }
