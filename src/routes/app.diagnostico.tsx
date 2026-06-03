@@ -114,10 +114,12 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
         <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
           <TrendingUp className="size-12 text-primary" />
           <div className="space-y-2">
-            <h3 className="text-xl font-bold">Novo Diagnóstico Estratégico</h3>
+            <h3 className="text-xl font-bold">Diagnóstico Estratégico</h3>
             <p className="text-muted-foreground max-w-md">Avalie a maturidade financeira da empresa e gere um relatório executivo automático com recomendações.</p>
           </div>
-          <Button onClick={() => createMut.mutate()} size="lg" className="px-10"><Plus className="size-4 mr-2" /> Iniciar Agora</Button>
+          {isConsultant && (
+            <Button onClick={() => createMut.mutate()} size="lg" className="px-10"><Plus className="size-4 mr-2" /> Iniciar Agora</Button>
+          )}
         </CardContent>
       </Card>
 
