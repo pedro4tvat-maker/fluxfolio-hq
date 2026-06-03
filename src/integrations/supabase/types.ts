@@ -315,7 +315,11 @@ export type Database = {
           impacts_operating_profit: boolean | null
           impacts_working_capital: boolean | null
           is_active: boolean | null
+          is_deduction: boolean | null
           is_default: boolean | null
+          is_financial_expense: boolean | null
+          is_fixed_cost: boolean | null
+          is_variable_cost: boolean | null
           kpi_classification: string | null
           management_group: string | null
           nature: string | null
@@ -342,7 +346,11 @@ export type Database = {
           impacts_operating_profit?: boolean | null
           impacts_working_capital?: boolean | null
           is_active?: boolean | null
+          is_deduction?: boolean | null
           is_default?: boolean | null
+          is_financial_expense?: boolean | null
+          is_fixed_cost?: boolean | null
+          is_variable_cost?: boolean | null
           kpi_classification?: string | null
           management_group?: string | null
           nature?: string | null
@@ -369,7 +377,11 @@ export type Database = {
           impacts_operating_profit?: boolean | null
           impacts_working_capital?: boolean | null
           is_active?: boolean | null
+          is_deduction?: boolean | null
           is_default?: boolean | null
+          is_financial_expense?: boolean | null
+          is_fixed_cost?: boolean | null
+          is_variable_cost?: boolean | null
           kpi_classification?: string | null
           management_group?: string | null
           nature?: string | null
@@ -2644,6 +2656,7 @@ export type Database = {
         Row: {
           branch_id: string | null
           categoria: string | null
+          centro_custo_id: string | null
           company_id: string
           created_at: string
           custo_unitario: number
@@ -2659,6 +2672,7 @@ export type Database = {
         Insert: {
           branch_id?: string | null
           categoria?: string | null
+          centro_custo_id?: string | null
           company_id: string
           created_at?: string
           custo_unitario?: number
@@ -2674,6 +2688,7 @@ export type Database = {
         Update: {
           branch_id?: string | null
           categoria?: string | null
+          centro_custo_id?: string | null
           company_id?: string
           created_at?: string
           custo_unitario?: number
@@ -2687,6 +2702,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "products_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_company_id_fkey"
             columns: ["company_id"]

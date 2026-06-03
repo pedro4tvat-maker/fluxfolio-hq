@@ -309,7 +309,9 @@ function FluxoCaixa() {
                     </TableCell>
                     <TableCell className={`text-right font-display font-semibold whitespace-nowrap ${t.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
                       {t.tipo === "entrada" ? "+" : "−"} {formatMoney(t.valor)}
+                      {!t.categoria_id && t.tipo === "saida" && <div className="text-[9px] text-amber-600 font-bold uppercase animate-pulse">Sem Categoria</div>}
                     </TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button

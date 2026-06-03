@@ -23,7 +23,12 @@ export type Category = {
   nome: string;
   tipo: "entrada" | "saida";
   kpi_classification: string | null;
+  is_deduction: boolean;
+  is_fixed_cost: boolean;
+  is_variable_cost: boolean;
+  is_financial_expense: boolean;
 };
+
 
 export type Payable = {
   id: string;
@@ -105,7 +110,7 @@ export async function fetchReportData(
         .eq("company_id", companyId),
       branchId,
     )),
-    supabase.from("categories").select("id, nome, tipo, kpi_classification").eq("company_id", companyId),
+    supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense").eq("company_id", companyId),
     applyCC(applyBranch(
       supabase
         .from("payables")
@@ -224,115 +229,77 @@ function toBucket(raw: string | null | undefined): DreBucket | null {
 export function buildDRE(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
   const catMap = new Map(data.categories.map((c) => [c.id, c]));
-  const ccMap = new Map(data.costCenters.map((c) => [c.id, c]));
 
-  // Classificação efetiva: tenta múltiplas fontes em ordem de prioridade.
-  // 1) kpi_classification do centro de custo
-  // 2) NOME do centro de custo (ex: "CUSTOS VARIÁVEIS" → bucket custos_variaveis)
-  // 3) kpi_classification da categoria
-  // 4) NOME da categoria
-  // Isso garante que o lançamento entre no bucket correto da DRE mesmo
-  // quando o usuário não preencheu o campo de classificação explicitamente.
-  const classOf = (t: Tx): string | null => {
-    const cc = ccMap.get(t.centro_custo_id ?? "");
+  const bucketOf = (t: Tx): string | null => {
     const cat = catMap.get(t.categoria_id ?? "");
-    return (
-      cc?.kpi_classification ||
-      cc?.nome ||
-      cat?.kpi_classification ||
-      cat?.nome ||
-      null
-    );
+    if (!cat) return null;
+    if (cat.is_deduction) return "impostos";
+    if (cat.is_variable_cost) return "custos_variaveis";
+    if (cat.is_fixed_cost) return "custos_fixos";
+    if (cat.is_financial_expense) return "despesas_financeiras";
+    return null;
   };
 
-  // bucketOf tenta cada fonte de classificação independentemente,
-  // assim mesmo que a primeira não mapeie em bucket conhecido, a próxima é tentada.
-  const bucketOf = (t: Tx): DreBucket | null => {
-    const cc = ccMap.get(t.centro_custo_id ?? "");
-    const cat = catMap.get(t.categoria_id ?? "");
-    return (
-      toBucket(cc?.kpi_classification ?? null) ||
-      toBucket(cc?.nome ?? null) ||
-      toBucket(cat?.kpi_classification ?? null) ||
-      toBucket(cat?.nome ?? null)
-    );
-  };
-
-  const sumByBucket = (bucket: DreBucket) =>
-    realized.filter((t) => bucketOf(t) === bucket).reduce((s, t) => s + t.valor, 0);
-
-  // Receita bruta: entradas classificadas como receita_bruta OU entradas
-  // sem classificação reconhecida (não caem em outras_receitas/impostos).
-  // Cada entrada é contada UMA única vez (não vira linha customizada também).
   const receitaBruta = realized
-    .filter((t) => {
-      if (t.tipo !== "entrada") return false;
-      const b = bucketOf(t);
-      return b === "receita_bruta" || b === null;
-    })
+    .filter((t) => t.tipo === "entrada")
     .reduce((s, t) => s + t.valor, 0);
 
-  const outrasReceitas = sumByBucket("outras_receitas");
-  const deducoes = sumByBucket("impostos");
-  const receitaLiquida = receitaBruta + outrasReceitas - deducoes;
-  const custosVariaveis = sumByBucket("custos_variaveis");
+  const deducoes = realized
+    .filter((t) => bucketOf(t) === "impostos")
+    .reduce((s, t) => s + t.valor, 0);
+
+  const receitaLiquida = receitaBruta - deducoes;
+
+  const custosVariaveis = realized
+    .filter((t) => bucketOf(t) === "custos_variaveis")
+    .reduce((s, t) => s + t.valor, 0);
+
   const margemContribuicao = receitaLiquida - custosVariaveis;
-  const custosFixos = sumByBucket("custos_fixos");
-  const despesasOperacionais = sumByBucket("despesas_operacionais") + sumByBucket("marketing");
-  const resultadoOperacional = margemContribuicao - custosFixos - despesasOperacionais;
-  const despesasFinanceiras = sumByBucket("despesas_financeiras");
-  const lucroLiquido = resultadoOperacional - despesasFinanceiras;
+
+  const custosFixos = realized
+    .filter((t) => bucketOf(t) === "custos_fixos")
+    .reduce((s, t) => s + t.valor, 0);
+
+  const despesasOperacionais = realized
+    .filter((t) => t.tipo === "saida" && !bucketOf(t))
+    .reduce((s, t) => s + t.valor, 0);
+
+  const ebitda = margemContribuicao - custosFixos - despesasOperacionais;
+
+  const despesasFinanceiras = realized
+    .filter((t) => bucketOf(t) === "despesas_financeiras")
+    .reduce((s, t) => s + t.valor, 0);
+
+  const lucroLiquido = ebitda - despesasFinanceiras;
   const margemLiquida = receitaLiquida > 0 ? (lucroLiquido / receitaLiquida) * 100 : 0;
-
-  const semClassificacao = data.categories.filter((c) => !c.kpi_classification).length;
-
-  // Linhas customizadas: SAÍDAS cujo classificador efetivo (qualquer fonte)
-  // NÃO mapeia em bucket fixo. Se bucketOf retorna algo, já foi contabilizado.
-  const customMap = new Map<string, number>();
-  realized.forEach((t) => {
-    if (t.tipo !== "saida") return;
-    if (bucketOf(t)) return; // já contabilizado em bucket fixo
-    const raw = classOf(t);
-    if (!raw) return;
-    customMap.set(raw, (customMap.get(raw) ?? 0) - t.valor);
-  });
-  const customRows = Array.from(customMap.entries()).map(([k, v]) => ({
-    Linha: `(–) ${k}`,
-    Valor: v,
-  }));
-
-  // Recalcula lucro líquido incluindo linhas customizadas (todas negativas)
-  const customTotal = Array.from(customMap.values()).reduce((s, v) => s + v, 0);
-  const lucroLiquidoFinal = lucroLiquido + customTotal;
-  const margemLiquidaFinal = receitaLiquida > 0 ? (lucroLiquidoFinal / receitaLiquida) * 100 : 0;
+  const semClassificacao = data.categories.filter((c) => c.tipo === "saida" && !c.is_variable_cost && !c.is_fixed_cost && !c.is_deduction && !c.is_financial_expense).length;
 
   return {
     rows: [
-      { Linha: "Receita Bruta", Valor: receitaBruta },
-      { Linha: "(–) Deduções e Impostos", Valor: -deducoes },
-      { Linha: "(+) Outras Receitas", Valor: outrasReceitas },
-      { Linha: "= Receita Líquida", Valor: receitaLiquida },
-      { Linha: "(–) Custos Variáveis", Valor: -custosVariaveis },
-      { Linha: "= Margem de Contribuição", Valor: margemContribuicao },
-      { Linha: "(–) Custos Fixos", Valor: -custosFixos },
-      { Linha: "(–) Despesas Operacionais", Valor: -despesasOperacionais },
-      { Linha: "= Resultado Operacional", Valor: resultadoOperacional },
-      { Linha: "(–) Despesas Financeiras", Valor: -despesasFinanceiras },
-      ...customRows,
-      { Linha: "= Lucro Líquido", Valor: lucroLiquidoFinal },
-      { Linha: "Margem Líquida (%)", Valor: margemLiquidaFinal },
+      { Linha: "1. Receita Bruta (Vendas)", Valor: receitaBruta },
+      { Linha: "2. Deduções (Impostos/Devol)", Valor: -deducoes },
+      { Linha: "3. = RECEITA LÍQUIDA", Valor: receitaLiquida },
+      { Linha: "4. (–) Custos Variáveis (CMV/Serv)", Valor: -custosVariaveis },
+      { Linha: "5. = MARGEM DE CONTRIBUIÇÃO", Valor: margemContribuicao },
+      { Linha: "6. (–) Custos Fixos (Estrutura)", Valor: -custosFixos },
+      { Linha: "7. (–) Despesas Operacionais", Valor: -despesasOperacionais },
+      { Linha: "8. = EBITDA / Lucro Operacional", Valor: ebitda },
+      { Linha: "9. (–) Despesas Financeiras / Juros", Valor: -despesasFinanceiras },
+      { Linha: "10. = LUCRO LÍQUIDO", Valor: lucroLiquido },
+      { Linha: "Margem Líquida (%)", Valor: margemLiquida },
     ],
     summary: {
       receitaBruta,
       receitaLiquida,
       margemContribuicao,
-      resultadoOperacional,
-      lucroLiquido: lucroLiquidoFinal,
-      margemLiquida: margemLiquidaFinal,
+      resultadoOperacional: ebitda,
+      lucroLiquido,
+      margemLiquida,
     },
     semClassificacao,
   };
 }
+
 
 // ============ FLUXO DE CAIXA REALIZADO ============
 export function buildFluxoRealizado(data: ReportData, period: Period) {

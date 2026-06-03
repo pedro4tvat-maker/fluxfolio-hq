@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Building2, Search, PlusCircle, Download, CheckCircle2, Trash2 } from "lucide-react";
+import { Building2, Search, PlusCircle, Download, CheckCircle2, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
@@ -180,6 +180,8 @@ function ContasAPagar() {
                 <TableHead>Forma</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-center">CC</TableHead>
+
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -202,6 +204,8 @@ function ContasAPagar() {
                     }`}>{p.status.replace("_", " ")}</span>
                   </TableCell>
                   <TableCell className="text-right font-display font-semibold">{formatMoney(Number(p.valor))}</TableCell>
+                  <TableCell className="text-center">{p.centro_custo_id ? <CheckCircle2 className="size-3 mx-auto text-success" /> : <AlertTriangle className="size-3 mx-auto text-amber-500" />}</TableCell>
+
                   <TableCell className="text-right whitespace-nowrap">
                     {p.status !== "pago" && (
                       <Button size="sm" variant="outline" onClick={() => markPaid.mutate(p)}>

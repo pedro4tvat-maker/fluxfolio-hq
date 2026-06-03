@@ -189,11 +189,9 @@ function ConfiguracoesPage() {
         </TabsContent>
 
         <TabsContent value="extras" className="mt-6">
-          <div className="bg-card border rounded-2xl p-6 shadow-card text-sm text-muted-foreground space-y-2">
-            <p><strong className="text-foreground">Categorias</strong>, <strong className="text-foreground">Centros de custo</strong> e <strong className="text-foreground">Contas financeiras</strong> são gerenciadas dentro dos próprios módulos onde são utilizadas (Fluxo de Caixa, Centro de Custos, etc.).</p>
-            <p>Em breve esta área terá uma visão consolidada de todas essas estruturas em um único lugar.</p>
-          </div>
+          <ExtrasSection companyId={companyId} />
         </TabsContent>
+
       </Tabs>
     </div>
   );
@@ -638,3 +636,87 @@ function FormField({
     </div>
   );
 }
+
+function ExtrasSection({ companyId }: { companyId: string }) {
+  const qc = useQueryClient();
+  const { data: categories, isLoading } = useQuery({
+    queryKey: ["categories-full", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const toggle = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string; field: string; value: boolean }) => {
+      // @ts-ignore - dynamic field names for database types
+      const { error } = await supabase.from("categories").update({ [field]: value }).eq("id", id);
+      if (error) throw error;
+    },
+
+    onSuccess: () => {
+      toast.success("Classificação atualizada");
+      qc.invalidateQueries({ queryKey: ["categories-full", companyId] });
+      qc.invalidateQueries({ queryKey: ["report-data"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  if (isLoading) return <div className="text-sm text-muted-foreground">Carregando categorias...</div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+        <div>
+          <h3 className="font-display font-semibold">Estrutura de Categorias e DRE</h3>
+          <p className="text-sm text-muted-foreground mt-1">Configure como cada categoria deve alimentar automaticamente a DRE (Demonstração do Resultado).</p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase text-muted-foreground border-b">
+                <th className="py-2 px-3 font-medium">Categoria</th>
+                <th className="py-2 px-3 font-medium">Tipo</th>
+                <th className="py-2 px-3 font-medium text-center">Variável (CMV)</th>
+                <th className="py-2 px-3 font-medium text-center">Fixo</th>
+                <th className="py-2 px-3 font-medium text-center">Dedução/Imp.</th>
+                <th className="py-2 px-3 font-medium text-center">Financeira</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories?.map((c) => (
+                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="py-3 px-3 font-medium">{c.nome}</td>
+                  <td className="py-3 px-3">
+                    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${c.tipo === "entrada" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                      {c.tipo}
+                    </span>
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <input type="checkbox" checked={!!c.is_variable_cost} onChange={(e) => toggle.mutate({ id: c.id, field: "is_variable_cost", value: e.target.checked })} />
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <input type="checkbox" checked={!!c.is_fixed_cost} onChange={(e) => toggle.mutate({ id: c.id, field: "is_fixed_cost", value: e.target.checked })} />
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <input type="checkbox" checked={!!c.is_deduction} onChange={(e) => toggle.mutate({ id: c.id, field: "is_deduction", value: e.target.checked })} />
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <input type="checkbox" checked={!!c.is_financial_expense} onChange={(e) => toggle.mutate({ id: c.id, field: "is_financial_expense", value: e.target.checked })} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
