@@ -180,6 +180,8 @@ function ContasAPagar() {
                 <TableHead>Forma</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-center">CC</TableHead>
+
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -202,6 +204,8 @@ function ContasAPagar() {
                     }`}>{p.status.replace("_", " ")}</span>
                   </TableCell>
                   <TableCell className="text-right font-display font-semibold">{formatMoney(Number(p.valor))}</TableCell>
+                  <TableCell className="text-center">{p.centro_custo_id ? <CheckCircle2 className="size-3 mx-auto text-success" /> : <AlertTriangle className="size-3 mx-auto text-amber-500" />}</TableCell>
+
                   <TableCell className="text-right whitespace-nowrap">
                     {p.status !== "pago" && (
                       <Button size="sm" variant="outline" onClick={() => markPaid.mutate(p)}>

@@ -23,7 +23,12 @@ export type Category = {
   nome: string;
   tipo: "entrada" | "saida";
   kpi_classification: string | null;
+  is_deduction: boolean;
+  is_fixed_cost: boolean;
+  is_variable_cost: boolean;
+  is_financial_expense: boolean;
 };
+
 
 export type Payable = {
   id: string;
@@ -105,7 +110,7 @@ export async function fetchReportData(
         .eq("company_id", companyId),
       branchId,
     )),
-    supabase.from("categories").select("id, nome, tipo, kpi_classification").eq("company_id", companyId),
+    supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense").eq("company_id", companyId),
     applyCC(applyBranch(
       supabase
         .from("payables")

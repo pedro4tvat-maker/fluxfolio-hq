@@ -105,12 +105,13 @@ function VendasPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("id, nome, preco_venda, quantidade, custo_unitario")
+        .select("id, nome, preco_venda, quantidade, custo_unitario, centro_custo_id")
         .eq("company_id", selected!)
         .order("nome");
       return data ?? [];
     },
   });
+
 
   const { data: account } = useQuery({
     queryKey: ["account-default", selected],
@@ -281,6 +282,7 @@ function VendasPage() {
           status: "realizado",
           data: form.data_venda,
           crm_contact_id: cliente?.id ?? null,
+          centro_custo_id: items[0]?.product_id ? products?.find(p => p.id === items[0].product_id)?.centro_custo_id : null,
         });
         if (error) throw error;
       } else {
@@ -294,9 +296,11 @@ function VendasPage() {
           forma_recebimento: form.forma_pagamento,
           conta_id: account?.id,
           status: "em_aberto",
+          centro_custo_id: items[0]?.product_id ? products?.find(p => p.id === items[0].product_id)?.centro_custo_id : null,
         });
         if (error) throw error;
       }
+
 
       toast.success("Venda registrada");
       generateOrderHTML({ openPrint: true });
