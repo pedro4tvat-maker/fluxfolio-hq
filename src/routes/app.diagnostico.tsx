@@ -95,10 +95,11 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
   const createMut = useMutation({
     mutationFn: async () => {
         const { data: consultant } = await supabase.from("consultants").select("id").eq("user_id", user?.id || "").maybeSingle();
+        if (!consultant) throw new Error("Consultor não encontrado. Verifique seu perfil.");
         const { data, error } = await supabase.from("financial_diagnostics").insert({ 
             company_id: companyId, 
             status: "em_andamento", 
-            consultant_id: consultant?.id 
+            consultant_id: consultant.id 
         }).select().single();
         if (error) throw error;
         return data;
