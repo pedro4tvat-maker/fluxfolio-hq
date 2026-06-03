@@ -297,28 +297,85 @@ export type Database = {
       }
       categories: {
         Row: {
+          cash_flow_line: string | null
           company_id: string
           created_at: string
+          description: string | null
+          dre_line: string | null
+          financial_classification: string | null
+          fixed_or_variable: string | null
           id: string
+          impacts_break_even: boolean | null
+          impacts_contribution_margin: boolean | null
+          impacts_debt: boolean | null
+          impacts_ebitda: boolean | null
+          impacts_gross_revenue: boolean | null
+          impacts_net_profit: boolean | null
+          impacts_net_revenue: boolean | null
+          impacts_operating_profit: boolean | null
+          impacts_working_capital: boolean | null
+          is_active: boolean | null
+          is_default: boolean | null
           kpi_classification: string | null
+          management_group: string | null
+          nature: string | null
           nome: string
           tipo: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string | null
         }
         Insert: {
+          cash_flow_line?: string | null
           company_id: string
           created_at?: string
+          description?: string | null
+          dre_line?: string | null
+          financial_classification?: string | null
+          fixed_or_variable?: string | null
           id?: string
+          impacts_break_even?: boolean | null
+          impacts_contribution_margin?: boolean | null
+          impacts_debt?: boolean | null
+          impacts_ebitda?: boolean | null
+          impacts_gross_revenue?: boolean | null
+          impacts_net_profit?: boolean | null
+          impacts_net_revenue?: boolean | null
+          impacts_operating_profit?: boolean | null
+          impacts_working_capital?: boolean | null
+          is_active?: boolean | null
+          is_default?: boolean | null
           kpi_classification?: string | null
+          management_group?: string | null
+          nature?: string | null
           nome: string
           tipo: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string | null
         }
         Update: {
+          cash_flow_line?: string | null
           company_id?: string
           created_at?: string
+          description?: string | null
+          dre_line?: string | null
+          financial_classification?: string | null
+          fixed_or_variable?: string | null
           id?: string
+          impacts_break_even?: boolean | null
+          impacts_contribution_margin?: boolean | null
+          impacts_debt?: boolean | null
+          impacts_ebitda?: boolean | null
+          impacts_gross_revenue?: boolean | null
+          impacts_net_profit?: boolean | null
+          impacts_net_revenue?: boolean | null
+          impacts_operating_profit?: boolean | null
+          impacts_working_capital?: boolean | null
+          is_active?: boolean | null
+          is_default?: boolean | null
           kpi_classification?: string | null
+          management_group?: string | null
+          nature?: string | null
           nome?: string
           tipo?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1592,27 +1649,52 @@ export type Database = {
       }
       cost_centers: {
         Row: {
+          branch_id: string | null
+          center_type: string | null
           company_id: string
           created_at: string
+          description: string | null
           id: string
+          is_active: boolean | null
           kpi_classification: string | null
           nome: string
+          responsible: string | null
+          updated_at: string | null
         }
         Insert: {
+          branch_id?: string | null
+          center_type?: string | null
           company_id: string
           created_at?: string
+          description?: string | null
           id?: string
+          is_active?: boolean | null
           kpi_classification?: string | null
           nome: string
+          responsible?: string | null
+          updated_at?: string | null
         }
         Update: {
+          branch_id?: string | null
+          center_type?: string | null
           company_id?: string
           created_at?: string
+          description?: string | null
           id?: string
+          is_active?: boolean | null
           kpi_classification?: string | null
           nome?: string
+          responsible?: string | null
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "cost_centers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cost_centers_company_id_fkey"
             columns: ["company_id"]
