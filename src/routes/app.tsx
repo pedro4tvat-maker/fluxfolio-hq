@@ -33,6 +33,7 @@ const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
 const consultantNav: NavEntry[] = [
   { to: "/app", label: "Painel do consultor", icon: LayoutDashboard, exact: true },
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
+  { to: "/app/diagnostico", label: "Diagnóstico Financeiro", icon: BadgeCheck },
   { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
   { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
   { to: "/app/jornada", label: "Jornada da Consultoria", icon: RouteIcon },
