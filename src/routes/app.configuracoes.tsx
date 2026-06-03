@@ -189,11 +189,9 @@ function ConfiguracoesPage() {
         </TabsContent>
 
         <TabsContent value="extras" className="mt-6">
-          <div className="bg-card border rounded-2xl p-6 shadow-card text-sm text-muted-foreground space-y-2">
-            <p><strong className="text-foreground">Categorias</strong>, <strong className="text-foreground">Centros de custo</strong> e <strong className="text-foreground">Contas financeiras</strong> são gerenciadas dentro dos próprios módulos onde são utilizadas (Fluxo de Caixa, Centro de Custos, etc.).</p>
-            <p>Em breve esta área terá uma visão consolidada de todas essas estruturas em um único lugar.</p>
-          </div>
+          <ExtrasSection companyId={companyId} />
         </TabsContent>
+
       </Tabs>
     </div>
   );
