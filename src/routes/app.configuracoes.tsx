@@ -654,9 +654,11 @@ function ExtrasSection({ companyId }: { companyId: string }) {
 
   const toggle = useMutation({
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: boolean }) => {
+      // @ts-ignore - dynamic field names for database types
       const { error } = await supabase.from("categories").update({ [field]: value }).eq("id", id);
       if (error) throw error;
     },
+
     onSuccess: () => {
       toast.success("Classificação atualizada");
       qc.invalidateQueries({ queryKey: ["categories-full", companyId] });
