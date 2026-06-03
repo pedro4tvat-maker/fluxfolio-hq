@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,11 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Eye, FileText, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
+import { ArrowLeft, Plus, Eye, CheckCircle2, ChevronRight, ChevronLeft, Calendar } from "lucide-react";
 
 export const Route = createFileRoute("/app/diagnostico")({ component: DiagnosticoPage });
 
-// Método Mordomia Questions Structure
 const SECTIONS = [
   { key: "identificacao", title: "ETAPA 1 – IDENTIFICAÇÃO", isForm: true },
   { key: "controle", title: "ETAPA 2 – CONTROLE FINANCEIRO", questions: [
@@ -68,16 +67,20 @@ function DiagnosticoPage() {
 }
 
 function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: (id: string) => void }) {
+  const { user } = useAuth();
   const { data: list, refetch } = useQuery({
     queryKey: ["diagnostics", companyId],
     queryFn: async () => {
-      const { data } = await supabase.from("financial_diagnostics").select("*").eq("company_id", companyId).order("diagnostic_date", { ascending: false });
+      const { data } = await supabase.from("financial_diagnostics").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
       return data ?? [];
     },
   });
 
   const createMut = useMutation({
-    mutationFn: async () => await supabase.from("financial_diagnostics").insert({ company_id: companyId, status: "em_andamento" }).select().single(),
+    mutationFn: async () => {
+        const { data: consultant } = await supabase.from("consultants").select("id").eq("user_id", user!.id).single();
+        return await supabase.from("financial_diagnostics").insert({ company_id: companyId, status: "em_andamento", consultant_id: consultant?.id }).select().single();
+    },
     onSuccess: (d) => { refetch(); onSelect(d.data.id); },
   });
 
@@ -91,7 +94,7 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
         {list.length === 0 ? <p className="text-sm text-center py-6 text-muted-foreground">Nenhum diagnóstico realizado.</p> : list.map(d => (
           <div key={d.id} className="flex justify-between items-center p-3 border-b hover:bg-muted/50 rounded">
             <div>
-              <span className="font-semibold">{new Date(d.diagnostic_date || d.created_at).toLocaleDateString()}</span>
+              <span className="font-semibold">{new Date(d.created_at).toLocaleDateString()}</span>
               <span className="ml-2 text-sm text-muted-foreground">· {d.classification || "Em andamento"}</span>
             </div>
             <Button size="sm" variant="ghost" onClick={() => onSelect(d.id)}><Eye className="size-4" /></Button>
@@ -114,7 +117,7 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
         const total = Object.entries(answers).reduce((acc, [key, ans]) => {
             const section = SECTIONS.find(s => s.questions?.find(q => q.key === key));
             const q = section?.questions?.find(q => q.key === key);
-            return acc + (q?.points[ans as any] || 0);
+            return acc + (q?.points[ans as keyof typeof q.points] || 0);
         }, 0);
         
         let classification = "";
@@ -132,6 +135,8 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["diag", id] }); onBack(); }
   });
+
+  if (!diag) return null;
 
   return (
     <div className="space-y-6">
@@ -162,10 +167,10 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
         <Card>
             <CardHeader><CardTitle>{SECTIONS[step].title}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-                {SECTIONS[step].questions.map(q => (
+                {SECTIONS[step].questions?.map(q => (
                     <div key={q.key} className="space-y-2">
                         <Label>{q.text}</Label>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             {Object.keys(q.points).map(opt => (
                                 <Button key={opt} variant={answers[q.key] === opt ? "default" : "outline"} onClick={() => setAnswers({...answers, [q.key]: opt})}>
                                     {opt.charAt(0).toUpperCase() + opt.slice(1)}
@@ -178,13 +183,24 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
         </Card>
       )}
 
-      {step === SECTIONS.length - 1 && (
-         <Button onClick={() => saveMut.mutate()} className="w-full">Finalizar e Gerar Relatório</Button>
+      {diag.data?.status === "finalizado" && (
+        <Card>
+            <CardHeader><CardTitle>Resultado do Diagnóstico</CardTitle></CardHeader>
+            <CardContent className="text-center">
+                <div className="text-6xl font-bold">{diag.data.total_points}/180</div>
+                <div className="text-xl font-semibold mt-2">{diag.data.classification}</div>
+                <Button className="mt-6 w-full"><Calendar className="size-4 mr-2" /> Agendar Reunião Estratégica</Button>
+            </CardContent>
+        </Card>
       )}
 
       <div className="flex justify-between">
         <Button variant="outline" onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}><ChevronLeft className="size-4 mr-2" /> Anterior</Button>
-        <Button variant="outline" onClick={() => setStep(s => Math.min(SECTIONS.length - 1, s + 1))} disabled={step === SECTIONS.length - 1}>Próximo <ChevronRight className="size-4 ml-2" /></Button>
+        {step < SECTIONS.length - 1 ? (
+            <Button variant="outline" onClick={() => setStep(s => Math.min(SECTIONS.length - 1, s + 1))}>Próximo <ChevronRight className="size-4 ml-2" /></Button>
+        ) : (
+            <Button onClick={() => saveMut.mutate()}>Finalizar Diagnóstico</Button>
+        )}
       </div>
     </div>
   );
