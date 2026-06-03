@@ -12,79 +12,88 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  ArrowLeft, ClipboardCheck, Plus, Eye, Trash2, FileText, CheckCircle2, Copy,
+  ArrowLeft, ClipboardCheck, Plus, Eye, Trash2, FileText, CheckCircle2, Copy, Calendar,
 } from "lucide-react";
 import { maybeAdvanceStage } from "@/lib/journey-stages";
 
 export const Route = createFileRoute("/app/diagnostico")({ component: DiagnosticoPage });
 
-type AnswerValue = "sim" | "parcial" | "nao" | "na";
-const ANSWER_SCORE: Record<AnswerValue, number | null> = {
-  sim: 2, parcial: 1, nao: 0, na: null,
-};
-const ANSWER_LABEL: Record<AnswerValue, string> = {
-  sim: "Sim", parcial: "Parcialmente", nao: "Não", na: "Não se aplica",
-};
+// ============ TYPES ============
+type QuestionOption = { value: string; label: string; points: number };
+type Question = { key: string; text: string; options: QuestionOption[] };
+type Block = { key: string; title: string; questions: Question[] };
+type CompanyInfo = { num_funcionarios: string; faturamento: string };
 
-const BLOCKS: { key: string; title: string; questions: { key: string; text: string }[] }[] = [
-  { key: "organizacao", title: "Organização Financeira", questions: [
-    { key: "org_1", text: "A empresa possui controle de entradas e saídas?" },
-    { key: "org_2", text: "A empresa registra o fluxo de caixa diariamente?" },
-    { key: "org_3", text: "A empresa possui contas bancárias separadas da pessoa física?" },
-    { key: "org_4", text: "O empresário sabe quanto entra e quanto sai por mês?" },
-    { key: "org_5", text: "Existe rotina de fechamento financeiro mensal?" },
-  ]},
-  { key: "contas", title: "Contas a Pagar e Receber", questions: [
-    { key: "cpr_1", text: "A empresa controla contas a pagar?" },
-    { key: "cpr_2", text: "A empresa controla contas a receber?" },
-    { key: "cpr_3", text: "Existem contas vencidas?" },
-    { key: "cpr_4", text: "Existem clientes inadimplentes?" },
-    { key: "cpr_5", text: "A empresa acompanha vencimentos futuros?" },
-  ]},
-  { key: "lucratividade", title: "Lucratividade e Resultado", questions: [
-    { key: "luc_1", text: "A empresa sabe se teve lucro ou prejuízo no mês?" },
-    { key: "luc_2", text: "A empresa possui DRE gerencial?" },
-    { key: "luc_3", text: "A empresa conhece sua margem líquida?" },
-    { key: "luc_4", text: "A empresa conhece sua margem de contribuição?" },
-    { key: "luc_5", text: "A empresa sabe seu ponto de equilíbrio?" },
-  ]},
-  { key: "precificacao", title: "Precificação", questions: [
-    { key: "pre_1", text: "A empresa sabe calcular preço de venda?" },
-    { key: "pre_2", text: "Considera impostos, taxas e custos variáveis na precificação?" },
-    { key: "pre_3", text: "A empresa conhece a margem dos produtos ou serviços?" },
-    { key: "pre_4", text: "A empresa revisa preços periodicamente?" },
-    { key: "pre_5", text: "Existem produtos ou serviços com margem negativa?" },
-  ]},
-  { key: "estoque", title: "Estoque", questions: [
-    { key: "est_1", text: "A empresa controla estoque?" },
-    { key: "est_2", text: "A empresa sabe quanto dinheiro está parado em estoque?" },
-    { key: "est_3", text: "Existem produtos parados ou sem giro?" },
-    { key: "est_4", text: "Existem produtos abaixo do estoque mínimo?" },
-    { key: "est_5", text: "O estoque é atualizado após vendas e compras?" },
-  ]},
-  { key: "orcamento", title: "Orçamento e Metas", questions: [
-    { key: "orc_1", text: "A empresa possui orçamento mensal por categoria?" },
-    { key: "orc_2", text: "A empresa compara orçado x realizado?" },
-    { key: "orc_3", text: "A empresa possui metas de faturamento?" },
-    { key: "orc_4", text: "A empresa possui meta de lucro?" },
-    { key: "orc_5", text: "A empresa possui meta de reserva financeira?" },
-  ]},
-  { key: "endividamento", title: "Endividamento e Caixa", questions: [
-    { key: "end_1", text: "A empresa possui dívidas ativas?" },
-    { key: "end_2", text: "A empresa sabe quanto paga de parcelas por mês?" },
-    { key: "end_3", text: "A empresa conhece o custo das dívidas?" },
-    { key: "end_4", text: "A empresa possui capital de giro suficiente?" },
-    { key: "end_5", text: "O caixa projetado indica risco de ficar negativo?" },
-  ]},
-  { key: "gestao", title: "Gestão e Rotina", questions: [
-    { key: "ges_1", text: "Existe responsável pelo financeiro?" },
-    { key: "ges_2", text: "A empresa envia documentos e informações no prazo?" },
-    { key: "ges_3", text: "Existe rotina semanal de análise financeira?" },
-    { key: "ges_4", text: "A empresa usa relatórios para tomar decisão?" },
-    { key: "ges_5", text: "O empresário acompanha indicadores financeiros?" },
-  ]},
+// ============ MÉTODO MORDOMIA BLOCKS ============
+const BLOCKS: Block[] = [
+  {
+    key: "controle",
+    title: "CONTROLE FINANCEIRO",
+    questions: [
+      { key: "con_1", text: "Possui fluxo de caixa atualizado?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "con_2", text: "Possui controle de contas a pagar?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "con_3", text: "Possui controle de contas a receber?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "con_4", text: "Consegue prever o saldo da empresa para os próximos 30 dias?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+    ],
+  },
+  {
+    key: "precificacao",
+    title: "PRECIFICAÇÃO E MARGEM",
+    questions: [
+      { key: "pre_1", text: "Conhece a margem dos seus principais produtos ou serviços?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "pre_2", text: "Possui metodologia de precificação?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "pre_3", text: "Revisa preços periodicamente?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "as_vezes", label: "Às vezes", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+    ],
+  },
+  {
+    key: "estoque",
+    title: "ESTOQUE",
+    questions: [
+      { key: "est_1", text: "Possui controle de estoque?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "est_2", text: "Realiza inventário periódico?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "as_vezes", label: "Às vezes", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "est_3", text: "Conhece o valor financeiro do estoque atual?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+    ],
+  },
+  {
+    key: "socios",
+    title: "SÓCIOS E RETIRADAS",
+    questions: [
+      { key: "soc_1", text: "Existe pró-labore definido?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "soc_2", text: "Existe separação entre contas pessoais e empresariais?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "soc_3", text: "Existem retiradas sem controle?", options: [{ value: "nunca", label: "Nunca", points: 10 }, { value: "as_vezes", label: "Às vezes", points: 5 }, { value: "frequente", label: "Frequentemente", points: 0 }] },
+    ],
+  },
+  {
+    key: "leitura",
+    title: "LEITURA DOS NÚMEROS",
+    questions: [
+      { key: "lei_1", text: "Você sabe qual foi o lucro dos últimos 3 meses?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "aprox", label: "Aproximadamente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "lei_2", text: "Analisa relatórios financeiros regularmente?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "as_vezes", label: "Às vezes", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "lei_3", text: "Toma decisões baseadas em números?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "as_vezes", label: "Às vezes", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+    ],
+  },
+  {
+    key: "gestao",
+    title: "GESTÃO",
+    questions: [
+      { key: "ges_1", text: "Possui metas financeiras definidas?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "ges_2", text: "Possui orçamento mensal?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+      { key: "ges_3", text: "A empresa possui indicadores de desempenho?", options: [{ value: "sim", label: "Sim", points: 10 }, { value: "parcial", label: "Parcialmente", points: 5 }, { value: "nao", label: "Não", points: 0 }] },
+    ],
+  },
+];
+
+const MAX_SCORE = 180; // 18 questions × 10 points
+
+const FATURAMENTO_OPTIONS = [
+  "Até R$ 20.000",
+  "R$ 20.001 a R$ 50.000",
+  "R$ 50.001 a R$ 100.000",
+  "R$ 100.001 a R$ 300.000",
+  "Acima de R$ 300.000",
 ];
 
 const STATUS_LABEL: Record<string, string> = {
@@ -95,24 +104,48 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function classify(score: number) {
-  if (score <= 40) return { label: "Crítico", color: "bg-destructive text-destructive-foreground" };
-  if (score <= 60) return { label: "Desorganizado", color: "bg-orange-500 text-white" };
-  if (score <= 75) return { label: "Em organização", color: "bg-yellow-500 text-black" };
-  if (score <= 90) return { label: "Boa gestão", color: "bg-blue-500 text-white" };
-  return { label: "Gestão avançada", color: "bg-success text-success-foreground" };
+  if (score <= 60) return { label: "Situação Crítica", color: "bg-destructive text-destructive-foreground", desc: "A empresa necessita de estruturação financeira urgente." };
+  if (score <= 120) return { label: "Em Desenvolvimento", color: "bg-orange-500 text-white", desc: "Possui controles básicos, porém existem riscos relevantes." };
+  if (score <= 150) return { label: "Empresa Organizada", color: "bg-yellow-500 text-black", desc: "Existem oportunidades de melhoria e crescimento." };
+  return { label: "Financeiramente Estruturada", color: "bg-success text-success-foreground", desc: "Possui boa maturidade financeira." };
 }
 
 const RECOMMENDATIONS: Record<string, string> = {
-  organizacao: "Priorizar organização do fluxo de caixa e separação entre finanças pessoais e empresariais.",
-  contas: "Criar rotina de cobrança e acompanhamento de inadimplência, e estruturar controle de contas a pagar.",
-  lucratividade: "Implantar DRE gerencial e cálculo de margem e ponto de equilíbrio.",
-  precificacao: "Realizar análise de precificação e margem dos principais produtos ou serviços.",
-  estoque: "Implantar controle de estoque com inventário e estoque mínimo.",
-  orcamento: "Criar orçamento mensal e acompanhar orçado x realizado.",
-  endividamento: "Mapear dívidas ativas, custo financeiro e projeção de caixa.",
-  gestao: "Definir responsável financeiro e rotina semanal de análise de indicadores.",
+  controle: "Implantar fluxo de caixa e organizar o controle de contas a pagar e receber.",
+  precificacao: "Estruturar metodologia de precificação e revisar margens dos produtos e serviços.",
+  estoque: "Implantar controle de estoque com inventário periódico e valorização financeira.",
+  socios: "Definir pró-labore, separar contas pessoais e empresariais e controlar retiradas.",
+  leitura: "Analisar relatórios financeiros regularmente e tomar decisões baseadas em dados.",
+  gestao: "Definir metas financeiras, criar orçamento mensal e acompanhar indicadores de desempenho.",
 };
 
+function generateNextSteps(blockScores: Record<string, { pct: number; max: number }>): string {
+  const steps: string[] = [];
+  if ((blockScores.controle?.pct ?? 100) < 70) steps.push("1. Implantar fluxo de caixa e organizar contas a pagar e receber.");
+  if ((blockScores.precificacao?.pct ?? 100) < 70) steps.push("2. Estruturar precificação e calcular margens dos produtos/serviços.");
+  if ((blockScores.estoque?.pct ?? 100) < 70) steps.push("3. Implantar controle de estoque com inventário periódico.");
+  if ((blockScores.socios?.pct ?? 100) < 70) steps.push("4. Separar finanças PF/PJ e definir pró-labore.");
+  if ((blockScores.leitura?.pct ?? 100) < 70) steps.push("5. Criar rotina de análise de relatórios financeiros.");
+  if ((blockScores.gestao?.pct ?? 100) < 70) steps.push("6. Implantar orçamento mensal e definir metas financeiras.");
+  if (!steps.length) steps.push("Continue mantendo a disciplina financeira e explore estratégias de crescimento.");
+  return steps.join("\n");
+}
+
+function generateExecutiveSummary(score: number, classification: string): string {
+  const percent = Math.round((score / MAX_SCORE) * 100);
+  if (score <= 60) {
+    return `Esta empresa apresenta situação financeira crítica, com pontuação de ${score}/${MAX_SCORE} pontos (${percent}%). Os indicadores revelam ausência de controles fundamentais que colocam em risco a sustentabilidade do negócio. Recomendamos início imediato da implementação dos controles básicos, começando pelo fluxo de caixa e separação das finanças pessoais e empresariais. O Método Mordomia indica que a reorganização financeira é o passo mais urgente.`;
+  }
+  if (score <= 120) {
+    return `Esta empresa está em desenvolvimento financeiro, com pontuação de ${score}/${MAX_SCORE} pontos (${percent}%). Há controles básicos em funcionamento, porém existem riscos relevantes que precisam ser endereçados. Com foco nas áreas identificadas como gargalos e aplicação consistente do Método Mordomia, é possível avançar significativamente na maturidade financeira nos próximos 90 dias.`;
+  }
+  if (score <= 150) {
+    return `Esta empresa está organizada financeiramente, com pontuação de ${score}/${MAX_SCORE} pontos (${percent}%). Os controles básicos estão estabelecidos e funcionando. O próximo passo é aprimorar a gestão estratégica com metas, indicadores e orçamento estruturado para alcançar o próximo nível de maturidade financeira com o Método Mordomia.`;
+  }
+  return `Esta empresa está financeiramente estruturada, com pontuação de ${score}/${MAX_SCORE} pontos (${percent}%). Parabéns pela maturidade financeira demonstrada! Continue mantendo os controles existentes e explore oportunidades de crescimento com base nos indicadores de desempenho. O Método Mordomia confirma uma gestão financeira sólida e consistente.`;
+}
+
+// ============ MAIN PAGE ============
 function DiagnosticoPage() {
   const { user, isConsultant, loading: authLoading } = useAuth();
   const { selected: selectedCompanyId } = useSelectedCompany();
@@ -151,6 +184,7 @@ function DiagnosticoPage() {
   });
 
   if (authLoading) return <div className="text-muted-foreground">Carregando...</div>;
+
   if (!selectedCompanyId) {
     return (
       <div className="bg-card border rounded-2xl p-10 text-center max-w-xl mx-auto">
@@ -175,9 +209,10 @@ function DiagnosticoPage() {
               <ArrowLeft className="size-3" /> Voltar para a empresa
             </Link>
           )}
-          <h1 className="text-2xl md:text-3xl font-display font-bold mt-1">Diagnóstico Inicial</h1>
-          <p className="text-muted-foreground text-sm">
-            {company?.nome ?? "Empresa"} · {company?.cnpj ?? company?.documento ?? "—"}
+          <h1 className="text-2xl md:text-3xl font-display font-bold mt-1">Diagnóstico Financeiro Empresarial</h1>
+          <p className="text-base text-muted-foreground">Método Mordomia | Finanças em Propósito</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {company?.nome ?? "Empresa"} · {(company as any)?.cnpj ?? (company as any)?.documento ?? "—"}
           </p>
         </div>
         {isConsultant && consultant && (
@@ -198,7 +233,8 @@ function DiagnosticoPage() {
           ) : (
             <div className="space-y-2">
               {list.map((d) => {
-                const cl = d.classification ?? classify(Number(d.overall_score)).label;
+                const score = Number(d.overall_score ?? 0);
+                const cl = classify(score);
                 return (
                   <div key={d.id} className="flex items-center justify-between gap-3 border rounded-lg p-3 flex-wrap">
                     <div className="flex-1 min-w-[180px]">
@@ -206,8 +242,8 @@ function DiagnosticoPage() {
                       <div className="text-xs text-muted-foreground">{STATUS_LABEL[d.status] ?? d.status}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold">{Number(d.overall_score).toFixed(0)}%</div>
-                      <Badge className={classify(Number(d.overall_score)).color}>{cl}</Badge>
+                      <div className="text-lg font-bold">{score.toFixed(0)}/{MAX_SCORE}</div>
+                      <Badge className={cl.color}>{d.classification || cl.label}</Badge>
                     </div>
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" onClick={() => setActiveId(d.id)}>
@@ -231,6 +267,7 @@ function DiagnosticoPage() {
   );
 }
 
+// ============ HELPER BUTTONS ============
 function NewDiagnosticButton({ consultantId, companyId, responsibleName, onCreated }: {
   consultantId: string; companyId: string; responsibleName: string; onCreated: (id: string) => void;
 }) {
@@ -287,9 +324,11 @@ function DeleteBtn({ id, onDone }: { id: string; onDone: () => void }) {
   return <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir diagnóstico?")) m.mutate(); }}><Trash2 className="size-3.5" /></Button>;
 }
 
+// ============ DIAGNOSTIC EDITOR ============
 function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => void; canEdit: boolean }) {
   const { user } = useAuth();
   const qc = useQueryClient();
+
   const { data: diag, refetch } = useQuery({
     queryKey: ["diagnostic", id],
     queryFn: async () => {
@@ -298,6 +337,7 @@ function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => v
       return data;
     },
   });
+
   const { data: answersRaw } = useQuery({
     queryKey: ["diagnostic-answers", id],
     queryFn: async () => {
@@ -307,86 +347,121 @@ function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => v
     },
   });
 
-  const [answers, setAnswers] = useState<Record<string, { answer: AnswerValue | ""; notes: string }>>({});
-  const [header, setHeader] = useState({ responsible_name: "", diagnostic_date: "", notes: "", allow_client_view: false });
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [header, setHeader] = useState({
+    responsible_name: "",
+    diagnostic_date: new Date().toISOString().slice(0, 10),
+    notes: "",
+    allow_client_view: false,
+  });
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
+    num_funcionarios: "",
+    faturamento: "",
+  });
 
   useEffect(() => {
     if (diag) {
+      let parsedNotes = "";
+      let parsedEtapa1: CompanyInfo = { num_funcionarios: "", faturamento: "" };
+      try {
+        const parsed = JSON.parse(diag.notes ?? "{}");
+        parsedNotes = parsed.notes ?? "";
+        if (parsed.etapa1) parsedEtapa1 = parsed.etapa1;
+      } catch {
+        parsedNotes = diag.notes ?? "";
+      }
       setHeader({
         responsible_name: diag.responsible_name ?? "",
-        diagnostic_date: diag.diagnostic_date,
-        notes: diag.notes ?? "",
+        diagnostic_date: diag.diagnostic_date ?? new Date().toISOString().slice(0, 10),
+        notes: parsedNotes,
         allow_client_view: !!diag.allow_client_view,
       });
+      setCompanyInfo(parsedEtapa1);
     }
   }, [diag]);
 
   useEffect(() => {
     if (answersRaw) {
-      const map: Record<string, { answer: AnswerValue | ""; notes: string }> = {};
+      const map: Record<string, string> = {};
       for (const a of answersRaw) {
-        map[a.question_key] = { answer: (a.answer as AnswerValue) ?? "", notes: a.notes ?? "" };
+        map[a.question_key] = a.answer ?? "";
       }
       setAnswers(map);
     }
   }, [answersRaw]);
 
-  const { perBlock, overall, answered, totalQ } = useMemo(() => {
-    let totalEarned = 0, totalPossible = 0, ansCount = 0, q = 0;
-    const perBlock: Record<string, { earned: number; possible: number; pct: number }> = {};
+  const { blockScores, totalScore, answeredCount, totalQuestions } = useMemo(() => {
+    let total = 0;
+    let answered = 0;
+    const blockScores: Record<string, { earned: number; max: number; pct: number }> = {};
+
     for (const b of BLOCKS) {
-      let earned = 0, possible = 0;
-      for (const qn of b.questions) {
-        q++;
-        const a = answers[qn.key]?.answer as AnswerValue | "";
-        if (!a) continue;
-        ansCount++;
-        const s = ANSWER_SCORE[a];
-        if (s === null) continue;
-        earned += s; possible += 2;
+      let earned = 0;
+      const max = b.questions.length * 10;
+      for (const q of b.questions) {
+        const ans = answers[q.key];
+        if (!ans) continue;
+        answered++;
+        const opt = q.options.find((o) => o.value === ans);
+        if (opt) earned += opt.points;
       }
-      perBlock[b.key] = { earned, possible, pct: possible ? (earned / possible) * 100 : 0 };
-      totalEarned += earned; totalPossible += possible;
+      blockScores[b.key] = { earned, max, pct: max > 0 ? (earned / max) * 100 : 0 };
+      total += earned;
     }
-    const overall = totalPossible ? (totalEarned / totalPossible) * 100 : 0;
-    return { perBlock, overall, answered: ansCount, totalQ: q };
+
+    return {
+      blockScores,
+      totalScore: total,
+      answeredCount: answered,
+      totalQuestions: BLOCKS.reduce((s, b) => s + b.questions.length, 0),
+    };
   }, [answers]);
 
-  const cls = classify(overall);
+  const cls = classify(totalScore);
 
   const saveMut = useMutation({
     mutationFn: async (finalize: boolean) => {
       const status = finalize ? "finalizado" : "em_andamento";
-      const weak = BLOCKS.filter((b) => perBlock[b.key]?.possible > 0 && perBlock[b.key].pct < 50).map((b) => b.title);
-      const strong = BLOCKS.filter((b) => perBlock[b.key]?.possible > 0 && perBlock[b.key].pct >= 80).map((b) => b.title);
-      const recs = BLOCKS.filter((b) => perBlock[b.key]?.possible > 0 && perBlock[b.key].pct < 60).map((b) => `• ${RECOMMENDATIONS[b.key]}`).join("\n");
+
+      const strong = BLOCKS.filter((b) => blockScores[b.key]?.pct >= 80).map((b) => b.title);
+      const weak = BLOCKS.filter((b) => (blockScores[b.key]?.pct ?? 100) < 50 && (blockScores[b.key]?.max ?? 0) > 0).map((b) => b.title);
+      const recs = BLOCKS
+        .filter((b) => (blockScores[b.key]?.pct ?? 100) < 70 && (blockScores[b.key]?.max ?? 0) > 0)
+        .map((b) => `• ${RECOMMENDATIONS[b.key]}`)
+        .join("\n");
+
+      const notesJson = JSON.stringify({ etapa1: companyInfo, notes: header.notes });
 
       const { error } = await supabase.from("financial_diagnostics").update({
         responsible_name: header.responsible_name,
         diagnostic_date: header.diagnostic_date,
-        notes: header.notes,
+        notes: notesJson,
         allow_client_view: header.allow_client_view,
         status,
-        overall_score: Number(overall.toFixed(2)),
+        overall_score: Number(totalScore.toFixed(2)),
         classification: cls.label,
         strengths: strong.join(", "),
         weaknesses: weak.join(", "),
         recommendations: recs,
-        next_steps: finalize ? "Criar ações no Plano de Ação a partir das fragilidades identificadas." : null,
+        next_steps: finalize ? generateNextSteps(blockScores) : null,
         finalized_at: finalize ? new Date().toISOString() : null,
       }).eq("id", id);
       if (error) throw error;
 
-      // upsert answers
       const rows: any[] = [];
       for (const b of BLOCKS) {
-        for (const qn of b.questions) {
-          const a = answers[qn.key];
-          if (!a?.answer) continue;
-          const s = ANSWER_SCORE[a.answer];
+        for (const q of b.questions) {
+          const ans = answers[q.key];
+          if (!ans) continue;
+          const opt = q.options.find((o) => o.value === ans);
           rows.push({
-            diagnostic_id: id, section: b.key, question_key: qn.key,
-            question: qn.text, answer: a.answer, score: s ?? 0, notes: a.notes || null,
+            diagnostic_id: id,
+            section: b.key,
+            question_key: q.key,
+            question: q.text,
+            answer: ans,
+            score: opt?.points ?? 0,
+            notes: null,
           });
         }
       }
@@ -403,7 +478,7 @@ function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => v
           consultantId: diag.consultant_id,
           targetStage: "organizacao_financeira",
           userId: user.id,
-          note: "Diagnóstico inicial finalizado",
+          note: "Diagnóstico financeiro Método Mordomia finalizado",
         });
         if (moved) toast.info("Fase da empresa avançada para 'Organização financeira'.");
       }
@@ -415,25 +490,27 @@ function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => v
     onError: (e: any) => toast.error(e.message),
   });
 
-  function setAns(key: string, patch: Partial<{ answer: AnswerValue | ""; notes: string }>) {
-    setAnswers((prev) => ({ ...prev, [key]: { answer: prev[key]?.answer ?? "", notes: prev[key]?.notes ?? "", ...patch } }));
-  }
+  const setAns = (key: string, value: string) => {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+  };
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
         <div>
           <button onClick={onBack} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
             <ArrowLeft className="size-3" /> Voltar ao histórico
           </button>
-          <h1 className="text-2xl md:text-3xl font-display font-bold mt-1">Diagnóstico Inicial</h1>
+          <h1 className="text-2xl md:text-3xl font-display font-bold mt-1">Diagnóstico Financeiro Empresarial</h1>
+          <p className="text-sm text-muted-foreground">Método Mordomia | Finanças em Propósito</p>
           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
             <Badge variant="outline">{STATUS_LABEL[diag?.status ?? "em_andamento"]}</Badge>
-            <span>· {answered}/{totalQ} respondidas</span>
+            <span>· {answeredCount}/{totalQuestions} respondidas</span>
           </div>
         </div>
         {canEdit && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => saveMut.mutate(false)} disabled={saveMut.isPending}>Salvar rascunho</Button>
             <Button onClick={() => saveMut.mutate(true)} disabled={saveMut.isPending}>
               <CheckCircle2 className="size-4" /> Finalizar
@@ -443,43 +520,100 @@ function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => v
         )}
       </div>
 
+      {/* Print header */}
+      <div className="hidden print:block text-center mb-6">
+        <h1 className="text-2xl font-bold">Diagnóstico Financeiro Empresarial</h1>
+        <p className="text-lg text-muted-foreground">Método Mordomia | Finanças em Propósito</p>
+      </div>
+
+      {/* ETAPA 1: Company Identification */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Resumo</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">ETAPA 1 — IDENTIFICAÇÃO DA EMPRESA</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
             <div>
-              <Label>Data</Label>
-              <Input type="date" value={header.diagnostic_date} onChange={(e) => setHeader({ ...header, diagnostic_date: e.target.value })} disabled={!canEdit} />
+              <Label>Data do diagnóstico</Label>
+              <Input
+                type="date"
+                value={header.diagnostic_date}
+                onChange={(e) => setHeader({ ...header, diagnostic_date: e.target.value })}
+                disabled={!canEdit}
+                className="mt-1"
+              />
             </div>
             <div>
-              <Label>Responsável</Label>
-              <Input value={header.responsible_name} onChange={(e) => setHeader({ ...header, responsible_name: e.target.value })} disabled={!canEdit} />
+              <Label>Responsável pelo diagnóstico</Label>
+              <Input
+                value={header.responsible_name}
+                onChange={(e) => setHeader({ ...header, responsible_name: e.target.value })}
+                disabled={!canEdit}
+                className="mt-1"
+              />
             </div>
-            <div className="flex items-end">
-              {canEdit && (
+            <div>
+              <Label>Número de funcionários</Label>
+              <Input
+                value={companyInfo.num_funcionarios}
+                onChange={(e) => setCompanyInfo({ ...companyInfo, num_funcionarios: e.target.value })}
+                disabled={!canEdit}
+                placeholder="Ex.: 5"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Faturamento médio mensal</Label>
+              <Select
+                value={companyInfo.faturamento || "none"}
+                onValueChange={(v) => setCompanyInfo({ ...companyInfo, faturamento: v === "none" ? "" : v })}
+                disabled={!canEdit}
+              >
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Selecionar faixa" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Selecionar faixa</SelectItem>
+                  {FATURAMENTO_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {canEdit && (
+              <div className="flex items-end pb-1">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <Checkbox checked={header.allow_client_view} onCheckedChange={(v) => setHeader({ ...header, allow_client_view: !!v })} />
+                  <Checkbox
+                    checked={header.allow_client_view}
+                    onCheckedChange={(v) => setHeader({ ...header, allow_client_view: !!v })}
+                  />
                   Liberar visualização para o cliente
                 </label>
-              )}
-            </div>
+              </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
 
+      {/* Score Summary */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Resumo da Pontuação</CardTitle></CardHeader>
+        <CardContent>
           <div className="grid gap-4 md:grid-cols-2 items-center">
             <div>
               <div className="text-xs text-muted-foreground">Pontuação geral</div>
-              <div className="text-4xl font-bold">{overall.toFixed(0)}%</div>
-              <Badge className={`mt-1 ${cls.color}`}>{cls.label}</Badge>
-              <Progress value={overall} className="mt-3" />
+              <div className="text-4xl font-bold mt-1">
+                {totalScore.toFixed(0)}
+                <span className="text-xl text-muted-foreground">/{MAX_SCORE}</span>
+              </div>
+              <Badge className={`mt-2 ${cls.color}`}>{cls.label}</Badge>
+              <p className="text-sm text-muted-foreground mt-2">{cls.desc}</p>
+              <Progress value={(totalScore / MAX_SCORE) * 100} className="mt-3" />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {BLOCKS.map((b) => {
-                const p = perBlock[b.key];
+                const s = blockScores[b.key];
                 return (
                   <div key={b.key} className="flex items-center gap-2 text-xs">
                     <span className="w-44 truncate">{b.title}</span>
-                    <Progress value={p?.pct ?? 0} className="flex-1 h-1.5" />
-                    <span className="w-10 text-right">{(p?.pct ?? 0).toFixed(0)}%</span>
+                    <Progress value={s?.pct ?? 0} className="flex-1 h-1.5" />
+                    <span className="w-16 text-right text-muted-foreground">{s?.earned ?? 0}/{s?.max ?? 0} pts</span>
                   </div>
                 );
               })}
@@ -488,32 +622,37 @@ function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => v
         </CardContent>
       </Card>
 
-      {BLOCKS.map((b) => (
+      {/* Question Blocks (ETAPA 2–7) */}
+      {BLOCKS.map((b, blockIdx) => (
         <Card key={b.key}>
           <CardHeader>
             <CardTitle className="text-base flex justify-between items-center">
-              <span>{b.title}</span>
-              <span className="text-sm font-normal text-muted-foreground">{(perBlock[b.key]?.pct ?? 0).toFixed(0)}%</span>
+              <span>ETAPA {blockIdx + 2} — {b.title}</span>
+              <span className="text-sm font-normal text-muted-foreground">
+                {blockScores[b.key]?.earned ?? 0}/{blockScores[b.key]?.max ?? 0} pontos
+              </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {b.questions.map((qn) => {
-              const a = answers[qn.key];
+          <CardContent className="space-y-4">
+            {b.questions.map((q) => {
+              const currentAnswer = answers[q.key];
               return (
-                <div key={qn.key} className="border-b last:border-0 pb-3 last:pb-0 space-y-2">
-                  <div className="text-sm font-medium">{qn.text}</div>
+                <div key={q.key} className="border-b last:border-0 pb-4 last:pb-0 space-y-2">
+                  <div className="text-sm font-medium">{q.text}</div>
                   <div className="flex flex-wrap gap-2">
-                    {(["sim", "parcial", "nao", "na"] as AnswerValue[]).map((v) => (
-                      <Button key={v} size="sm" variant={a?.answer === v ? "default" : "outline"}
-                        onClick={() => canEdit && setAns(qn.key, { answer: v })}
-                        disabled={!canEdit}>
-                        {ANSWER_LABEL[v]}
+                    {q.options.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        size="sm"
+                        variant={currentAnswer === opt.value ? "default" : "outline"}
+                        onClick={() => canEdit && setAns(q.key, opt.value)}
+                        disabled={!canEdit}
+                      >
+                        {opt.label}
+                        <span className="ml-1.5 text-[10px] opacity-70">({opt.points} pts)</span>
                       </Button>
                     ))}
                   </div>
-                  <Textarea placeholder="Observações (opcional)" value={a?.notes ?? ""}
-                    onChange={(e) => setAns(qn.key, { notes: e.target.value })}
-                    disabled={!canEdit} className="text-xs" />
                 </div>
               );
             })}
@@ -521,26 +660,89 @@ function DiagnosticEditor({ id, onBack, canEdit }: { id: string; onBack: () => v
         </Card>
       ))}
 
+      {/* Consultant Notes */}
       {canEdit && (
         <Card>
           <CardHeader><CardTitle className="text-base">Observações do consultor</CardTitle></CardHeader>
           <CardContent>
-            <Textarea rows={4} value={header.notes} onChange={(e) => setHeader({ ...header, notes: e.target.value })} placeholder="Comentários e contexto adicional..." />
+            <Textarea
+              rows={4}
+              value={header.notes}
+              onChange={(e) => setHeader({ ...header, notes: e.target.value })}
+              placeholder="Comentários e contexto adicional sobre a empresa..."
+            />
           </CardContent>
         </Card>
       )}
 
+      {/* Results Report (shown after finalization) */}
       {diag?.status === "finalizado" && (
         <Card>
-          <CardHeader><CardTitle className="text-base">Resultado</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div><b>Pontos fortes:</b> {diag.strengths || "—"}</div>
-            <div><b>Fragilidades:</b> {diag.weaknesses || "—"}</div>
-            <div className="whitespace-pre-wrap"><b>Recomendações:</b>
-              {"\n"}{diag.recommendations || "—"}</div>
-            <div><b>Próximos passos:</b> {diag.next_steps || "—"}</div>
+          <CardHeader>
+            <CardTitle className="text-base">Relatório Executivo — Método Mordomia</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Score highlight */}
+            <div className="rounded-xl border p-4 text-center">
+              <div className="text-4xl font-bold">{Number(diag.overall_score ?? totalScore).toFixed(0)}/{MAX_SCORE}</div>
+              <Badge className={`mt-2 ${classify(Number(diag.overall_score ?? totalScore)).color}`}>
+                {diag.classification || cls.label}
+              </Badge>
+              <p className="text-sm text-muted-foreground mt-2">{classify(Number(diag.overall_score ?? totalScore)).desc}</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border p-4 bg-success/5 border-success/20">
+                <h4 className="font-semibold text-sm text-success mb-2">✅ Principais Pontos Fortes</h4>
+                <p className="text-sm">{diag.strengths || "Nenhum identificado."}</p>
+              </div>
+              <div className="rounded-xl border p-4 bg-destructive/5 border-destructive/20">
+                <h4 className="font-semibold text-sm text-destructive mb-2">⚠️ Principais Gargalos</h4>
+                <p className="text-sm">{diag.weaknesses || "Nenhum identificado."}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border p-4">
+              <h4 className="font-semibold text-sm mb-2">📋 Oportunidades de Melhoria</h4>
+              <div className="text-sm whitespace-pre-wrap text-muted-foreground">{diag.recommendations || "—"}</div>
+            </div>
+
+            <div className="rounded-xl border p-4 bg-primary/5 border-primary/20">
+              <h4 className="font-semibold text-sm text-primary mb-2">🚀 Próximos Passos Recomendados</h4>
+              <div className="text-sm whitespace-pre-wrap">{diag.next_steps || "—"}</div>
+            </div>
+
+            <div className="rounded-xl border p-4 bg-muted/30">
+              <h4 className="font-semibold text-sm mb-2">📊 Parecer Executivo — Método Mordomia</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {generateExecutiveSummary(Number(diag.overall_score ?? totalScore), diag.classification ?? cls.label)}
+              </p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Button variant="outline" onClick={() => window.print()}>
+                <FileText className="size-4" /> Gerar PDF
+              </Button>
+              <Button asChild>
+                <Link to="/app/agenda">
+                  <Calendar className="size-4" /> Agendar Reunião Estratégica
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Bottom save buttons */}
+      {canEdit && (
+        <div className="flex gap-2 flex-wrap print:hidden">
+          <Button variant="outline" onClick={() => saveMut.mutate(false)} disabled={saveMut.isPending}>Salvar rascunho</Button>
+          <Button onClick={() => saveMut.mutate(true)} disabled={saveMut.isPending}>
+            <CheckCircle2 className="size-4" /> Finalizar diagnóstico
+          </Button>
+          <Button variant="outline" onClick={() => window.print()}><FileText className="size-4" /> Gerar PDF</Button>
+        </div>
       )}
     </div>
   );
