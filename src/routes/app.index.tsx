@@ -286,6 +286,7 @@ function ConsultantPanel() {
           )}
           <Button asChild variant="outline"><Link to="/app/agenda"><Calendar className="size-4" /> Ver agenda</Link></Button>
           <Button asChild variant="outline"><Link to="/app/relatorios"><FileText className="size-4" /> Relatórios</Link></Button>
+          <Button asChild variant="outline"><Link to="/app/diagnostico"><BadgeCheck className="size-4" /> Diagnóstico</Link></Button>
           <Button asChild variant="outline"><Link to="/app/agenda"><PlusCircle className="size-4" /> Nova atividade</Link></Button>
           <Button asChild><Link to="/app/clientes"><PlusCircle className="size-4" /> Nova empresa</Link></Button>
         </div>
