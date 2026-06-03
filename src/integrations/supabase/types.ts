@@ -1831,7 +1831,7 @@ export type Database = {
           business_phone: string | null
           business_segment: string | null
           classification: string | null
-          company_id: string
+          company_id: string | null
           consultant_id: string
           created_at: string
           diagnostic_date: string
@@ -1841,6 +1841,8 @@ export type Database = {
           next_steps: string | null
           notes: string | null
           overall_score: number
+          prospect_name: string | null
+          prospect_responsible: string | null
           recommendations: string | null
           responsible_name: string | null
           status: string
@@ -1858,7 +1860,7 @@ export type Database = {
           business_phone?: string | null
           business_segment?: string | null
           classification?: string | null
-          company_id: string
+          company_id?: string | null
           consultant_id: string
           created_at?: string
           diagnostic_date?: string
@@ -1868,6 +1870,8 @@ export type Database = {
           next_steps?: string | null
           notes?: string | null
           overall_score?: number
+          prospect_name?: string | null
+          prospect_responsible?: string | null
           recommendations?: string | null
           responsible_name?: string | null
           status?: string
@@ -1885,7 +1889,7 @@ export type Database = {
           business_phone?: string | null
           business_segment?: string | null
           classification?: string | null
-          company_id?: string
+          company_id?: string | null
           consultant_id?: string
           created_at?: string
           diagnostic_date?: string
@@ -1895,6 +1899,8 @@ export type Database = {
           next_steps?: string | null
           notes?: string | null
           overall_score?: number
+          prospect_name?: string | null
+          prospect_responsible?: string | null
           recommendations?: string | null
           responsible_name?: string | null
           status?: string

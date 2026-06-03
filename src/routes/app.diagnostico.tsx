@@ -51,15 +51,17 @@ const SECTIONS = [
 ];
 
 function DiagnosticoPage() {
+  const { user, isConsultant } = useAuth();
   const { selected: selectedCompanyId } = useSelectedCompany();
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  if (!selectedCompanyId) {
+  // If no company selected and not a consultant, show restricted access
+  if (!selectedCompanyId && !isConsultant) {
     return (
       <div className="flex flex-col items-center justify-center p-20 text-center space-y-4">
-        <FileText className="size-16 text-muted-foreground opacity-20" />
-        <h2 className="text-xl font-semibold">Selecione uma empresa</h2>
-        <p className="text-muted-foreground max-w-xs mx-auto">Abra uma empresa cliente para iniciar ou visualizar diagnósticos financeiros.</p>
+        <AlertCircle className="size-16 text-muted-foreground opacity-20" />
+        <h2 className="text-xl font-semibold">Acesso Restrito</h2>
+        <p className="text-muted-foreground max-w-xs mx-auto">Selecione uma empresa para visualizar diagnósticos.</p>
         <Button asChild variant="outline"><Link to="/app">Ir para Empresas</Link></Button>
       </div>
     );
@@ -77,17 +79,32 @@ function DiagnosticoPage() {
         )}
       </div>
 
-      {!activeId ? <DiagnosticList companyId={selectedCompanyId} onSelect={setActiveId} /> : <DiagnosticEditor id={activeId} onBack={() => setActiveId(null)} />}
+      {!activeId ? (
+        <DiagnosticList 
+          companyId={selectedCompanyId || undefined} 
+          onSelect={setActiveId} 
+        />
+      ) : (
+        <DiagnosticEditor id={activeId} onBack={() => setActiveId(null)} />
+      )}
     </div>
   );
 }
 
-function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: (id: string) => void }) {
+function DiagnosticList({ companyId, onSelect }: { companyId?: string; onSelect: (id: string) => void }) {
   const { user, isConsultant } = useAuth();
   const { data: list, refetch } = useQuery({
-    queryKey: ["diagnostics", companyId],
+    queryKey: ["diagnostics", companyId || "prospects"],
     queryFn: async () => {
-      const { data } = await supabase.from("financial_diagnostics").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
+      let query = supabase.from("financial_diagnostics").select("*").order("created_at", { ascending: false });
+      
+      if (companyId) {
+        query = query.eq("company_id", companyId);
+      } else {
+        query = query.is("company_id", null);
+      }
+      
+      const { data } = await query;
       return data ?? [];
     },
   });
@@ -97,7 +114,7 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
         const { data: consultant } = await supabase.from("consultants").select("id").eq("user_id", user?.id || "").maybeSingle();
         if (!consultant) throw new Error("Consultor não encontrado. Verifique seu perfil.");
         const { data, error } = await supabase.from("financial_diagnostics").insert({ 
-            company_id: companyId, 
+            company_id: companyId || null, 
             status: "em_andamento", 
             consultant_id: consultant.id 
         }).select().single();
@@ -114,8 +131,14 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
         <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
           <TrendingUp className="size-12 text-primary" />
           <div className="space-y-2">
-            <h3 className="text-xl font-bold">Diagnóstico Estratégico</h3>
-            <p className="text-muted-foreground max-w-md">Avalie a maturidade financeira da empresa e gere um relatório executivo automático com recomendações.</p>
+            <h3 className="text-xl font-bold">
+              {companyId ? "Diagnóstico Estratégico" : "Diagnóstico de Prospecto"}
+            </h3>
+            <p className="text-muted-foreground max-w-md">
+              {companyId 
+                ? "Avalie a maturidade financeira da empresa selecionada e gere um relatório executivo automático."
+                : "Realize um diagnóstico para um potencial cliente sem precisar cadastrar a empresa no sistema agora."}
+            </p>
           </div>
           {isConsultant && (
             <Button onClick={() => createMut.mutate()} size="lg" className="px-10"><Plus className="size-4 mr-2" /> Iniciar Agora</Button>
@@ -124,7 +147,10 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
       </Card>
 
       <div className="space-y-4">
-        <h3 className="font-semibold text-lg flex items-center gap-2"><Calendar className="size-5" /> Histórico de Avaliações</h3>
+        <h3 className="font-semibold text-lg flex items-center gap-2">
+          <Calendar className="size-5" /> 
+          {companyId ? "Histórico de Avaliações" : "Diagnósticos de Prospectos"}
+        </h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {list?.map(d => (
             <Card key={d.id} className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => onSelect(d.id)}>
@@ -134,6 +160,11 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
                   <span className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString()}</span>
                 </div>
                 <div>
+                  {!companyId && (
+                    <div className="text-sm font-bold truncate mb-1 text-primary">
+                      {d.prospect_name || "Prospecto Sem Nome"}
+                    </div>
+                  )}
                   <div className="text-2xl font-bold">{d.total_points || 0}/180</div>
                   <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{d.classification || "—"}</div>
                 </div>
@@ -145,7 +176,7 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
           ))}
           {!list?.length && (
             <div className="col-span-full py-10 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
-              Nenhum diagnóstico realizado para esta empresa ainda.
+              Nenhum diagnóstico realizado {companyId ? "para esta empresa" : "de prospectos"} ainda.
             </div>
           )}
         </div>
@@ -166,12 +197,14 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
     }
   });
 
-  const [formData, setFormData] = useState<any>({ business_segment: "", employee_count: "", avg_monthly_revenue: "", business_city: "", business_phone: "", business_email: "" });
+  const [formData, setFormData] = useState<any>({ prospect_name: "", prospect_responsible: "", business_segment: "", employee_count: "", avg_monthly_revenue: "", business_city: "", business_phone: "", business_email: "" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (diag?.data) {
       setFormData({
+        prospect_name: diag.data.prospect_name || "",
+        prospect_responsible: diag.data.prospect_responsible || "",
         business_segment: diag.data.business_segment || "",
         business_city: diag.data.business_city || "",
         business_phone: diag.data.business_phone || "",
@@ -278,8 +311,20 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
       <div className="min-h-[400px]">
         {step === 0 && (
           <Card>
-              <CardHeader><CardTitle>Identificação da Empresa</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Identificação {!diag.data.company_id && "do Prospecto"}</CardTitle></CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
+                  {!diag.data.company_id && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Nome da Empresa</Label>
+                        <Input placeholder="Nome Fantasia / Razão Social" value={formData.prospect_name} onChange={e => setFormData({...formData, prospect_name: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nome do Responsável</Label>
+                        <Input placeholder="Nome completo" value={formData.prospect_responsible} onChange={e => setFormData({...formData, prospect_responsible: e.target.value})} />
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-2">
                     <Label>Segmento</Label>
                     <Input placeholder="Ex: Varejo, Serviços..." value={formData.business_segment} onChange={e => setFormData({...formData, business_segment: e.target.value})} />
