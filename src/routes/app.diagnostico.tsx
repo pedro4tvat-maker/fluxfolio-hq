@@ -350,8 +350,23 @@ function DiagnosticReport({ data, onBack }: { data: any; onBack: () => void }) {
                     </div>
 
                     <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-bold text-lg">Oportunidades de Melhoria</h3>
+                        <div className="grid gap-3">
+                            {data.weaknesses?.split(", ").map((g: string) => (
+                                <div key={g} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
+                                    <div className="size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold mt-0.5">!</div>
+                                    <div>
+                                        <div className="font-bold text-sm">Implantar melhorias em {g}</div>
+                                        <p className="text-xs text-muted-foreground mt-1">Estruturar processos e ferramentas para garantir o controle de {g.toLowerCase()}.</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t">
                         <h3 className="font-bold text-lg">Parecer Executivo | Método Mordomia</h3>
-                        <div className="p-6 bg-muted/30 rounded-xl leading-relaxed text-muted-foreground whitespace-pre-wrap italic">
+                        <div className="p-6 bg-muted/30 rounded-xl leading-relaxed text-muted-foreground whitespace-pre-wrap italic text-sm">
                             {data.total_points <= 60 && "Sua empresa encontra-se em uma situação de vulnerabilidade financeira alta. A ausência de controles básicos impede uma visão clara do lucro e coloca em risco a continuidade do negócio. É necessária uma intervenção imediata para estruturar o fluxo de caixa e separar as contas pessoais das empresariais."}
                             {data.total_points > 60 && data.total_points <= 120 && "A empresa possui alguns controles, mas ainda carece de processos robustos para garantir previsibilidade. O crescimento pode estar sendo freado por gargalos operacionais e falta de análise de margens. Recomenda-se estruturar a leitura dos números para decisões mais assertivas."}
                             {data.total_points > 120 && data.total_points <= 150 && "Parabéns! Sua empresa demonstra uma organização sólida. O próximo nível envolve a otimização de metas, orçamentos e uma gestão mais profunda de indicadores de desempenho para maximizar o lucro."}
