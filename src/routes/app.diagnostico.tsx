@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -94,7 +94,7 @@ function DiagnosticList({ companyId, onSelect }: { companyId: string; onSelect: 
 
   const createMut = useMutation({
     mutationFn: async () => {
-        const { data: consultant } = await supabase.from("consultants").select("id").eq("user_id", user?.id || "").single();
+        const { data: consultant } = await supabase.from("consultants").select("id").eq("user_id", user?.id || "").maybeSingle();
         const { data, error } = await supabase.from("financial_diagnostics").insert({ 
             company_id: companyId, 
             status: "em_andamento", 
@@ -188,7 +188,6 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
                 total += points;
               }
             });
-            // 4 questions max per section (40 pts)
             if (sectionScore >= 30) strengths.push(section.title.split(" – ")[1] || section.title);
             if (sectionScore <= 15) bottlenecks.push(section.title.split(" – ")[1] || section.title);
           }
@@ -218,7 +217,7 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
     onError: (e: any) => toast.error("Falha ao salvar: " + e.message),
   });
 
-  if (!diag?.data) return <div className="p-20 text-center">Carregando...</div>;
+  if (!diag?.data) return <div className="p-20 text-center text-muted-foreground">Carregando...</div>;
 
   const isFinalized = diag.data.status === "finalizado";
 
@@ -227,7 +226,7 @@ function DiagnosticEditor({ id, onBack }: { id: string; onBack: () => void }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center gap-4">
         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
           <div className="h-full bg-primary transition-all duration-500" style={{ width: `${((step + 1) / SECTIONS.length) * 100}%` }} />
