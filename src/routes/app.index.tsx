@@ -253,6 +253,8 @@ function ConsultantPanel() {
   if (reunioesHoje.length > 0) alerts.push({ text: `Você tem ${reunioesHoje.length} reunião(ões) agendada(s) para hoje.`, tone: "info" });
   const semProxAcao = cias.filter((c) => c.ativo && !c.proximaAcao).length;
   if (semProxAcao > 0) alerts.push({ text: `Nenhuma próxima ação definida para ${semProxAcao} empresa(s).`, tone: "warning" });
+  const semDiagnostico = cias.filter(c => c.ativo && c.consultancy_stage === 'diagnostico_inicial').length;
+  if (semDiagnostico > 0) alerts.push({ text: `${semDiagnostico} empresa(s) aguardando diagnóstico inicial.`, tone: "info", href: "/app/diagnostico" });
 
   return (
     <div className="space-y-8 max-w-7xl">
