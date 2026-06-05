@@ -74,10 +74,6 @@ function LandingPage() {
             <a href="#funcionalidades" className="hover:text-primary transition-colors">Funcionalidades</a>
             <a href="#diferenciais" className="hover:text-primary transition-colors">Diferenciais</a>
             <a href="#precos" className="hover:text-primary transition-colors">Planos</a>
-            <div className="w-px h-4 bg-border mx-2" />
-            <Link to="/login" className="text-primary font-semibold hover:underline flex items-center gap-1">
-              <Users className="size-4" /> Área do Consultor
-            </Link>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -85,7 +81,7 @@ function LandingPage() {
               <Link to="/login">Entrar</Link>
             </Button>
             <Button asChild className="bg-primary text-primary-foreground">
-              <Link to="/signup">Criar conta grátis</Link>
+              <Link to="/signup">Começar agora</Link>
             </Button>
           </div>
         </div>
@@ -95,18 +91,18 @@ function LandingPage() {
       <section className="relative pt-20 pb-32 overflow-hidden">
         <div className="mx-auto max-w-5xl text-center px-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wide mb-6">
-            <BadgeCheck className="size-4" /> Gestão Financeira Inteligente
+            <BadgeCheck className="size-4" /> Gestão Financeira para Pequenas Empresas
           </div>
           <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight mb-8">
             Controle financeiro total <br/>
-            para <span className="text-primary">sua consultoria</span>
+            para <span className="text-primary">sua empresa</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
             Chega de planilhas dispersas. Centralize seu fluxo de caixa, contas a pagar, receber, indicadores e relatórios de performance em uma única plataforma profissional.
           </p>
           <div className="flex items-center justify-center gap-4">
             <Button asChild size="lg" className="h-14 px-8 text-lg">
-              <Link to="/signup">Começar agora <ArrowRight className="size-5 ml-2" /></Link>
+              <Link to="/signup">Experimentar Grátis <ArrowRight className="size-5 ml-2" /></Link>
             </Button>
           </div>
         </div>
