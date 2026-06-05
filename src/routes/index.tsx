@@ -164,35 +164,35 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* PARA CONSULTORES SECTION */}
-      <section id="consultores" className="py-24 border-t">
+      {/* PARA EMPRESAS SECTION */}
+      <section id="empresas" className="py-24 border-t">
         <div className="mx-auto max-w-7xl px-6">
           <div className="bg-primary/5 rounded-[40px] p-8 md:p-16 flex flex-col lg:flex-row gap-12 items-center">
             <div className="flex-1 space-y-6 text-center lg:text-left">
               <div className="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
-                Exclusivo para Consultores
+                Solução para sua Empresa
               </div>
               <h2 className="text-4xl md:text-5xl font-display font-bold">
-                Escale seu negócio de <span className="text-primary">consultoria financeira</span>
+                A gestão que sua <span className="text-primary">empresa merece</span>
               </h2>
               <p className="text-lg text-muted-foreground">
-                Tenha um painel centralizado para acompanhar todos os seus clientes, gerenciar atas de reunião, diagnósticos e entregas automáticas de relatórios.
+                Elimine o retrabalho e tenha visibilidade total do seu negócio. O SISTEMAFP PJ foi criado para que você gaste menos tempo com burocracia e mais tempo crescendo.
               </p>
               <div className="flex flex-wrap justify-center lg:justify-start gap-4">
                 <Button asChild size="lg" className="h-12 px-6">
-                  <Link to="/signup">Quero ser um consultor parceiro</Link>
+                  <Link to="/signup">Começar agora gratuitamente</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="h-12 px-6">
-                  <Link to="/login">Acessar Painel do Consultor</Link>
+                  <Link to="/login">Fazer Login</Link>
                 </Button>
               </div>
             </div>
             <div className="flex-1 grid grid-cols-2 gap-4">
               {[
-                { icon: Users, label: "Multi-clientes", desc: "Gestão centralizada" },
-                { icon: NotebookPen, label: "Atas Inteligentes", desc: "Com suporte de IA" },
-                { icon: BadgeCheck, label: "Diagnósticos", desc: "Padronizados e rápidos" },
-                { icon: FileText, label: "Relatórios", desc: "Prontos em segundos" },
+                { icon: Wallet, label: "Fluxo de Caixa", desc: "Controle diário" },
+                { icon: CreditCard, label: "Contas", desc: "Pagar e Receber" },
+                { icon: BarChart3, label: "Relatórios", desc: "DRE Automático" },
+                { icon: ShieldCheck, label: "Segurança", desc: "Dados protegidos" },
               ].map((item) => (
                 <div key={item.label} className="bg-card p-6 rounded-3xl border border-border shadow-sm">
                   <item.icon className="size-6 text-primary mb-3" />
