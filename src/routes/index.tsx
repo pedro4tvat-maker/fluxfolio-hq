@@ -69,14 +69,18 @@ function LandingPage() {
             <span className="font-display font-bold text-xl">SISTEMAFP PJ</span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
+          <nav className="hidden items-center gap-6 text-sm font-medium lg:flex">
             <a href="#funcionalidades" className="hover:text-primary transition-colors">Funcionalidades</a>
             <a href="#diferenciais" className="hover:text-primary transition-colors">Diferenciais</a>
             <a href="#precos" className="hover:text-primary transition-colors">Planos</a>
+            <div className="w-px h-4 bg-border mx-2" />
+            <Link to="/login" className="text-primary font-semibold hover:underline flex items-center gap-1">
+              <Users className="size-4" /> Área do Consultor
+            </Link>
           </nav>
 
           <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" className="hidden md:inline-flex">
+            <Button asChild variant="ghost" className="hidden sm:inline-flex">
               <Link to="/login">Entrar</Link>
             </Button>
             <Button asChild className="bg-primary text-primary-foreground">
