@@ -1,116 +1,48 @@
-# SISTEMAFP PJ — Plano de Implementação (MVP)
 
-Sistema de gestão financeira para consultorias, com dois perfis (Consultor e Cliente), backend completo em Lovable Cloud, layout profissional azul escuro + verde/vermelho/âmbar, e dados de demonstração.
+## Diagnóstico
 
-## 1. Arquitetura
+Encontrei duas causas distintas — uma no banco, outra no front. Os dados estão íntegros: as 4 empresas-cliente existem, todas com vínculo em `company_members`, e há 1 consultor cadastrado com código `FP-PEDROGUILH-EA450`.
 
-- **Frontend**: TanStack Start + React + Tailwind v4 + shadcn/ui
-- **Backend**: Lovable Cloud (Postgres + Auth + RLS)
-- **Estado**: TanStack Query + server functions (`createServerFn`)
-- **Layout**: Sidebar fixa colapsável, header com troca de empresa (consultor)
-- **Responsivo**: desktop / tablet / mobile (sidebar vira drawer no mobile)
+### 1) Cadastro não encontra o código do consultor
 
-## 2. Design System
+As funções RPC `find_consultant_by_code` e `search_consultants` só têm permissão `EXECUTE` para os papéis `authenticated` e `service_role` — não para `anon`. Como o usuário está deslogado durante o cadastro, a chamada não retorna dados e o front mostra "Código de convite não encontrado", mesmo para códigos válidos.
 
-Tokens em `src/styles.css` (oklch):
-- `--primary` azul escuro corporativo (~#0F2A4A)
-- `--success` verde, `--destructive` vermelho, `--warning` âmbar
-- `--muted` cinza claro para fundos
-- Cards com `rounded-2xl`, sombras suaves
-- Tipografia: Inter (body) + Sora (headings)
-- Badges de status (Saudável / Atenção / Crítico)
+### 2) "Empresa não encontrada" depois do login (área cliente)
 
-## 3. Banco de dados (Cloud)
+No `ClientDashboard` (`src/routes/app.index.tsx`), o ramo de erro `!company || !data` é exibido durante uma janela legítima de carregamento:
 
-Tabelas com RLS por `company_id` + tabela `user_roles` (enum: `consultant`, `client_manager`, `operator`):
+- `selected` começa `null` (SSR/hidratação do `localStorage`); um `useEffect` é quem define a empresa default depois que `companies` chega.
+- Enquanto `selected` é `null`, a query `client-dashboard-v2` fica com `enabled: false`, então `isLoading` é `false` e `data` é `undefined`.
+- Resultado: o guard `companyLoading || isLoading` passa direto e cai em "Empresa não encontrada", mesmo a empresa existindo.
 
-- `profiles` (id, full_name, email)
-- `user_roles` (user_id, role)
-- `companies` (id, nome, responsável, cnpj, telefone, email, segmento, cidade, uf, observações, data_inicio, ativo, owner_id)
-- `company_members` (company_id, user_id, role) — vincula clientes/operadores a empresas; consultor enxerga tudo
-- `categories` (company_id, nome, tipo: entrada/saida)
-- `cost_centers` (company_id, nome)
-- `financial_accounts` (company_id, nome, tipo, ativo)
-- `transactions` (company_id, data, tipo, descrição, categoria_id, centro_custo_id, forma_pagto, conta_id, valor, status, observações, payable_id?, receivable_id?)
-- `payables` (company_id, descrição, fornecedor, categoria_id, valor, vencimento, data_pagto, status, forma_pagto, conta_id, recorrência, parcelas, observações)
-- `receivables` (company_id, cliente, descrição, categoria_id, valor, vencimento, data_receb, status, forma_receb, conta_id, recorrência, parcelas, observações)
-- `budgets` (company_id, mes, ano, categoria_id, valor_orcado, observações)
-- `products` (company_id, nome, categoria, fornecedor, quantidade, custo, preço_venda, estoque_min)
-- `stock_movements` (company_id, product_id, tipo, quantidade, custo_unit, data, motivo, observações)
+O usuário fica preso nessa tela porque, em alguns casos, a rota não re-renderiza após o `useEffect` definir `selected` (a tela "fixa" a primeira renderização).
 
-Função SECURITY DEFINER `has_role()` + `is_consultant()` + `user_has_company_access(company_id)` para policies. GRANTs explícitos em todas as tabelas.
+## Correções
 
-**Regra-chave anti-duplicação**: quando uma `payable` vira `pago` ou `receivable` vira `recebido`, um trigger Postgres cria automaticamente o `transaction` correspondente vinculado por `payable_id`/`receivable_id`. Reverter o status apaga a transaction.
+### A. Migration — liberar RPCs para anônimos no fluxo de cadastro
+```sql
+GRANT EXECUTE ON FUNCTION public.find_consultant_by_code(text) TO anon;
+GRANT EXECUTE ON FUNCTION public.search_consultants(text) TO anon;
+```
+Essas funções já são `SECURITY INVOKER` e retornam apenas campos públicos do consultor (nome da consultoria, cidade, estado), seguro para expor no signup.
 
-## 4. Telas
+### B. Front — gate de carregamento correto no ClientDashboard
 
-### Autenticação
-- `/login` — email + senha, mostrar/ocultar, indicador de força, link recuperar
-- `/signup` — cadastro (primeiro user vira consultor)
-- `/reset-password`
-- Roteamento pós-login conforme papel
+Em `src/routes/app.index.tsx` (`ClientDashboard`):
 
-### Consultor (`/_authenticated/consultor`)
-- `/consultor/clientes` — grid de cards por empresa: saldo, entradas/saídas mês, resultado, vencidos, último lançamento, badge de status
-- `/consultor/clientes/novo` e `/editar/:id`
-- Ao clicar no card → entra no contexto da empresa
+- Substituir o guard atual por um que aguarde também a definição de `selected` quando há empresas disponíveis:
+  - Mostrar "Carregando seu dashboard..." enquanto `companyLoading`, `isLoading` **ou** (`companies.length > 0 && !selected`).
+- Só após esse gate, avaliar:
+  - sem empresas → "Nenhuma empresa encontrada";
+  - com empresa selecionada mas sem `data` → continuar em loading (não mostrar mais "Empresa não encontrada"; esse estado era um falso negativo).
+- Manter o `useEffect` no `useSelectedCompany` que já define o fallback (`companies[0].id`), garantindo que `selected` é sempre preenchido quando houver vínculos.
 
-### Cliente / Empresa (`/_authenticated/empresa/$companyId/...`)
-- `/dashboard` — cards principais + alertas inteligentes + resumo do mês
-- `/fluxo-caixa` — tabela + filtros (data, tipo, categoria, status) + modal novo lançamento
-- `/contas-pagar` — KPIs + tabela com destaques de cor + modal + ação "marcar como pago"
-- `/contas-receber` — análogo
-- `/orcamento` — barras de progresso orçado×realizado por categoria/mês
-- `/estoque` — produtos, entrada/saída, alertas de mínimo
-- `/relatorios` — 6 tipos de relatório com filtros de período + botões PDF/CSV (CSV funcional, PDF preparado)
-- `/configuracoes` — abas: empresa, categorias, centros de custo, contas financeiras, usuários
+### C. Verificação
 
-## 5. Cálculos centrais
+- Recriar cadastro de cliente informando o código `FP-PEDROGUILH-EA450` → deve achar "Finanças em Propósito".
+- Login com um dos clientes existentes (ex.: Kellen) → dashboard da empresa deve abrir direto, sem cair em "Empresa não encontrada".
+- Conferir que o painel do consultor continua funcionando (sem mudanças nessa rota).
 
-- Saldo da conta = soma das transactions `realizado` (entrada +, saída −)
-- Saldo da empresa = soma de todas as contas
-- Resultado do mês = entradas realizadas − saídas realizadas no mês
-- Orçado×realizado = sum(transactions realizadas) no mês/categoria
-- Status orçamento: ≤70 ok, 70–90 atenção, 90–100 perto, >100 estourado
-- Status empresa: derivado de resultado, vencidos e orçamento
+## Escopo
 
-Todos os agregados via server functions usando o cliente autenticado (RLS aplica).
-
-## 6. Alertas inteligentes (dashboard)
-
-Calculados no server: contas vencidas, recebimentos vencidos, orçamento >90%, estoque abaixo do mínimo, sem lançamento há >3 dias, projeção de caixa negativa.
-
-## 7. Dados de demonstração
-
-Seed automático no primeiro signup: 3 empresas, 10 lançamentos, 5 a pagar, 5 a receber, 5 orçamentos, 5 produtos, categorias/centros/contas padrão.
-
-## 8. Fora do escopo (conforme pedido)
-
-NF-e, integração bancária, maquininha, folha, PDV, fiscal avançado, CRM, app nativo.
-
-## 9. Ordem de execução
-
-1. Ativar Lovable Cloud
-2. Migration completa (tabelas + RLS + triggers + seed function)
-3. Design system + layout (sidebar, header)
-4. Auth (login, signup, reset, guards por papel)
-5. Painel do consultor + CRUD empresas
-6. Contexto de empresa + dashboard
-7. Fluxo de caixa
-8. Contas a pagar + trigger
-9. Contas a receber + trigger
-10. Orçamento
-11. Estoque
-12. Relatórios + export CSV
-13. Configurações
-14. Seed de demonstração + QA de navegação/responsividade
-
-## Detalhes técnicos
-
-- Server functions sob `src/lib/*.functions.ts` com `requireSupabaseAuth`
-- `attachSupabaseAuth` em `src/start.ts`
-- Roteamento: `_authenticated.tsx` (gate), `_authenticated.consultor.*`, `_authenticated.empresa.$companyId.*`
-- Validação com Zod em todos os formulários e inputValidators
-- Componentes shadcn customizados via variants (sem className ad-hoc de cor)
-
-Aprova esse plano para eu começar a construir?
+Apenas dois arquivos tocados: nova migration (grants) e ajuste de guards no `src/routes/app.index.tsx`. Nenhuma alteração no painel do consultor, nas políticas RLS ou no `useSelectedCompany`.
