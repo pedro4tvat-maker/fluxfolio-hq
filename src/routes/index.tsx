@@ -19,6 +19,9 @@ import {
   FileText,
   BadgeCheck,
   NotebookPen,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Layers,
 } from "lucide-react";
 import logoAsset from "@/assets/sistemafp-logo.png.asset.json";
 
@@ -74,10 +77,6 @@ function LandingPage() {
             <a href="#funcionalidades" className="hover:text-primary transition-colors">Funcionalidades</a>
             <a href="#diferenciais" className="hover:text-primary transition-colors">Diferenciais</a>
             <a href="#precos" className="hover:text-primary transition-colors">Planos</a>
-            <div className="w-px h-4 bg-border mx-2" />
-            <Link to="/login" className="text-primary font-semibold hover:underline flex items-center gap-1">
-              <Users className="size-4" /> Área do Consultor
-            </Link>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -85,7 +84,7 @@ function LandingPage() {
               <Link to="/login">Entrar</Link>
             </Button>
             <Button asChild className="bg-primary text-primary-foreground">
-              <Link to="/signup">Criar conta grátis</Link>
+              <Link to="/signup">Começar agora</Link>
             </Button>
           </div>
         </div>
@@ -95,18 +94,18 @@ function LandingPage() {
       <section className="relative pt-20 pb-32 overflow-hidden">
         <div className="mx-auto max-w-5xl text-center px-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wide mb-6">
-            <BadgeCheck className="size-4" /> Gestão Financeira Inteligente
+            <BadgeCheck className="size-4" /> Gestão Financeira para Pequenas Empresas
           </div>
           <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight mb-8">
             Controle financeiro total <br/>
-            para <span className="text-primary">sua consultoria</span>
+            para <span className="text-primary">sua empresa</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
             Chega de planilhas dispersas. Centralize seu fluxo de caixa, contas a pagar, receber, indicadores e relatórios de performance em uma única plataforma profissional.
           </p>
           <div className="flex items-center justify-center gap-4">
             <Button asChild size="lg" className="h-14 px-8 text-lg">
-              <Link to="/signup">Começar agora <ArrowRight className="size-5 ml-2" /></Link>
+              <Link to="/signup">Experimentar Grátis <ArrowRight className="size-5 ml-2" /></Link>
             </Button>
           </div>
         </div>
@@ -144,9 +143,9 @@ function LandingPage() {
             <h2 className="text-3xl font-display font-bold mb-8">Por que escolher o SISTEMAFP PJ?</h2>
             <ul className="space-y-6">
               {[
-                { title: "Foco no Consultor", desc: "Ferramentas desenhadas especificamente para quem presta consultoria financeira." },
+                { title: "Simplicidade", desc: "Interface intuitiva focada no empresário e no consultor." },
                 { title: "Projeções Precisas", desc: "Tome decisões baseadas em dados, não em suposições." },
-                { title: "Integração Total", desc: "Conecte financeiro, estoque, precificação e orçamentos." },
+                { title: "Gestão Integrada", desc: "Contas, estoque, precificação e orçamentos em um só lugar." },
               ].map((item) => (
                 <li key={item.title} className="flex gap-4">
                   <div className="size-8 rounded-full bg-success/20 flex items-center justify-center shrink-0">
@@ -168,35 +167,35 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* PARA CONSULTORES SECTION */}
-      <section id="consultores" className="py-24 border-t">
+      {/* PARA EMPRESAS SECTION */}
+      <section id="empresas" className="py-24 border-t">
         <div className="mx-auto max-w-7xl px-6">
           <div className="bg-primary/5 rounded-[40px] p-8 md:p-16 flex flex-col lg:flex-row gap-12 items-center">
             <div className="flex-1 space-y-6 text-center lg:text-left">
               <div className="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
-                Exclusivo para Consultores
+                Solução para sua Empresa
               </div>
               <h2 className="text-4xl md:text-5xl font-display font-bold">
-                Escale seu negócio de <span className="text-primary">consultoria financeira</span>
+                A gestão que sua <span className="text-primary">empresa merece</span>
               </h2>
               <p className="text-lg text-muted-foreground">
-                Tenha um painel centralizado para acompanhar todos os seus clientes, gerenciar atas de reunião, diagnósticos e entregas automáticas de relatórios.
+                Elimine o retrabalho e tenha visibilidade total do seu negócio. O SISTEMAFP PJ foi criado para que você gaste menos tempo com burocracia e mais tempo crescendo.
               </p>
               <div className="flex flex-wrap justify-center lg:justify-start gap-4">
                 <Button asChild size="lg" className="h-12 px-6">
-                  <Link to="/signup">Quero ser um consultor parceiro</Link>
+                  <Link to="/signup">Começar agora gratuitamente</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="h-12 px-6">
-                  <Link to="/login">Acessar Painel do Consultor</Link>
+                  <Link to="/login">Fazer Login</Link>
                 </Button>
               </div>
             </div>
             <div className="flex-1 grid grid-cols-2 gap-4">
               {[
-                { icon: Users, label: "Multi-clientes", desc: "Gestão centralizada" },
-                { icon: NotebookPen, label: "Atas Inteligentes", desc: "Com suporte de IA" },
-                { icon: BadgeCheck, label: "Diagnósticos", desc: "Padronizados e rápidos" },
-                { icon: FileText, label: "Relatórios", desc: "Prontos em segundos" },
+                { icon: Wallet, label: "Fluxo de Caixa", desc: "Controle diário" },
+                { icon: CreditCard, label: "Contas", desc: "Pagar e Receber" },
+                { icon: BarChart3, label: "Relatórios", desc: "DRE Automático" },
+                { icon: ShieldCheck, label: "Segurança", desc: "Dados protegidos" },
               ].map((item) => (
                 <div key={item.label} className="bg-card p-6 rounded-3xl border border-border shadow-sm">
                   <item.icon className="size-6 text-primary mb-3" />
@@ -215,9 +214,9 @@ function LandingPage() {
           <h2 className="text-3xl font-display font-bold text-center mb-16">Planos que cabem no seu negócio</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {[
-              { title: "Empresa", price: "R$ 97", desc: "Para pequenos negócios que buscam organização.", items: ["Fluxo de Caixa", "Contas a Pagar/Receber", "Relatórios Financeiros", "1 Usuário"] },
-              { title: "Consultor", price: "R$ 197", desc: "Para consultores que gerenciam múltiplos clientes.", items: ["Painel do Consultor", "Atas de Reunião", "Gestão de Clientes", "Multi-empresas", "Relatórios consolidados"], featured: true },
-              { title: "Enterprise", price: "Sob consulta", desc: "Para grandes consultorias e redes de franquias.", items: ["Customização total", "API de Integração", "Suporte 24/7", "Treinamento exclusivo"] },
+              { title: "Empresa", price: "R$ 97", desc: "Para pequenos negócios que buscam organização.", items: ["Fluxo de Caixa", "Contas a Pagar/Receber", "Relatórios Financeiros", "1 Usuário"], featured: true },
+              { title: "Consultor", price: "Sob consulta", desc: "Para consultores que gerenciam múltiplos clientes.", items: ["Painel do Consultor", "Atas de Reunião", "Gestão de Clientes", "Multi-empresas", "Relatórios consolidados"] },
+              { title: "Enterprise", price: "Sob consulta", desc: "Para redes de franquias ou grandes empresas.", items: ["Customização total", "API de Integração", "Suporte 24/7", "Treinamento exclusivo"] },
             ].map((p) => (
               <div key={p.title} className={`p-8 rounded-3xl border ${p.featured ? "bg-primary text-primary-foreground scale-105 shadow-xl border-primary" : "bg-card border-border shadow-sm"}`}>
                 <h3 className="text-xl font-bold mb-2">{p.title}</h3>
