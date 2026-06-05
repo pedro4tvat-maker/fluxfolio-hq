@@ -41,6 +41,28 @@ function LoginPage() {
     navigate({ to: "/app", replace: true });
   };
 
+  const onResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Por favor, informe seu e-mail");
+      return;
+    }
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    setResetLoading(false);
+    if (error) {
+      toast.error("Erro ao enviar e-mail de recuperação", { description: error.message });
+      return;
+    }
+    toast.success("E-mail de recuperação enviado!", {
+      description: "Verifique sua caixa de entrada para redefinir a senha.",
+    });
+    setShowReset(false);
+  };
+
+
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-background">
       <div className="hidden md:flex flex-col justify-between p-12 bg-sidebar text-sidebar-foreground">
