@@ -19,6 +19,9 @@ import {
   FileText,
   BadgeCheck,
   NotebookPen,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Layers,
 } from "lucide-react";
 import logoAsset from "@/assets/sistemafp-logo.png.asset.json";
 
