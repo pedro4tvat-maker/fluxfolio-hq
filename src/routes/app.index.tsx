@@ -659,7 +659,18 @@ function ClientDashboard() {
     },
   });
 
-  if (companyLoading || isLoading) return <div className="text-muted-foreground">Carregando seu dashboard...</div>;
+  if (companyLoading || isLoading) return <div className="text-muted-foreground p-10 text-center">Carregando seu dashboard...</div>;
+  if (!companies.length) {
+    return (
+      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
+        <Building2 className="size-12 mx-auto text-muted-foreground/40" />
+        <h3 className="font-display font-semibold mt-4">Nenhuma empresa encontrada</h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Você ainda não possui uma empresa vinculada.
+        </p>
+      </div>
+    );
+  }
   if (!company || !data) {
     return (
       <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
