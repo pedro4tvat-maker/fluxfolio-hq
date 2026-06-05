@@ -906,10 +906,13 @@ function QuickCard({
   const valueTone =
     tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning-foreground" : "";
   return (
-    <div className="bg-card border rounded-2xl p-6">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+    <div className="bg-card border-l-4 border-l-primary rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
       <div className={`mt-3 font-display font-bold text-[26px] leading-tight tabular-nums ${valueTone}`}>{value}</div>
-      {hint && <div className="text-xs text-muted-foreground mt-2">{hint}</div>}
+      {hint && <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+        <div className="size-1 rounded-full bg-primary/40" />
+        {hint}
+      </div>}
     </div>
   );
 }
