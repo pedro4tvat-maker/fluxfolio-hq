@@ -2948,6 +2948,30 @@ export type Database = {
           },
         ]
       }
+      terms_of_service: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          version: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          version: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          version?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           branch_id: string | null
