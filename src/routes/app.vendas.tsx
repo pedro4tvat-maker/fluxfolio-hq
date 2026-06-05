@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText, TrendingUp, Download, Ban, Pencil } from "lucide-react";
+import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText, TrendingUp, Download, Ban, Pencil, Building2 } from "lucide-react";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { ContactForm } from "./app.crm";
 import { cn } from "@/lib/utils";
@@ -51,7 +51,7 @@ type CompanyData = {
 };
 
 function VendasPage() {
-  const { selected } = useSelectedCompany();
+  const { selected, isLoading: companiesLoading } = useSelectedCompany();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1133,6 +1133,16 @@ function VendasPage() {
             </div>
           </div>
         </form>
+      )}
+
+      {companiesLoading && <div className="text-muted-foreground p-10 text-center">Carregando dados da empresa...</div>}
+
+      {!companiesLoading && !selected && (
+        <div className="max-w-2xl mx-auto bg-card border rounded-2xl p-10 text-center shadow-card">
+          <Building2 className="size-12 mx-auto text-muted-foreground/40" />
+          <h2 className="font-display font-semibold mt-4">Nenhuma empresa disponível</h2>
+          <p className="text-sm text-muted-foreground mt-1">Selecione ou cadastre uma empresa para gerenciar vendas.</p>
+        </div>
       )}
 
       {selected && (

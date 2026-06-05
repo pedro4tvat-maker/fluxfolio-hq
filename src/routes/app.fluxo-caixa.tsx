@@ -38,7 +38,7 @@ type Tx = {
 };
 
 function FluxoCaixa() {
-  const { companies, selected } = useSelectedCompany();
+  const { companies, selected, isLoading: companiesLoading } = useSelectedCompany();
   const qc = useQueryClient();
   const [period, setPeriod] = useState<"mes" | "mes_passado" | "30d" | "tudo">("mes");
   const [tipo, setTipo] = useState<"todos" | "entrada" | "saida">("todos");
@@ -148,6 +148,10 @@ function FluxoCaixa() {
       Valor: Number(t.valor).toFixed(2),
     })));
   };
+
+  if (companiesLoading) {
+    return <div className="text-muted-foreground p-10 text-center">Carregando dados da empresa...</div>;
+  }
 
   if (!companies.length) {
     return (

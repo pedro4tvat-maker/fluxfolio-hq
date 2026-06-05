@@ -57,11 +57,17 @@ interface CompanyKpi {
 
 const DIAS_SEM_ATUALIZACAO = 7;
 
-async function loadCompaniesV2(): Promise<CompanyKpi[]> {
-  const { data: companies, error } = await supabase
+async function loadCompaniesV2(isConsultant: boolean, userId: string): Promise<CompanyKpi[]> {
+  const query = supabase
     .from("companies")
     .select("id, nome, responsavel, ativo, cnpj, consultancy_stage, consultancy_status, created_at")
     .order("nome");
+    
+  if (!isConsultant) {
+    query.eq("owner_id", userId);
+  }
+  
+  const { data: companies, error } = await query;
   if (error) throw error;
   const range = monthRange();
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -139,7 +145,12 @@ const statusLabel: Record<CompanyKpi["status"], string> = {
 
 function ConsultantPanel() {
   const [seeding, setSeeding] = useState(false);
-  const { data, isLoading, refetch } = useQuery({ queryKey: ["dashboard-companies-v2"], queryFn: loadCompaniesV2 });
+  const { user, isConsultant } = useAuth();
+  const { data, isLoading, refetch } = useQuery({ 
+    queryKey: ["dashboard-companies-v2", isConsultant, user?.id], 
+    queryFn: () => loadCompaniesV2(isConsultant, user?.id!),
+    enabled: !!user?.id
+  });
 
   const { data: consultancy } = useQuery({
     queryKey: ["my-consultancy-header"],
@@ -648,7 +659,18 @@ function ClientDashboard() {
     },
   });
 
-  if (companyLoading || isLoading) return <div className="text-muted-foreground">Carregando seu dashboard...</div>;
+  if (companyLoading || isLoading) return <div className="text-muted-foreground p-10 text-center">Carregando seu dashboard...</div>;
+  if (!companies.length) {
+    return (
+      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
+        <Building2 className="size-12 mx-auto text-muted-foreground/40" />
+        <h3 className="font-display font-semibold mt-4">Nenhuma empresa encontrada</h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Você ainda não possui uma empresa vinculada.
+        </p>
+      </div>
+    );
+  }
   if (!company || !data) {
     return (
       <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">

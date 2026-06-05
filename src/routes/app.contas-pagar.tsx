@@ -26,7 +26,7 @@ type Payable = {
 };
 
 function ContasAPagar() {
-  const { companies, selected } = useSelectedCompany();
+  const { companies, selected, isLoading: companiesLoading } = useSelectedCompany();
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"todos" | "em_aberto" | "vencido" | "pago">("todos");
@@ -123,6 +123,10 @@ function ContasAPagar() {
       Valor: Number(p.valor).toFixed(2),
     })));
   };
+
+  if (companiesLoading) {
+    return <div className="text-muted-foreground p-10 text-center">Carregando dados da empresa...</div>;
+  }
 
   if (!companies.length) {
     return (

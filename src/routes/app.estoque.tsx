@@ -64,7 +64,7 @@ const emptyMovement = {
 };
 
 function EstoquePage() {
-  const { selected } = useSelectedCompany();
+  const { selected, isLoading: companiesLoading } = useSelectedCompany();
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -333,8 +333,12 @@ function EstoquePage() {
     downloadCSV(`estoque-${new Date().toISOString().slice(0, 10)}.csv`, rows);
   }
 
+  if (companiesLoading) {
+    return <div className="text-muted-foreground p-10 text-center">Carregando dados da empresa...</div>;
+  }
+
   if (!selected) {
-    return <div className="text-muted-foreground">Selecione uma empresa para gerenciar o estoque.</div>;
+    return <div className="text-muted-foreground p-10 text-center">Selecione uma empresa para gerenciar o estoque.</div>;
   }
 
   return (
