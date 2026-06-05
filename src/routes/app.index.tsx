@@ -659,7 +659,10 @@ function ClientDashboard() {
     },
   });
 
-  if (companyLoading || isLoading) return <div className="text-muted-foreground p-10 text-center">Carregando seu dashboard...</div>;
+  const waitingForSelection = companies.length > 0 && !selected;
+  if (companyLoading || waitingForSelection || (selected && isLoading) || (selected && !data)) {
+    return <div className="text-muted-foreground p-10 text-center">Carregando seu dashboard...</div>;
+  }
   if (!companies.length) {
     return (
       <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
@@ -672,16 +675,9 @@ function ClientDashboard() {
     );
   }
   if (!company || !data) {
-    return (
-      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
-        <Building2 className="size-12 mx-auto text-muted-foreground/40" />
-        <h3 className="font-display font-semibold mt-4">Empresa não encontrada</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Sua empresa não foi encontrada ou você não tem acesso a ela. Faça logout e entre novamente.
-        </p>
-      </div>
-    );
+    return <div className="text-muted-foreground p-10 text-center">Carregando seu dashboard...</div>;
   }
+
 
   const hours = new Date().getHours();
   const greeting = hours < 12 ? "Bom dia" : hours < 18 ? "Boa tarde" : "Boa noite";
