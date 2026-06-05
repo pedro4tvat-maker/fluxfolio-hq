@@ -18,14 +18,14 @@ import { AGENDA_SECTIONS } from "@/routes/app.agenda";
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ context }) => {
     if (typeof window === "undefined") return;
-    const { data } = await context.queryClient.ensureQueryData({
+    const session = await context.queryClient.ensureQueryData({
       queryKey: ["auth-session"],
       queryFn: async () => {
         const { data } = await supabase.auth.getSession();
         return data.session;
       },
     });
-    if (!data) throw redirect({ to: "/login" });
+    if (!session) throw redirect({ to: "/login" });
   },
   component: AppLayout,
 });
