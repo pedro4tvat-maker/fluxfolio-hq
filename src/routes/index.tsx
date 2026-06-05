@@ -18,6 +18,7 @@ import {
   Building2,
   FileText,
   BadgeCheck,
+  NotebookPen,
 } from "lucide-react";
 import logoAsset from "@/assets/sistemafp-logo.png.asset.json";
 
