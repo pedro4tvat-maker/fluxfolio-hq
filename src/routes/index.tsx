@@ -120,7 +120,7 @@ function LandingPage() {
               { icon: Wallet, title: "Fluxo de Caixa", desc: "Visão consolidada em tempo real de todas as contas e movimentações." },
               { icon: CreditCard, title: "Contas a Pagar/Receber", desc: "Gestão inteligente de prazos, cobranças e obrigações financeiras." },
               { icon: BarChart3, title: "Relatórios DRE", desc: "Análise de resultado automático, sem erros de digitação." },
-              { icon: Users, title: "Painel do Consultor", desc: "Gerencie múltiplos clientes de forma centralizada e profissional." },
+              { icon: Layers, title: "Centros de Custo", desc: "Classifique suas despesas e entenda para onde o dinheiro está indo." },
               { icon: ShieldCheck, title: "Segurança total", desc: "Seus dados financeiros protegidos com tecnologia de ponta." },
               { icon: Zap, title: "Automação", desc: "Reduza o trabalho manual e foque no crescimento do negócio." },
             ].map((f) => (
