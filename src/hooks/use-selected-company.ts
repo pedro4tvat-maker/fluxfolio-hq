@@ -8,11 +8,19 @@ const KEY = "sfp:selected_company";
 export type CompanyLite = { id: string; nome: string };
 
 export function useSelectedCompany() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isConsultant, loading: authLoading } = useAuth();
   const { data: companies, isLoading: companiesLoading } = useQuery({
-    queryKey: ["companies-lite", user?.id],
+    queryKey: ["companies-lite", user?.id, isConsultant],
     enabled: !!user && !authLoading,
     queryFn: async (): Promise<CompanyLite[]> => {
+      if (isConsultant) {
+        const { data, error } = await supabase
+          .from("companies")
+          .select("id, nome")
+          .order("nome");
+        if (error) throw error;
+        return data ?? [];
+      }
       const { data, error } = await supabase
         .from("company_members")
         .select("company_id, companies(id, nome)")
