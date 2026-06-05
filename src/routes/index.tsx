@@ -159,9 +159,48 @@ function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="bg-card border p-8 rounded-3xl shadow-2xl">
-            <div className="aspect-video bg-muted rounded-xl flex items-center justify-center text-muted-foreground border border-dashed">
-              Dashboard Demo Preview
+          <div className="bg-card border p-4 md:p-8 rounded-3xl shadow-2xl relative">
+            <div className="aspect-video bg-muted rounded-xl flex flex-col overflow-hidden border shadow-inner">
+              {/* Mock Dashboard UI */}
+              <div className="h-8 bg-card border-b flex items-center px-3 gap-2 shrink-0">
+                <div className="flex gap-1.5">
+                  <div className="size-2 rounded-full bg-destructive/20" />
+                  <div className="size-2 rounded-full bg-warning/20" />
+                  <div className="size-2 rounded-full bg-success/20" />
+                </div>
+                <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="flex-1 flex gap-0">
+                <div className="w-16 border-r bg-muted/30 p-2 space-y-2 shrink-0">
+                  <div className="h-2 w-full bg-muted rounded" />
+                  <div className="h-2 w-full bg-muted rounded" />
+                  <div className="h-2 w-full bg-muted rounded" />
+                  <div className="h-2 w-full bg-muted rounded" />
+                </div>
+                <div className="flex-1 p-4 space-y-4 overflow-hidden">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="h-16 bg-card border rounded-lg p-2 space-y-2">
+                      <div className="h-2 w-1/2 bg-muted rounded" />
+                      <div className="h-4 w-3/4 bg-success/10 rounded" />
+                    </div>
+                    <div className="h-16 bg-card border rounded-lg p-2 space-y-2">
+                      <div className="h-2 w-1/2 bg-muted rounded" />
+                      <div className="h-4 w-3/4 bg-destructive/10 rounded" />
+                    </div>
+                    <div className="h-16 bg-card border rounded-lg p-2 space-y-2">
+                      <div className="h-2 w-1/2 bg-muted rounded" />
+                      <div className="h-4 w-3/4 bg-primary/10 rounded" />
+                    </div>
+                  </div>
+                  <div className="h-32 bg-card border rounded-lg p-3 relative overflow-hidden">
+                    <div className="absolute inset-0 flex items-end px-3 pb-3 gap-1">
+                      {[40, 70, 45, 90, 65, 80, 55, 95, 75, 85].map((h, i) => (
+                        <div key={i} className="flex-1 bg-primary/20 rounded-t" style={{ height: `${h}%` }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
