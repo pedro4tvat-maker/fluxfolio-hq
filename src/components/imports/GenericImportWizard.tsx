@@ -211,7 +211,7 @@ export function GenericImportWizard({
         <Card>
           <CardHeader>
             <CardTitle>Envie o arquivo</CardTitle>
-            <CardDescription>Formatos aceitos: CSV ou XLSX.</CardDescription>
+            <CardDescription>Formatos aceitos: PDF, CSV ou XLSX.</CardDescription>
           </CardHeader>
           <CardContent>
             <div
@@ -222,9 +222,9 @@ export function GenericImportWizard({
             >
               <FileSpreadsheet className="size-10 mx-auto text-muted-foreground" />
               <p className="mt-3 font-medium">Arraste o arquivo aqui ou clique para selecionar</p>
-              <p className="text-xs text-muted-foreground mt-1">CSV · XLSX (até 5MB)</p>
+              <p className="text-xs text-muted-foreground mt-1">PDF · CSV · XLSX (até 5MB)</p>
               <input
-                ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
+                ref={fileInputRef} type="file" accept=".pdf,.csv,.xlsx,.xls" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
               />
             </div>

@@ -1,4 +1,10 @@
 import * as XLSX from "xlsx";
+import * as pdfjs from "pdfjs-dist";
+
+// Configure pdfjs worker
+if (typeof window !== "undefined") {
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+}
 
 export type RawRow = Record<string, string>;
 
@@ -11,6 +17,7 @@ export async function parseFile(file: File): Promise<ParsedFile> {
   const name = file.name.toLowerCase();
   const buf = await file.arrayBuffer();
 
+  if (name.endsWith(".pdf")) return parsePDF(buf);
   if (name.endsWith(".ofx")) return parseOFX(new TextDecoder("utf-8").decode(buf));
 
   // CSV / XLSX via SheetJS (handles both)
@@ -19,6 +26,65 @@ export async function parseFile(file: File): Promise<ParsedFile> {
   const json = XLSX.utils.sheet_to_json<RawRow>(ws, { defval: "", raw: false });
   const columns = json.length > 0 ? Object.keys(json[0]) : [];
   return { columns, rows: json };
+}
+
+async function parsePDF(buffer: ArrayBuffer): Promise<ParsedFile> {
+  try {
+    const loadingTask = pdfjs.getDocument({ data: buffer });
+    const pdf = await loadingTask.promise;
+    let fullText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(" ");
+      fullText += pageText + "\n";
+    }
+
+    // Heuristic: try to extract tabular-like data from text
+    // We look for patterns like DD/MM/YYYY description AMOUNT
+    const lines = fullText.split("\n").filter(l => l.trim().length > 10);
+    const rows: RawRow[] = [];
+    
+    // Pattern for dates (DD/MM/YYYY or DD/MM/YY) and amounts
+    const dateRegex = /(\d{2}\/\d{2}\/\d{2,4})/;
+    const amountRegex = /(-?\d+[\.,]\d{2})/;
+
+    lines.forEach(line => {
+      const dateMatch = line.match(dateRegex);
+      const amountMatch = line.match(amountRegex);
+      
+      if (dateMatch && amountMatch) {
+        const date = dateMatch[1];
+        const amount = amountMatch[1];
+        // Clean description by removing date and amount
+        let desc = line.replace(date, "").replace(amount, "").trim();
+        // Remove common separators
+        desc = desc.replace(/^[-. ]+/, "").replace(/[-. ]+$/, "");
+        
+        if (desc.length > 2) {
+          rows.push({
+            "Data": date,
+            "Descricao": desc,
+            "Valor": amount
+          });
+        }
+      }
+    });
+
+    if (rows.length === 0) {
+      // Fallback for non-transactional PDFs: just one row with full text in description
+      rows.push({ "Conteudo": "Não foi possível extrair colunas automaticamente deste PDF. Tente converter para Excel ou copiar os dados manualmente." });
+    }
+
+    const columns = rows.length > 0 ? Object.keys(rows[0]) : ["Conteudo"];
+    return { columns, rows };
+  } catch (error) {
+    console.error("Erro ao ler PDF:", error);
+    throw new Error("Não foi possível processar o arquivo PDF.");
+  }
 }
 
 function parseOFX(text: string): ParsedFile {
