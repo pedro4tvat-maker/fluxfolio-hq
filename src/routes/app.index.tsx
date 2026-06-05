@@ -720,19 +720,21 @@ function ClientDashboard() {
   return (
     <div className="space-y-10 max-w-6xl">
       {/* 1. Cabeçalho */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight">{company.nome}</h1>
-            <CompanySwitcher />
-            <BranchSwitcher />
+      <header className="bg-primary/5 border border-primary/10 p-6 rounded-2xl">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-primary">{company.nome}</h1>
+              <CompanySwitcher />
+              <BranchSwitcher />
+            </div>
+            <p className="text-muted-foreground text-sm">
+              {greeting}. Veja os principais pontos da sua empresa hoje.
+            </p>
+            {branches.length > 1 && (
+              <p className="text-xs text-muted-foreground">Visualizando: <span className="text-foreground/80 font-medium">{branchLabel}</span></p>
+            )}
           </div>
-          <p className="text-muted-foreground text-sm">
-            {greeting}. Veja os principais pontos da sua empresa hoje.
-          </p>
-          {branches.length > 1 && (
-            <p className="text-xs text-muted-foreground">Visualizando: <span className="text-foreground/80 font-medium">{branchLabel}</span></p>
-          )}
         </div>
       </header>
 
