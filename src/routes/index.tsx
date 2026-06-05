@@ -214,9 +214,9 @@ function LandingPage() {
           <h2 className="text-3xl font-display font-bold text-center mb-16">Planos que cabem no seu negócio</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {[
-              { title: "Empresa", price: "R$ 97", desc: "Para pequenos negócios que buscam organização.", items: ["Fluxo de Caixa", "Contas a Pagar/Receber", "Relatórios Financeiros", "1 Usuário"] },
-              { title: "Consultor", price: "R$ 197", desc: "Para consultores que gerenciam múltiplos clientes.", items: ["Painel do Consultor", "Atas de Reunião", "Gestão de Clientes", "Multi-empresas", "Relatórios consolidados"], featured: true },
-              { title: "Enterprise", price: "Sob consulta", desc: "Para grandes consultorias e redes de franquias.", items: ["Customização total", "API de Integração", "Suporte 24/7", "Treinamento exclusivo"] },
+              { title: "Empresa", price: "R$ 97", desc: "Para pequenos negócios que buscam organização.", items: ["Fluxo de Caixa", "Contas a Pagar/Receber", "Relatórios Financeiros", "1 Usuário"], featured: true },
+              { title: "Consultor", price: "Sob consulta", desc: "Para consultores que gerenciam múltiplos clientes.", items: ["Painel do Consultor", "Atas de Reunião", "Gestão de Clientes", "Multi-empresas", "Relatórios consolidados"] },
+              { title: "Enterprise", price: "Sob consulta", desc: "Para redes de franquias ou grandes empresas.", items: ["Customização total", "API de Integração", "Suporte 24/7", "Treinamento exclusivo"] },
             ].map((p) => (
               <div key={p.title} className={`p-8 rounded-3xl border ${p.featured ? "bg-primary text-primary-foreground scale-105 shadow-xl border-primary" : "bg-card border-border shadow-sm"}`}>
                 <h3 className="text-xl font-bold mb-2">{p.title}</h3>
