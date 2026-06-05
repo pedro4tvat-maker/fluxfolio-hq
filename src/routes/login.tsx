@@ -81,13 +81,17 @@ function LoginPage() {
       </div>
 
       <div className="flex items-center justify-center p-6 md:p-12">
-        <form onSubmit={onSubmit} className="w-full max-w-sm space-y-6">
-        <div className="md:hidden flex items-center gap-2">
+        <form onSubmit={showReset ? onResetPassword : onSubmit} className="w-full max-w-sm space-y-6">
+          <div className="md:hidden flex items-center gap-2">
             <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-8" />
           </div>
           <div>
-            <h2 className="text-2xl font-display font-bold">Acessar sua conta</h2>
-            <p className="text-sm text-muted-foreground mt-1">Entre com seu e-mail e senha.</p>
+            <h2 className="text-2xl font-display font-bold">
+              {showReset ? "Recuperar senha" : "Acessar sua conta"}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {showReset ? "Informe seu e-mail para receber as instruções." : "Entre com seu e-mail e senha."}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -95,19 +99,43 @@ function LoginPage() {
             <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@empresa.com" />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <div className="relative">
-              <Input id="password" type={show ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Sua senha" />
-              <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1" aria-label="Mostrar senha">
-                {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
+          {!showReset && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Senha</Label>
+                <button
+                  type="button"
+                  onClick={() => setShowReset(true)}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+              <div className="relative">
+                <Input id="password" type={show ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Sua senha" />
+                <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1" aria-label="Mostrar senha">
+                  {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Entrando..." : "Entrar"}
-          </Button>
+          <div className="space-y-3">
+            <Button type="submit" disabled={loading || resetLoading} className="w-full">
+              {showReset ? (resetLoading ? "Enviando..." : "Enviar link de recuperação") : (loading ? "Entrando..." : "Entrar")}
+            </Button>
+            
+            {showReset && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowReset(false)}
+                className="w-full"
+              >
+                Voltar para o login
+              </Button>
+            )}
+          </div>
 
           <div className="text-sm text-center text-muted-foreground">
             Ainda não tem conta? <Link to="/signup" className="text-primary font-medium hover:underline">Criar conta</Link>
