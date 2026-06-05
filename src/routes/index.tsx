@@ -209,6 +209,37 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* PRECOS SECTION */}
+      <section id="precos" className="py-24 bg-muted/30">
+        <div className="mx-auto max-w-7xl px-6">
+          <h2 className="text-3xl font-display font-bold text-center mb-16">Planos que cabem no seu negócio</h2>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              { title: "Empresa", price: "R$ 97", desc: "Para pequenos negócios que buscam organização.", items: ["Fluxo de Caixa", "Contas a Pagar/Receber", "Relatórios Financeiros", "1 Usuário"] },
+              { title: "Consultor", price: "R$ 197", desc: "Para consultores que gerenciam múltiplos clientes.", items: ["Painel do Consultor", "Atas de Reunião", "Gestão de Clientes", "Multi-empresas", "Relatórios consolidados"], featured: true },
+              { title: "Enterprise", price: "Sob consulta", desc: "Para grandes consultorias e redes de franquias.", items: ["Customização total", "API de Integração", "Suporte 24/7", "Treinamento exclusivo"] },
+            ].map((p) => (
+              <div key={p.title} className={`p-8 rounded-3xl border ${p.featured ? "bg-primary text-primary-foreground scale-105 shadow-xl border-primary" : "bg-card border-border shadow-sm"}`}>
+                <h3 className="text-xl font-bold mb-2">{p.title}</h3>
+                <div className="text-3xl font-bold mb-4">{p.price}<span className="text-sm font-normal opacity-70">{p.price.includes("R$") ? "/mês" : ""}</span></div>
+                <p className={`text-sm mb-6 ${p.featured ? "opacity-90" : "text-muted-foreground"}`}>{p.desc}</p>
+                <ul className="space-y-3 mb-8">
+                  {p.items.map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className={`size-4 ${p.featured ? "text-primary-foreground" : "text-success"}`} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <Button asChild className={`w-full ${p.featured ? "bg-white text-primary hover:bg-white/90" : ""}`}>
+                  <Link to="/signup">Começar agora</Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer className="border-t py-12 bg-card">
         <div className="mx-auto max-w-7xl px-6 text-center text-sm text-muted-foreground">
