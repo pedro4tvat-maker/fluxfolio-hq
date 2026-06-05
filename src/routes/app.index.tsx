@@ -260,36 +260,37 @@ function ConsultantPanel() {
     <div className="space-y-8 max-w-7xl">
       {/* Cabeçalho */}
       <div className="bg-primary/5 border border-primary/10 p-6 rounded-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-2xl md:text-3xl font-display font-bold text-primary">Painel do Consultor</h1>
             <p className="text-muted-foreground text-sm">Acompanhe seus clientes, entregas, riscos e resultados da consultoria.</p>
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {consultancy?.consultancy_name && (
-              <span className="text-xs text-muted-foreground">{consultancy.consultancy_name}</span>
-            )}
-            {consultancy?.invite_code && (
-              <button
-                onClick={copyCode}
-                title="Copiar código de convite"
-                className="text-[11px] bg-primary/10 text-primary px-2 py-1 rounded-md font-mono hover:bg-primary/20 transition-colors"
-              >
-                Código: {consultancy.invite_code}
-              </button>
-            )}
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {consultancy?.consultancy_name && (
+                <span className="text-xs text-muted-foreground">{consultancy.consultancy_name}</span>
+              )}
+              {consultancy?.invite_code && (
+                <button
+                  onClick={copyCode}
+                  title="Copiar código de convite"
+                  className="text-[11px] bg-primary/10 text-primary px-2 py-1 rounded-md font-mono hover:bg-primary/20 transition-colors"
+                >
+                  Código: {consultancy.invite_code}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {data && data.length === 0 && (
-            <Button onClick={handleSeed} variant="outline" disabled={seeding}>
-              <Sparkles className="size-4" /> {seeding ? "Carregando..." : "Dados de demonstração"}
-            </Button>
-          )}
-          <Button asChild variant="outline"><Link to="/app/agenda"><Calendar className="size-4" /> Ver agenda</Link></Button>
-          <Button asChild variant="outline"><Link to="/app/relatorios"><FileText className="size-4" /> Relatórios</Link></Button>
-          <Button asChild variant="outline"><Link to="/app/diagnostico"><BadgeCheck className="size-4" /> Diagnóstico</Link></Button>
-          <Button asChild variant="outline"><Link to="/app/agenda"><PlusCircle className="size-4" /> Nova atividade</Link></Button>
-          <Button asChild><Link to="/app/clientes"><PlusCircle className="size-4" /> Nova empresa</Link></Button>
+          <div className="flex flex-wrap gap-2">
+            {data && data.length === 0 && (
+              <Button onClick={handleSeed} variant="outline" disabled={seeding}>
+                <Sparkles className="size-4" /> {seeding ? "Carregando..." : "Dados de demonstração"}
+              </Button>
+            )}
+            <Button asChild variant="outline"><Link to="/app/agenda"><Calendar className="size-4" /> Ver agenda</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/relatorios"><FileText className="size-4" /> Relatórios</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/diagnostico"><BadgeCheck className="size-4" /> Diagnóstico</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/agenda"><PlusCircle className="size-4" /> Nova atividade</Link></Button>
+            <Button asChild><Link to="/app/clientes"><PlusCircle className="size-4" /> Nova empresa</Link></Button>
+          </div>
         </div>
       </div>
 
