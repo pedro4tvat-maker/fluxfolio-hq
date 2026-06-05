@@ -51,7 +51,7 @@ type CompanyData = {
 };
 
 function VendasPage() {
-  const { selected } = useSelectedCompany();
+  const { selected, isLoading: companiesLoading } = useSelectedCompany();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
