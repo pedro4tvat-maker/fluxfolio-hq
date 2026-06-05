@@ -1135,6 +1135,16 @@ function VendasPage() {
         </form>
       )}
 
+      {companiesLoading && <div className="text-muted-foreground p-10 text-center">Carregando dados da empresa...</div>}
+
+      {!companiesLoading && !selected && (
+        <div className="max-w-2xl mx-auto bg-card border rounded-2xl p-10 text-center shadow-card">
+          <Building2 className="size-12 mx-auto text-muted-foreground/40" />
+          <h2 className="font-display font-semibold mt-4">Nenhuma empresa disponível</h2>
+          <p className="text-sm text-muted-foreground mt-1">Selecione ou cadastre uma empresa para gerenciar vendas.</p>
+        </div>
+      )}
+
       {selected && (
         <ContactForm
           open={contactDialog}
