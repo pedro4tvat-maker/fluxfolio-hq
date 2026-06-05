@@ -468,11 +468,11 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
             >
               <FileSpreadsheet className="size-10 mx-auto text-muted-foreground" />
               <p className="mt-3 font-medium">Arraste o arquivo aqui ou clique para selecionar</p>
-              <p className="text-xs text-muted-foreground mt-1">CSV · XLSX · OFX (até 5MB)</p>
+              <p className="text-xs text-muted-foreground mt-1">PDF · CSV · XLSX · OFX (até 5MB)</p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx,.xls,.ofx"
+                accept=".pdf,.csv,.xlsx,.xls,.ofx"
                 className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
               />
