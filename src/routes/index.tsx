@@ -143,9 +143,9 @@ function LandingPage() {
             <h2 className="text-3xl font-display font-bold mb-8">Por que escolher o SISTEMAFP PJ?</h2>
             <ul className="space-y-6">
               {[
-                { title: "Foco no Consultor", desc: "Ferramentas desenhadas especificamente para quem presta consultoria financeira." },
+                { title: "Simplicidade", desc: "Interface intuitiva focada no empresário e no consultor." },
                 { title: "Projeções Precisas", desc: "Tome decisões baseadas em dados, não em suposições." },
-                { title: "Integração Total", desc: "Conecte financeiro, estoque, precificação e orçamentos." },
+                { title: "Gestão Integrada", desc: "Contas, estoque, precificação e orçamentos em um só lugar." },
               ].map((item) => (
                 <li key={item.title} className="flex gap-4">
                   <div className="size-8 rounded-full bg-success/20 flex items-center justify-center shrink-0">
