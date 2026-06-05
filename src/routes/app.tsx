@@ -242,11 +242,11 @@ function AppLayout() {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b flex items-center px-4 gap-3 bg-card">
-          <button onClick={() => setOpen(true)} className="p-2 -ml-2 rounded hover:bg-muted" aria-label="Abrir menu">
+        <header className="h-14 border-b flex items-center px-4 gap-3 bg-primary text-primary-foreground shadow-sm">
+          <button onClick={() => setOpen(true)} className="p-2 -ml-2 rounded hover:bg-white/10" aria-label="Abrir menu">
             <Menu className="size-5" />
           </button>
-          <span className="font-display font-semibold">SISTEMAFP PJ</span>
+          <span className="font-display font-semibold tracking-tight">SISTEMAFP PJ</span>
         </header>
         <main className="flex-1 p-4 md:p-8 overflow-x-auto">
           <Outlet />
