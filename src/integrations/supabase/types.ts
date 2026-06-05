@@ -2652,6 +2652,27 @@ export type Database = {
         }
         Relationships: []
       }
+      privacy_policy_versions: {
+        Row: {
+          created_at: string
+          effective_date: string
+          id: string
+          version_text: string
+        }
+        Insert: {
+          created_at?: string
+          effective_date?: string
+          id?: string
+          version_text: string
+        }
+        Update: {
+          created_at?: string
+          effective_date?: string
+          id?: string
+          version_text?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           branch_id: string | null
