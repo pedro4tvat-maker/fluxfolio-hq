@@ -259,36 +259,38 @@ function ConsultantPanel() {
   return (
     <div className="space-y-8 max-w-7xl">
       {/* Cabeçalho */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Painel do Consultor</h1>
-          <p className="text-muted-foreground text-sm">Acompanhe seus clientes, entregas, riscos e resultados da consultoria.</p>
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {consultancy?.consultancy_name && (
-              <span className="text-xs text-muted-foreground">{consultancy.consultancy_name}</span>
-            )}
-            {consultancy?.invite_code && (
-              <button
-                onClick={copyCode}
-                title="Copiar código de convite"
-                className="text-[11px] bg-primary/10 text-primary px-2 py-1 rounded-md font-mono hover:bg-primary/20 transition-colors"
-              >
-                Código: {consultancy.invite_code}
-              </button>
-            )}
+      <div className="bg-primary/5 border border-primary/10 p-6 rounded-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-primary">Painel do Consultor</h1>
+            <p className="text-muted-foreground text-sm">Acompanhe seus clientes, entregas, riscos e resultados da consultoria.</p>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {consultancy?.consultancy_name && (
+                <span className="text-xs text-muted-foreground">{consultancy.consultancy_name}</span>
+              )}
+              {consultancy?.invite_code && (
+                <button
+                  onClick={copyCode}
+                  title="Copiar código de convite"
+                  className="text-[11px] bg-primary/10 text-primary px-2 py-1 rounded-md font-mono hover:bg-primary/20 transition-colors"
+                >
+                  Código: {consultancy.invite_code}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {data && data.length === 0 && (
-            <Button onClick={handleSeed} variant="outline" disabled={seeding}>
-              <Sparkles className="size-4" /> {seeding ? "Carregando..." : "Dados de demonstração"}
-            </Button>
-          )}
-          <Button asChild variant="outline"><Link to="/app/agenda"><Calendar className="size-4" /> Ver agenda</Link></Button>
-          <Button asChild variant="outline"><Link to="/app/relatorios"><FileText className="size-4" /> Relatórios</Link></Button>
-          <Button asChild variant="outline"><Link to="/app/diagnostico"><BadgeCheck className="size-4" /> Diagnóstico</Link></Button>
-          <Button asChild variant="outline"><Link to="/app/agenda"><PlusCircle className="size-4" /> Nova atividade</Link></Button>
-          <Button asChild><Link to="/app/clientes"><PlusCircle className="size-4" /> Nova empresa</Link></Button>
+          <div className="flex flex-wrap gap-2">
+            {data && data.length === 0 && (
+              <Button onClick={handleSeed} variant="outline" disabled={seeding}>
+                <Sparkles className="size-4" /> {seeding ? "Carregando..." : "Dados de demonstração"}
+              </Button>
+            )}
+            <Button asChild variant="outline"><Link to="/app/agenda"><Calendar className="size-4" /> Ver agenda</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/relatorios"><FileText className="size-4" /> Relatórios</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/diagnostico"><BadgeCheck className="size-4" /> Diagnóstico</Link></Button>
+            <Button asChild variant="outline"><Link to="/app/agenda"><PlusCircle className="size-4" /> Nova atividade</Link></Button>
+            <Button asChild><Link to="/app/clientes"><PlusCircle className="size-4" /> Nova empresa</Link></Button>
+          </div>
         </div>
       </div>
 
@@ -718,19 +720,21 @@ function ClientDashboard() {
   return (
     <div className="space-y-10 max-w-6xl">
       {/* 1. Cabeçalho */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight">{company.nome}</h1>
-            <CompanySwitcher />
-            <BranchSwitcher />
+      <header className="bg-primary/5 border border-primary/10 p-6 rounded-2xl">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-primary">{company.nome}</h1>
+              <CompanySwitcher />
+              <BranchSwitcher />
+            </div>
+            <p className="text-muted-foreground text-sm">
+              {greeting}. Veja os principais pontos da sua empresa hoje.
+            </p>
+            {branches.length > 1 && (
+              <p className="text-xs text-muted-foreground">Visualizando: <span className="text-foreground/80 font-medium">{branchLabel}</span></p>
+            )}
           </div>
-          <p className="text-muted-foreground text-sm">
-            {greeting}. Veja os principais pontos da sua empresa hoje.
-          </p>
-          {branches.length > 1 && (
-            <p className="text-xs text-muted-foreground">Visualizando: <span className="text-foreground/80 font-medium">{branchLabel}</span></p>
-          )}
         </div>
       </header>
 
@@ -887,7 +891,10 @@ function ClientDashboard() {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">{children}</h2>
+    <h2 className="text-[11px] font-bold text-primary/70 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
+      <div className="h-px w-4 bg-primary/30" />
+      {children}
+    </h2>
   );
 }
 
@@ -902,10 +909,13 @@ function QuickCard({
   const valueTone =
     tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning-foreground" : "";
   return (
-    <div className="bg-card border rounded-2xl p-6">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+    <div className="bg-card border-l-4 border-l-primary rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
       <div className={`mt-3 font-display font-bold text-[26px] leading-tight tabular-nums ${valueTone}`}>{value}</div>
-      {hint && <div className="text-xs text-muted-foreground mt-2">{hint}</div>}
+      {hint && <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+        <div className="size-1 rounded-full bg-primary/40" />
+        {hint}
+      </div>}
     </div>
   );
 }
