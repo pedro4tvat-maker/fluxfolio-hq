@@ -167,6 +167,47 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* PARA CONSULTORES SECTION */}
+      <section id="consultores" className="py-24 border-t">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="bg-primary/5 rounded-[40px] p-8 md:p-16 flex flex-col lg:flex-row gap-12 items-center">
+            <div className="flex-1 space-y-6 text-center lg:text-left">
+              <div className="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+                Exclusivo para Consultores
+              </div>
+              <h2 className="text-4xl md:text-5xl font-display font-bold">
+                Escale seu negócio de <span className="text-primary">consultoria financeira</span>
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Tenha um painel centralizado para acompanhar todos os seus clientes, gerenciar atas de reunião, diagnósticos e entregas automáticas de relatórios.
+              </p>
+              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                <Button asChild size="lg" className="h-12 px-6">
+                  <Link to="/signup">Quero ser um consultor parceiro</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="h-12 px-6">
+                  <Link to="/login">Acessar Painel do Consultor</Link>
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-4">
+              {[
+                { icon: Users, label: "Multi-clientes", desc: "Gestão centralizada" },
+                { icon: NotebookPen, label: "Atas Inteligentes", desc: "Com suporte de IA" },
+                { icon: BadgeCheck, label: "Diagnósticos", desc: "Padronizados e rápidos" },
+                { icon: FileText, label: "Relatórios", desc: "Prontos em segundos" },
+              ].map((item) => (
+                <div key={item.label} className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+                  <item.icon className="size-6 text-primary mb-3" />
+                  <div className="font-bold text-sm">{item.label}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer className="border-t py-12 bg-card">
         <div className="mx-auto max-w-7xl px-6 text-center text-sm text-muted-foreground">
