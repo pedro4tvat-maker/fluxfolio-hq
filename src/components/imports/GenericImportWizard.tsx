@@ -211,7 +211,7 @@ export function GenericImportWizard({
         <Card>
           <CardHeader>
             <CardTitle>Envie o arquivo</CardTitle>
-            <CardDescription>Formatos aceitos: CSV ou XLSX.</CardDescription>
+            <CardDescription>Formatos aceitos: PDF, CSV ou XLSX.</CardDescription>
           </CardHeader>
           <CardContent>
             <div
