@@ -891,7 +891,10 @@ function ClientDashboard() {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">{children}</h2>
+    <h2 className="text-[11px] font-bold text-primary/70 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
+      <div className="h-px w-4 bg-primary/30" />
+      {children}
+    </h2>
   );
 }
 
