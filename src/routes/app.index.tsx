@@ -259,10 +259,11 @@ function ConsultantPanel() {
   return (
     <div className="space-y-8 max-w-7xl">
       {/* Cabeçalho */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Painel do Consultor</h1>
-          <p className="text-muted-foreground text-sm">Acompanhe seus clientes, entregas, riscos e resultados da consultoria.</p>
+      <div className="bg-primary/5 border border-primary/10 p-6 rounded-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-primary">Painel do Consultor</h1>
+            <p className="text-muted-foreground text-sm">Acompanhe seus clientes, entregas, riscos e resultados da consultoria.</p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             {consultancy?.consultancy_name && (
               <span className="text-xs text-muted-foreground">{consultancy.consultancy_name}</span>
