@@ -107,7 +107,9 @@ export async function fetchReportData(
       supabase
         .from("transactions")
         .select("id, data, tipo, valor, descricao, status, categoria_id, centro_custo_id, conta_id, forma_pagamento")
-        .eq("company_id", companyId),
+        .eq("company_id", companyId)
+        .gte("data", period.start)
+        .lte("data", period.end),
       branchId,
     )),
     supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense").eq("company_id", companyId),

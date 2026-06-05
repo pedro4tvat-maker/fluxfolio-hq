@@ -16,10 +16,16 @@ import { CONSULTORIA_SECTIONS } from "@/routes/app.consultoria";
 import { AGENDA_SECTIONS } from "@/routes/app.agenda";
 
 export const Route = createFileRoute("/app")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context }) => {
     if (typeof window === "undefined") return;
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login" });
+    const session = await context.queryClient.ensureQueryData({
+      queryKey: ["auth-session"],
+      queryFn: async () => {
+        const { data } = await supabase.auth.getSession();
+        return data.session;
+      },
+    });
+    if (!session) throw redirect({ to: "/login" });
   },
   component: AppLayout,
 });

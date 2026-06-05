@@ -69,14 +69,13 @@ async function loadCompaniesV2(): Promise<CompanyKpi[]> {
   return Promise.all((companies ?? []).map(async (c: any) => {
     const [
       { data: tx }, { data: pay }, { data: rec }, { data: accs },
-      { data: allTx }, { data: lastTx },
+      { data: lastTx },
       { data: pendings }, { data: plans },
     ] = await Promise.all([
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
       supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "pago"),
       supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "recebido"),
       supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", c.id),
-      supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado"),
       supabase.from("transactions").select("data").eq("company_id", c.id).order("data", { ascending: false }).limit(1),
       supabase.from("client_pending_items").select("id, status, due_date").eq("company_id", c.id).neq("status", "concluido"),
       supabase.from("action_plans").select("id, title, due_date, status, related_area").eq("company_id", c.id).neq("status", "concluido").order("due_date", { ascending: true, nullsFirst: false }),
@@ -85,7 +84,12 @@ async function loadCompaniesV2(): Promise<CompanyKpi[]> {
     const entradas = (tx ?? []).filter((t: any) => t.tipo === "entrada").reduce((s, t: any) => s + Number(t.valor), 0);
     const saidas = (tx ?? []).filter((t: any) => t.tipo === "saida").reduce((s, t: any) => s + Number(t.valor), 0);
     const saldoInicial = (accs ?? []).reduce((s, a: any) => s + Number(a.saldo_inicial), 0);
-    const delta = (allTx ?? []).reduce((s, t: any) => s + (t.tipo === "entrada" ? 1 : -1) * Number(t.valor), 0);
+    
+    // Simplificando o cálculo do delta para evitar buscar todo o histórico
+    const { data: totalIn } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).eq("status", "realizado").eq("tipo", "entrada").maybeSingle();
+    const { data: totalOut } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).eq("status", "realizado").eq("tipo", "saida").maybeSingle();
+    
+    const delta = (Number((totalIn as any)?.sum) || 0) - (Number((totalOut as any)?.sum) || 0);
     const saldo = saldoInicial + delta;
     const pagamentosAtraso = (pay ?? []).filter((p: any) => p.vencimento < todayISO).length;
     const coletasAtraso = (rec ?? []).filter((r: any) => r.vencimento < todayISO).length;
