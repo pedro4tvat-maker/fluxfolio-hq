@@ -272,234 +272,295 @@ function ConsultantPanel() {
   if (semDiagnostico > 0) alerts.push({ text: `${semDiagnostico} empresa(s) aguardando diagnóstico inicial.`, tone: "info", href: "/app/diagnostico" });
 
   return (
-    <div className="space-y-8 max-w-7xl">
-      {/* Cabeçalho */}
-      <div className="bg-primary/5 border border-primary/10 p-6 rounded-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-2xl md:text-3xl font-display font-bold text-primary">Painel do Consultor</h1>
-            <p className="text-muted-foreground text-sm">Acompanhe seus clientes, entregas, riscos e resultados da consultoria.</p>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {consultancy?.consultancy_name && (
-                <span className="text-xs text-muted-foreground">{consultancy.consultancy_name}</span>
-              )}
-              {consultancy?.invite_code && (
-                <button
-                  onClick={copyCode}
-                  title="Copiar código de convite"
-                  className="text-[11px] bg-primary/10 text-primary px-2 py-1 rounded-md font-mono hover:bg-primary/20 transition-colors"
-                >
-                  Código: {consultancy.invite_code}
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {data && data.length === 0 && (
-              <Button onClick={handleSeed} variant="outline" disabled={seeding}>
-                <Sparkles className="size-4" /> {seeding ? "Carregando..." : "Dados de demonstração"}
-              </Button>
+    <div className="space-y-6 max-w-7xl animate-in fade-in duration-500 pb-12">
+      {/* Header Simplificado */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
+        <div>
+          <h1 className="text-2xl font-display font-bold tracking-tight text-foreground">Painel do Consultor</h1>
+          <p className="text-muted-foreground text-sm mt-1">Bem-vindo de volta. Aqui está o resumo da sua consultoria hoje.</p>
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            {consultancy?.consultancy_name && (
+              <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">{consultancy.consultancy_name}</span>
             )}
-            <Button asChild variant="outline"><Link to="/app/agenda"><Calendar className="size-4" /> Ver agenda</Link></Button>
-            <Button asChild variant="outline"><Link to="/app/relatorios"><FileText className="size-4" /> Relatórios</Link></Button>
-            <Button asChild variant="outline"><Link to="/app/diagnostico"><BadgeCheck className="size-4" /> Diagnóstico</Link></Button>
-            <Button asChild variant="outline"><Link to="/app/agenda"><PlusCircle className="size-4" /> Nova atividade</Link></Button>
-            <Button asChild><Link to="/app/clientes"><PlusCircle className="size-4" /> Nova empresa</Link></Button>
+            {consultancy?.invite_code && (
+              <button
+                onClick={copyCode}
+                title="Copiar código de convite"
+                className="text-[11px] bg-muted text-muted-foreground px-2 py-1 rounded-md font-mono hover:bg-muted/80 transition-colors border"
+              >
+                Código: {consultancy.invite_code}
+              </button>
+            )}
           </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <div className="flex bg-muted/50 p-1 rounded-lg border">
+            <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/agenda">Agenda</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/relatorios">Relatórios</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/diagnostico">Diagnóstico</Link></Button>
+          </div>
+          <Button asChild size="sm" className="h-10 px-4 shadow-sm"><Link to="/app/clientes"><PlusCircle className="size-4 mr-2" /> Nova empresa</Link></Button>
         </div>
       </div>
 
-      {/* Seção 1: O que exige sua atenção hoje */}
-      <section className="space-y-3">
-        <div className="flex items-end justify-between">
-          <h2 className="text-lg font-display font-semibold">O que exige sua atenção hoje</h2>
-          <span className="text-xs text-muted-foreground">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</span>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ActionCard icon={AlertTriangle} tone="danger" label="Clientes em risco" value={clientesRisco} desc="Empresas críticas exigindo intervenção" to="/app/clientes" />
-          <ActionCard icon={Clock} tone="danger" label="Entregas atrasadas" value={entregasAtrasadas} desc="Planos e pendências vencidos" to="/app/agenda" />
-          <ActionCard icon={Calendar} tone="info" label="Reuniões de hoje" value={reunioesHoje.length} desc="Agendadas para hoje" to="/app/agenda" />
-          <ActionCard icon={AlertCircle} tone="warning" label="Pendências de clientes" value={pendenciasClientes} desc="Solicitações abertas" to="/app/agenda" />
-          <ActionCard icon={FileText} tone="warning" label="Relatórios a entregar" value={relatoriosPendentes} desc="Empresas com relatório pendente" to="/app/relatorios" />
-          <ActionCard icon={Clock} tone="warning" label="Sem atualização recente" value={semAtualizacao} desc={`Empresas há mais de ${DIAS_SEM_ATUALIZACAO} dias sem lançamento`} to="/app/clientes" />
-        </div>
-      </section>
+      {/* Seção 1: Resumo Executivo */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard 
+          label="Empresas Ativas" 
+          value={ativas.length} 
+          icon={Building2} 
+          trend={novasNoMes > 0 ? `+${novasNoMes} este mês` : undefined}
+          to="/app/clientes"
+        />
+        <MetricCard 
+          label="Receita Mensal" 
+          value={formatMoney(finance?.receitaMes ?? 0)} 
+          icon={DollarSign} 
+          trend={finance?.resultado && finance.resultado > 0 ? "Em crescimento" : undefined}
+          to="/app/consultoria"
+        />
+        <MetricCard 
+          label="Alertas Críticos" 
+          value={criticas} 
+          icon={AlertTriangle} 
+          variant={criticas > 0 ? "destructive" : "default"}
+          to="/app/clientes"
+        />
+        <MetricCard 
+          label="Relatórios Pendentes" 
+          value={relatoriosPendentes} 
+          icon={FileText} 
+          variant={relatoriosPendentes > 0 ? "warning" : "default"}
+          to="/app/relatorios"
+        />
+      </div>
 
-      {/* Seção 2: Carteira de clientes */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-display font-semibold">Carteira de clientes</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <MiniKpi icon={Building2} label="Ativas" value={ativas.length} />
-          <MiniKpi icon={AlertCircle} label="Em atenção" value={emAtencao} tone="warning" />
-          <MiniKpi icon={AlertTriangle} label="Críticas" value={criticas} tone="danger" />
-          <MiniKpi icon={Building2} label="Pausadas/Inativas" value={pausadas} />
-          <MiniKpi icon={Sparkles} label="Novas no mês" value={novasNoMes} />
-          <MiniKpi icon={Clock} label="Sem atualização 7d+" value={semAtualizacao} tone={semAtualizacao > 0 ? "warning" : undefined} />
-        </div>
-      </section>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Prioridades e Agenda */}
+        <div className="lg:col-span-2 space-y-6">
+          <section className="bg-card border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b flex items-center justify-between bg-muted/30">
+              <h2 className="text-sm font-semibold flex items-center gap-2"><Calendar className="size-4 text-primary" /> Prioridades e Agenda</h2>
+              <Button asChild variant="ghost" size="sm" className="h-8 text-xs"><Link to="/app/agenda">Ver agenda completa</Link></Button>
+            </div>
+            <div className="p-0">
+              {agendaSemana.length === 0 && alerts.length === 0 ? (
+                <div className="p-10 text-center">
+                  <BadgeCheck className="size-10 mx-auto text-muted-foreground/20" />
+                  <p className="text-sm text-muted-foreground mt-2">Tudo em dia por aqui.</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {/* Alertas Críticos Primeiro */}
+                  {alerts.slice(0, 3).map((a, i) => (
+                    <div key={`alert-${i}`} className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors group">
+                      <div className={`mt-1 p-2 rounded-lg ${a.tone === "danger" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning-foreground"}`}>
+                        <AlertCircle className="size-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground leading-tight">{a.text}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Ação recomendada</p>
+                      </div>
+                      <Button asChild variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity"><Link to={a.href || "/app/clientes"}>Tratar</Link></Button>
+                    </div>
+                  ))}
+                  
+                  {/* Próximos compromissos */}
+                  {agendaSemana.map((it) => (
+                    <div key={`${it.kind}-${it.id}`} className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+                      <div className={`w-2 h-2 rounded-full ${it.kind === "Reunião" ? "bg-primary" : "bg-warning"}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{it.kind}</span>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <span className="text-xs font-medium text-foreground">{it.date ? formatDate(it.date) : ""}</span>
+                        </div>
+                        <div className="text-sm font-semibold truncate mt-0.5">{it.title}</div>
+                        <div className="text-xs text-muted-foreground truncate">{companyName(it.company_id)}</div>
+                      </div>
+                      <div className="text-right hidden sm:block">
+                        <div className="text-xs font-medium">{it.time ? String(it.time).slice(0, 5) : "--:--"}</div>
+                        {it.priority && (
+                          <span className={`text-[10px] font-bold uppercase ${it.priority === "alta" ? "text-destructive" : "text-muted-foreground"}`}>
+                            {it.priority}
+                          </span>
+                        )}
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="h-8"><Link to="/app/agenda">Ver</Link></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
 
-      {/* Seção 3: Agenda e entregas da semana */}
-      <section className="space-y-3">
-        <div className="flex items-end justify-between">
-          <h2 className="text-lg font-display font-semibold">Agenda e entregas da semana</h2>
-          <Button asChild variant="ghost" size="sm"><Link to="/app/agenda">Ver agenda completa <ArrowRight className="size-3.5" /></Link></Button>
+          {/* Lista de Empresas */}
+          <section className="bg-card border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b flex items-center justify-between bg-muted/30">
+              <h2 className="text-sm font-semibold flex items-center gap-2"><Building2 className="size-4 text-primary" /> Empresas Acompanhadas</h2>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{cias.length} TOTAL</span>
+            </div>
+            <div className="overflow-x-auto">
+              {isLoading ? (
+                <div className="p-8 text-center text-sm text-muted-foreground italic">Carregando dados das empresas...</div>
+              ) : cias.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Building2 className="size-12 mx-auto text-muted-foreground/20" />
+                  <p className="text-sm text-muted-foreground mt-4">Nenhuma empresa vinculada à sua consultoria.</p>
+                  <Button asChild variant="outline" size="sm" className="mt-4"><Link to="/app/clientes">Cadastrar Primeira Empresa</Link></Button>
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted/10">
+                      <th className="text-left px-5 py-3 border-b">Empresa</th>
+                      <th className="text-left px-5 py-3 border-b">Status</th>
+                      <th className="text-left px-5 py-3 border-b hidden md:table-cell">Último Lanç.</th>
+                      <th className="text-right px-5 py-3 border-b">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {cias.slice(0, 10).map((c) => (
+                      <tr key={c.id} className="hover:bg-muted/20 transition-colors group">
+                        <td className="px-5 py-3">
+                          <Link
+                            to="/app/empresa/$id" params={{ id: c.id }}
+                            onClick={() => localStorage.setItem("sfp:selected_company", c.id)}
+                            className="font-semibold text-foreground hover:text-primary transition-colors block"
+                          >
+                            {c.nome}
+                          </Link>
+                          <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5 capitalize">
+                            {c.consultancy_stage?.replace(/_/g, " ")}
+                            {c.responsavel && <><span>•</span> {c.responsavel}</>}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className={`size-2 rounded-full ${
+                              c.status === "saudavel" ? "bg-success" : 
+                              c.status === "critico" ? "bg-destructive animate-pulse" : 
+                              c.status === "atencao" ? "bg-warning" : "bg-muted"
+                            }`} />
+                            <span className="text-xs font-medium">{statusLabel[c.status]}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 hidden md:table-cell">
+                          <div className="text-xs">
+                            {c.ultimoLancamento ? formatDate(c.ultimoLancamento) : <span className="text-muted-foreground">Nunca</span>}
+                            {(c.diasSemAtualizacao ?? 0) > DIAS_SEM_ATUALIZACAO && (
+                              <div className="text-[10px] text-destructive font-bold uppercase mt-0.5">Atrasado</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Link to="/app/empresa/$id" params={{ id: c.id }}><ArrowRight className="size-4" /></Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            {cias.length > 10 && (
+              <div className="p-3 text-center border-t bg-muted/10">
+                <Button asChild variant="link" size="sm" className="text-xs"><Link to="/app/clientes">Ver todas as empresas ({cias.length})</Link></Button>
+              </div>
+            )}
+          </section>
         </div>
-        <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
-          {agendaSemana.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">Nenhum compromisso ou entrega para os próximos 7 dias.</div>
-          ) : (
-            <ul className="divide-y">
-              {agendaSemana.map((it) => (
-                <li key={`${it.kind}-${it.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30">
-                  <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md ${it.kind === "Reunião" ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning-foreground"}`}>{it.kind}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{it.title}</div>
-                    <div className="text-xs text-muted-foreground truncate">{companyName(it.company_id)}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {it.date ? formatDate(it.date) : "—"}{it.time ? ` ${String(it.time).slice(0, 5)}` : ""}
-                  </div>
-                  {it.priority && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${it.priority === "alta" ? "bg-destructive/10 text-destructive" : it.priority === "media" ? "bg-warning/10 text-warning-foreground" : "bg-muted text-muted-foreground"}`}>
-                      {it.priority}
-                    </span>
-                  )}
-                  <Button asChild size="sm" variant="ghost"><Link to="/app/agenda">Ver</Link></Button>
-                </li>
-              ))}
-            </ul>
+
+        {/* Lateral: Saúde da Consultoria e Atalhos */}
+        <div className="space-y-6">
+          <section className="bg-card border rounded-xl shadow-sm p-5">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><TrendingUp className="size-4 text-primary" /> Saúde Financeira</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <span className="text-xs text-muted-foreground">Faturamento Mensal</span>
+                <span className="text-sm font-bold text-success">{formatMoney(finance?.receitaMes ?? 0)}</span>
+              </div>
+              <div className="flex items-center justify-between border-b pb-3">
+                <span className="text-xs text-muted-foreground">A Receber Total</span>
+                <span className="text-sm font-bold text-foreground">{formatMoney(finance?.aReceber ?? 0)}</span>
+              </div>
+              <div className="flex items-center justify-between border-b pb-3">
+                <span className="text-xs text-muted-foreground">Contratos Ativos</span>
+                <span className="text-sm font-bold text-foreground">{finance?.contratosAtivos ?? 0}</span>
+              </div>
+              {(finance?.vencidasReceber ?? 0) > 0 && (
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-destructive font-semibold">Mensalidades em Atraso</span>
+                  <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full">{finance?.vencidasReceber}</span>
+                </div>
+              )}
+            </div>
+            <Button asChild variant="outline" className="w-full mt-6 text-xs h-9 bg-muted/50"><Link to="/app/consultoria">Gerenciar Consultoria</Link></Button>
+          </section>
+
+          <section className="bg-primary/5 border border-primary/20 rounded-xl p-5">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-primary"><Sparkles className="size-4" /> Atalhos Rápidos</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <QuickLink to="/app/agenda" icon={PlusCircle} label="Atividade" />
+              <QuickLink to="/app/clientes" icon={PlusCircle} label="Cliente" />
+              <QuickLink to="/app/relatorios" icon={FileText} label="Relatórios" />
+              <QuickLink to="/app/diagnostico" icon={BadgeCheck} label="Diagnóstico" />
+            </div>
+          </section>
+          
+          {data && data.length === 0 && (
+            <div className="bg-muted/30 border border-dashed rounded-xl p-5 text-center">
+              <p className="text-xs text-muted-foreground mb-3">Sua conta está vazia. Comece carregando dados de teste.</p>
+              <Button onClick={handleSeed} variant="outline" size="sm" className="w-full h-8" disabled={seeding}>
+                {seeding ? "Carregando..." : "Popular com Demonstração"}
+              </Button>
+            </div>
           )}
         </div>
-      </section>
-
-      {/* Seção 4: Empresas acompanhadas */}
-      <section className="space-y-3">
-        <div className="flex items-end justify-between">
-          <h2 className="text-lg font-display font-semibold">Empresas acompanhadas</h2>
-          <span className="text-xs text-muted-foreground">{cias.length} no total</span>
-        </div>
-        {isLoading ? (
-          <div className="text-muted-foreground text-sm">Carregando empresas...</div>
-        ) : cias.length === 0 ? (
-          <div className="bg-card border rounded-2xl p-10 text-center shadow-card">
-            <Building2 className="size-12 mx-auto text-muted-foreground/40" />
-            <h3 className="font-display font-semibold mt-4">Nenhuma empresa cadastrada ainda</h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-              Cadastre sua primeira empresa cliente ou carregue dados de demonstração para explorar o sistema.
-            </p>
-          </div>
-        ) : (
-          <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-4 py-2">Empresa</th>
-                    <th className="text-left px-4 py-2">Status</th>
-                    <th className="text-left px-4 py-2">Fase</th>
-                    <th className="text-left px-4 py-2">Último lanç.</th>
-                    <th className="text-left px-4 py-2">Próxima ação</th>
-                    <th className="text-right px-4 py-2">Pend.</th>
-                    <th className="text-right px-4 py-2">Atrasos</th>
-                    <th className="text-right px-4 py-2">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cias.map((c) => (
-                    <tr key={c.id} className={`border-t hover:bg-muted/20 ${!c.ativo ? "opacity-60" : ""}`}>
-                      <td className="px-4 py-2">
-                        <Link
-                          to="/app/empresa/$id" params={{ id: c.id }}
-                          onClick={() => localStorage.setItem("sfp:selected_company", c.id)}
-                          className="font-medium hover:text-primary"
-                        >
-                          {c.nome}
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          {c.cnpj && <span>{c.cnpj} · </span>}
-                          {c.responsavel ?? "Sem responsável"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={`text-[11px] font-medium px-2 py-1 rounded-full border ${statusColors[c.status]}`}>
-                          {statusLabel[c.status]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-xs text-muted-foreground capitalize">{c.consultancy_stage?.replace(/_/g, " ") ?? "—"}</td>
-                      <td className="px-4 py-2 text-xs">
-                        {c.ultimoLancamento ? (
-                          <>
-                            {formatDate(c.ultimoLancamento)}
-                            {(c.diasSemAtualizacao ?? 0) > DIAS_SEM_ATUALIZACAO && (
-                              <div className="text-[10px] text-warning-foreground">Sem atualização recente</div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-warning-foreground">Sem lançamento</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-xs">
-                        {c.proximaAcao ? (
-                          <>
-                            <div className="truncate max-w-[160px]">{c.proximaAcao.title}</div>
-                            {c.proximaAcao.due_date && <div className="text-[10px] text-muted-foreground">{formatDate(c.proximaAcao.due_date)}</div>}
-                          </>
-                        ) : (
-                          <span className="text-warning-foreground">Sem próxima ação</span>
-                        )}
-                        {c.relatorioPendente && <div className="text-[10px] text-destructive mt-0.5">Relatório pendente</div>}
-                      </td>
-                      <td className="px-4 py-2 text-right">{c.pendenciasAbertas > 0 ? <span className="font-medium">{c.pendenciasAbertas}</span> : <span className="text-muted-foreground">—</span>}</td>
-                      <td className="px-4 py-2 text-right">{c.entregasAtrasadas > 0 ? <span className="text-destructive font-medium">{c.entregasAtrasadas}</span> : <span className="text-muted-foreground">—</span>}</td>
-                      <td className="px-4 py-2 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button asChild size="sm" variant="ghost"><Link to="/app/empresa/$id" params={{ id: c.id }}>Resumo</Link></Button>
-                          <Button asChild size="sm" variant="ghost"><Link to="/app/relatorios">Relatórios</Link></Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Seção 5: Minha Consultoria */}
-      <section className="space-y-3">
-        <div className="flex items-end justify-between">
-          <h2 className="text-lg font-display font-semibold">Minha Consultoria</h2>
-          <Button asChild variant="ghost" size="sm"><Link to="/app/consultoria">Ver Minha Consultoria <ArrowRight className="size-3.5" /></Link></Button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <MiniKpi icon={TrendingUp} label="Receita do mês" value={formatMoney(finance?.receitaMes ?? 0)} tone="success" />
-          <MiniKpi icon={TrendingDown} label="Despesas do mês" value={formatMoney(finance?.despesaMes ?? 0)} />
-          <MiniKpi icon={DollarSign} label="Resultado líquido" value={formatMoney(finance?.resultado ?? 0)} tone={(finance?.resultado ?? 0) < 0 ? "danger" : "success"} />
-          <MiniKpi icon={ArrowDownCircle} label="A receber" value={formatMoney(finance?.aReceber ?? 0)} />
-          <MiniKpi icon={AlertCircle} label="Vencidas" value={finance?.vencidasReceber ?? 0} tone={(finance?.vencidasReceber ?? 0) > 0 ? "danger" : undefined} />
-          <MiniKpi icon={FileText} label="Contratos ativos" value={finance?.contratosAtivos ?? 0} />
-        </div>
-      </section>
-
-      {/* Seção 6: Alertas inteligentes */}
-      {alerts.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-display font-semibold">Alertas inteligentes</h2>
-          <div className="space-y-2">
-            {alerts.map((a, i) => (
-              <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${a.tone === "danger" ? "bg-destructive/5 border-destructive/20" : a.tone === "warning" ? "bg-warning/5 border-warning/20" : "bg-primary/5 border-primary/20"}`}>
-                <AlertCircle className={`size-4 mt-0.5 ${a.tone === "danger" ? "text-destructive" : a.tone === "warning" ? "text-warning-foreground" : "text-primary"}`} />
-                <div className="flex-1 text-sm">{a.text}</div>
-                <Button asChild size="sm" variant="ghost"><Link to="/app/clientes">Ver</Link></Button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      </div>
     </div>
   );
 }
+
+function MetricCard({ label, value, icon: Icon, trend, variant = "default", to }: { label: string; value: string | number; icon: any; trend?: string; variant?: "default" | "destructive" | "warning"; to: string }) {
+  return (
+    <Link to={to} className="bg-card border rounded-xl p-5 shadow-sm hover:shadow-md transition-all group">
+      <div className="flex items-center justify-between mb-3">
+        <div className={`p-2 rounded-lg ${
+          variant === "destructive" ? "bg-destructive/10 text-destructive" : 
+          variant === "warning" ? "bg-warning/10 text-warning-foreground" : 
+          "bg-primary/10 text-primary"
+        }`}>
+          <Icon className="size-5" />
+        </div>
+        <ArrowRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+      </div>
+      <div className="space-y-1">
+        <div className={`text-2xl font-bold tracking-tight ${
+          variant === "destructive" && Number(value) > 0 ? "text-destructive" : 
+          variant === "warning" && Number(value) > 0 ? "text-warning-foreground" : "text-foreground"
+        }`}>
+          {value}
+        </div>
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
+        {trend && <div className="text-[10px] text-success font-semibold mt-1">{trend}</div>}
+      </div>
+    </Link>
+  );
+}
+
+function QuickLink({ to, icon: Icon, label }: { to: string; icon: any; label: string }) {
+  return (
+    <Link to={to} className="flex flex-col items-center justify-center p-3 bg-card border rounded-lg hover:border-primary/40 hover:bg-primary/5 transition-all text-center">
+      <Icon className="size-4 text-primary mb-1.5" />
+      <span className="text-[10px] font-bold uppercase text-foreground leading-none">{label}</span>
+    </Link>
+  );
+}
+
+// Keep existing ActionCard, MiniKpi, etc for backward compatibility or use elsewhere if needed
+
 
 function ActionCard({ icon: Icon, label, value, desc, tone, to }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number | string; desc: string; tone: "danger" | "warning" | "info" | "success"; to: string }) {
   const toneClasses =
