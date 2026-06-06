@@ -559,63 +559,8 @@ function QuickLink({ to, icon: Icon, label }: { to: string; icon: any; label: st
   );
 }
 
-// Keep existing ActionCard, MiniKpi, etc for backward compatibility or use elsewhere if needed
 
 
-function ActionCard({ icon: Icon, label, value, desc, tone, to }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number | string; desc: string; tone: "danger" | "warning" | "info" | "success"; to: string }) {
-  const toneClasses =
-    tone === "danger" ? "border-destructive/30 hover:border-destructive/50" :
-    tone === "warning" ? "border-warning/30 hover:border-warning/50" :
-    tone === "success" ? "border-success/30 hover:border-success/50" :
-    "border-primary/30 hover:border-primary/50";
-  const iconColor =
-    tone === "danger" ? "text-destructive" :
-    tone === "warning" ? "text-warning-foreground" :
-    tone === "success" ? "text-success" :
-    "text-primary";
-  const num = typeof value === "number" ? value : parseInt(String(value));
-  const showTone = !Number.isNaN(num) && num > 0;
-  return (
-    <Link to={to} className={`group bg-card border-2 ${showTone ? toneClasses : "border-border"} rounded-2xl p-5 shadow-card transition-colors block`}>
-      <div className="flex items-start justify-between">
-        <Icon className={`size-5 ${showTone ? iconColor : "text-muted-foreground"}`} />
-        <ArrowRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-      </div>
-      <div className={`font-display font-bold text-3xl mt-3 ${showTone ? iconColor : ""}`}>{value}</div>
-      <div className="text-sm font-medium mt-1">{label}</div>
-      <div className="text-xs text-muted-foreground mt-0.5">{desc}</div>
-    </Link>
-  );
-}
-
-function MiniKpi({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number | string; tone?: "success" | "warning" | "danger" }) {
-  const c = tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warning" ? "text-warning-foreground" : "";
-  return (
-    <div className="bg-card border rounded-xl p-4 shadow-card">
-      <div className="flex items-center gap-2">
-        <Icon className="size-4 text-muted-foreground" />
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      </div>
-      <div className={`font-display font-semibold text-xl mt-2 ${c}`}>{value}</div>
-    </div>
-  );
-}
-
-function Kpi({ icon: Icon, label, value, tone, desc }: { icon?: React.ComponentType<{ className?: string }>; label: string; value: string | number; tone?: "success" | "warning" | "danger"; desc?: string; }) {
-  const c = tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warning" ? "text-warning-foreground" : "";
-  return (
-    <div className="bg-card border rounded-2xl p-5 shadow-card">
-      <div className="flex items-start gap-3">
-        {Icon && <Icon className="size-6 text-muted-foreground" />}
-        <div className="flex-1">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-          <div className={`font-display font-bold text-2xl mt-2 ${c}`}>{value}</div>
-          {desc && <div className="text-xs text-muted-foreground mt-1">{desc}</div>}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* =============== CLIENT =============== */
 
