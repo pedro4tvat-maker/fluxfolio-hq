@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { PlusCircle, Building2, Pencil } from "lucide-react";
+import { PlusCircle, Building2, Pencil, FileBarChart, NotebookPen, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
@@ -117,13 +117,23 @@ function ClientesPage() {
                   <th className="p-3">Cidade/UF</th>
                   <th className="p-3">Início</th>
                   <th className="p-3">Status</th>
+                  <th className="p-3 text-right">Módulos</th>
                   <th className="p-3 w-20"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {data.map((c: any) => (
-                  <tr key={c.id} className="hover:bg-muted/30">
-                    <td className="p-3 font-medium">{c.nome}</td>
+                  <tr key={c.id} className="hover:bg-muted/30 group">
+                    <td className="p-3 font-medium">
+                      <Link 
+                        to="/app/empresa/$id" 
+                        params={{ id: c.id }}
+                        onClick={() => localStorage.setItem("sfp:selected_company", c.id)}
+                        className="hover:text-primary transition-colors"
+                      >
+                        {c.nome}
+                      </Link>
+                    </td>
                     <td className="p-3 text-muted-foreground">{c.responsavel || "—"}</td>
                     <td className="p-3 text-muted-foreground">{c.segmento || "—"}</td>
                     <td className="p-3 text-muted-foreground">{c.cidade ? `${c.cidade}/${c.estado || ""}` : "—"}</td>
@@ -134,9 +144,27 @@ function ClientesPage() {
                       </span>
                     </td>
                     <td className="p-3 text-right">
-                      {isConsultant && (
-                        <Button size="icon" variant="ghost" onClick={() => startEdit(c)}><Pencil className="size-4" /></Button>
-                      )}
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button asChild size="icon" variant="ghost" title="Relatórios" className="h-8 w-8" onClick={() => localStorage.setItem("sfp:selected_company", c.id)}>
+                          <Link to="/app/relatorios"><FileBarChart className="size-4" /></Link>
+                        </Button>
+                        <Button asChild size="icon" variant="ghost" title="Atas" className="h-8 w-8" onClick={() => localStorage.setItem("sfp:selected_company", c.id)}>
+                          <Link to="/app/atas"><NotebookPen className="size-4" /></Link>
+                        </Button>
+                        <Button asChild size="icon" variant="ghost" title="Agenda" className="h-8 w-8" onClick={() => localStorage.setItem("sfp:selected_company", c.id)}>
+                          <Link to="/app/agenda" search={{ company: c.id }}><Calendar className="size-4" /></Link>
+                        </Button>
+                      </div>
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button asChild size="icon" variant="ghost" className="h-8 w-8" title="Resumo" onClick={() => localStorage.setItem("sfp:selected_company", c.id)}>
+                          <Link to="/app/empresa/$id" params={{ id: c.id }}><PlusCircle className="size-4" /></Link>
+                        </Button>
+                        {isConsultant && (
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(c)}><Pencil className="size-4" /></Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
