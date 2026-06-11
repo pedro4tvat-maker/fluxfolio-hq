@@ -511,6 +511,7 @@ export type Database = {
           consultancy_progress: number
           consultancy_stage: string
           consultancy_status: string
+          consultant_id: string | null
           created_at: string
           data_inicio: string | null
           documento: string | null
@@ -537,6 +538,7 @@ export type Database = {
           consultancy_progress?: number
           consultancy_stage?: string
           consultancy_status?: string
+          consultant_id?: string | null
           created_at?: string
           data_inicio?: string | null
           documento?: string | null
@@ -563,6 +565,7 @@ export type Database = {
           consultancy_progress?: number
           consultancy_stage?: string
           consultancy_status?: string
+          consultant_id?: string | null
           created_at?: string
           data_inicio?: string | null
           documento?: string | null
@@ -580,7 +583,15 @@ export type Database = {
           telefone?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "companies_consultant_id_fkey"
+            columns: ["consultant_id"]
+            isOneToOne: false
+            referencedRelation: "consultants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_journey_checklist: {
         Row: {
