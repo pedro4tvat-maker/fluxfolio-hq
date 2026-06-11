@@ -60,11 +60,20 @@ const DIAS_SEM_ATUALIZACAO = 7;
 async function loadCompaniesV2(isConsultant: boolean, userId: string): Promise<CompanyKpi[]> {
   const query = supabase
     .from("companies")
-    .select("id, nome, responsavel, ativo, cnpj, consultancy_stage, consultancy_status, created_at")
+    .select("id, nome, responsavel, ativo, cnpj, consultancy_stage, consultancy_status, created_at, consultant_id")
     .order("nome");
     
   if (!isConsultant) {
     query.eq("owner_id", userId);
+  } else {
+    // If consultant, show companies linked to them or where they are the owner
+    // First, we need to find the consultant record
+    const { data: consultant } = await supabase.from("consultants").select("id").eq("user_id", userId).maybeSingle();
+    if (consultant) {
+      query.or(`consultant_id.eq.${consultant.id},owner_id.eq.${userId}`);
+    } else {
+      query.eq("owner_id", userId);
+    }
   }
   
   const { data: companies, error } = await query;

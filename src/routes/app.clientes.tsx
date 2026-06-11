@@ -30,15 +30,31 @@ function ClientesGuard() {
 }
 
 function ClientesPage() {
-  const { isConsultant } = useAuth();
+  const { isConsultant, user } = useAuth();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
-    queryKey: ["companies-list"],
+    queryKey: ["companies-list", isConsultant, user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("*").order("nome");
+      const query = supabase.from("companies").select("*").order("nome");
+      
+      if (isConsultant && user) {
+        // Find the consultant record to get their ID
+        const { data: consultant } = await supabase.from("consultants").select("id").eq("user_id", user.id).maybeSingle();
+        if (consultant) {
+          // If consultant, show companies they own OR are linked to
+          query.or(`consultant_id.eq.${consultant.id},owner_id.eq.${user.id}`);
+        } else {
+          query.eq("owner_id", user.id);
+        }
+      } else if (user) {
+        query.eq("owner_id", user.id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!user?.id
   });
 
   const [open, setOpen] = useState(false);
@@ -56,7 +72,22 @@ function ClientesPage() {
       toast.success("Empresa atualizada");
     } else {
       const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("companies").insert({ ...form, owner_id: u.user!.id });
+      
+      // If the current user is a consultant, we should also set the consultant_id
+      let consultant_id = null;
+      if (isConsultant) {
+        const { data: consultant } = await supabase.from("consultants")
+          .select("id")
+          .eq("user_id", u.user!.id)
+          .maybeSingle();
+        if (consultant) consultant_id = consultant.id;
+      }
+
+      const { error } = await supabase.from("companies").insert({ 
+        ...form, 
+        owner_id: u.user!.id,
+        consultant_id
+      });
       if (error) return toast.error(error.message);
       toast.success("Empresa cadastrada");
     }
