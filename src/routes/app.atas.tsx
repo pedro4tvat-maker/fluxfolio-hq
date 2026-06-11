@@ -131,12 +131,26 @@ function AtasPage() {
     enabled: !!user,
     queryFn: async () => {
       if (isConsultant && consultant?.id) {
-        const { data } = await sb
+        // First try to get companies from links
+        const { data: links } = await sb
           .from("consultant_company_links")
           .select("company:companies(id, nome, cnpj)")
           .eq("consultant_id", consultant.id)
           .eq("status", "approved");
-        return (data ?? []).map((r: any) => r.company).filter(Boolean);
+        
+        const linkedCompanies = (links ?? []).map((r: any) => r.company).filter(Boolean);
+
+        // Also get companies where consultant_id is directly set
+        const { data: directCompanies } = await sb
+          .from("companies")
+          .select("id, nome, cnpj")
+          .eq("consultant_id", consultant.id);
+
+        // Merge and remove duplicates
+        const allCompanies = [...linkedCompanies, ...(directCompanies ?? [])];
+        const uniqueCompanies = Array.from(new Map(allCompanies.map(item => [item.id, item])).values());
+        
+        return uniqueCompanies;
       }
       const { data } = await sb.from("company_members").select("companies(id, nome, cnpj)").eq("user_id", user!.id);
       return (data ?? []).map((r: any) => r.companies).filter(Boolean);
