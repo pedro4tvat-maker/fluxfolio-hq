@@ -581,6 +581,14 @@ function MinuteFormDialog({
               <Label>Horário</Label>
               <Input type="time" value={form.meeting_time ?? ""} onChange={(e) => setForm({ ...form, meeting_time: e.target.value })} />
             </div>
+            <div>
+              <Label>Próxima reunião (opcional)</Label>
+              <Input type="date" value={form.next_meeting_date ?? ""} onChange={(e) => setForm({ ...form, next_meeting_date: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Resumo de anexos/documentos (opcional)</Label>
+              <Input value={form.attachments_summary ?? ""} onChange={(e) => setForm({ ...form, attachments_summary: e.target.value })} placeholder="Ex: Planilha de custos, Relatório de vendas..." />
+            </div>
             <div className="md:col-span-2">
               <Label>Participantes</Label>
               <div className="flex gap-2">
@@ -601,7 +609,7 @@ function MinuteFormDialog({
               </div>
             </div>
             <div className="md:col-span-2">
-              <Label>Pauta</Label>
+              <Label>Pauta (opcional)</Label>
               <Textarea value={form.agenda_text ?? ""} onChange={(e) => setForm({ ...form, agenda_text: e.target.value })} rows={2} placeholder="O que será tratado nesta reunião..." />
             </div>
             <div className="md:col-span-2">
