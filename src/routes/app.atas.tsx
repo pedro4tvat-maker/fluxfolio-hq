@@ -478,26 +478,51 @@ function MinuteFormDialog({
           meeting_time: form.meeting_time,
           meeting_type: MEETING_TYPES.find(t => t.v === form.meeting_type)?.l || form.meeting_type,
           participants: form.participants,
-          agenda_text: form.agenda_text,
           raw_notes: form.raw_notes,
           consultant_name: consultantName || "Não informado",
         },
       });
-      if (error || !data?.content) {
-        // Fallback: local template
-        const fallback = defaultTemplate(companyName)
-          .replace("## 3. Resumo da reunião\n", `## 3. Resumo da reunião\n${form.raw_notes}\n`);
-        setForm((f: any) => ({ ...f, generated_content: fallback, final_content: fallback, status: "rascunho", ai_generated: false }));
-        toast.warning("Geração com IA indisponível. Preenchemos um modelo padrão — edite manualmente.");
-      } else {
-        setForm((f: any) => ({
-          ...f, generated_content: data.content, final_content: data.content,
-          status: "gerada_ia", ai_generated: true,
-        }));
-        toast.success("Ata gerada por IA. Revise antes de finalizar.");
+
+      if (error) {
+        // Check if it's a 503 error (AI not configured)
+        const errorMsg = error.message || "";
+        if (errorMsg.includes("503") || errorMsg.includes("AI não configurada")) {
+          toast.error("A geração inteligente de atas ainda não está configurada.");
+        } else {
+          toast.error("Erro ao gerar ata com IA. Tente novamente em instantes.");
+        }
+        return;
       }
+
+      if (!data?.content) {
+        toast.error("A IA retornou um conteúdo vazio. Tente reformular seu relato.");
+        return;
+      }
+
+      // Final validation on client side for placeholders
+      const placeholders = [
+        "Decisão — Responsável — Prazo",
+        "Pendência — Responsável — Prazo — Status",
+        "Ação — Responsável — Data prevista"
+      ];
+      
+      const hasPlaceholders = placeholders.some(p => data.content.includes(p));
+      if (hasPlaceholders) {
+        toast.warning("A ata gerada parece conter placeholders não preenchidos. Por favor, revise e ajuste manualmente.");
+      } else {
+        toast.success("Ata gerada por IA com sucesso! Revise antes de finalizar.");
+      }
+
+      setForm((f: any) => ({
+        ...f, 
+        generated_content: data.content, 
+        final_content: data.content,
+        status: "gerada_ia", 
+        ai_generated: true,
+      }));
     } catch (e: any) {
-      toast.error(e.message ?? "Erro ao gerar ata");
+      toast.error("Erro técnico na geração da ata.");
+      console.error(e);
     } finally {
       setGenerating(false);
     }
