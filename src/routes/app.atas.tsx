@@ -387,6 +387,7 @@ function AtasPage() {
           editing={editing}
           companies={companies}
           consultantId={consultant.id}
+          consultantName={consultant.consultancy_name}
           userId={user!.id}
         />
       )}
@@ -395,10 +396,10 @@ function AtasPage() {
 }
 
 function MinuteFormDialog({
-  open, onClose, editing, companies, consultantId, userId,
+  open, onClose, editing, companies, consultantId, consultantName, userId,
 }: {
   open: boolean; onClose: () => void; editing: Minute | null;
-  companies: any[]; consultantId: string; userId: string;
+  companies: any[]; consultantId: string; consultantName?: string; userId: string;
 }) {
   const qc = useQueryClient();
   const [form, setForm] = useState(() => editing ?? {
@@ -479,7 +480,7 @@ function MinuteFormDialog({
           participants: form.participants,
           agenda_text: form.agenda_text,
           raw_notes: form.raw_notes,
-          consultant_name: companies.find((c: any) => c.id === form.company_id)?.consultancy_name || "Não informado",
+          consultant_name: consultantName || "Não informado",
         },
       });
       if (error || !data?.content) {
