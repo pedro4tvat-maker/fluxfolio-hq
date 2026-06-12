@@ -107,9 +107,15 @@ ESTRUTURA DA ATA (SIGA RIGOROSAMENTE):
     if (!aiResp.ok) {
        const errorText = await aiResp.text();
        console.error("AI Gateway Error:", aiResp.status, errorText);
-       return new Response(JSON.stringify({ error: "Erro na IA", status: aiResp.status }), {
-         status: aiResp.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-       });
+       const friendly = aiResp.status === 402
+         ? "Créditos de IA esgotados. Adicione saldo em Settings → Workspace → Plans & Credits."
+         : aiResp.status === 429
+           ? "Limite de requisições atingido. Aguarde alguns instantes e tente novamente."
+           : "Erro ao gerar ata com IA.";
+       return new Response(
+         JSON.stringify({ error: friendly, status: aiResp.status, content: null }),
+         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+       );
     }
 
     const json = await aiResp.json();
