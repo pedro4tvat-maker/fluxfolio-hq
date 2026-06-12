@@ -479,7 +479,7 @@ function MinuteFormDialog({
           participants: form.participants,
           agenda_text: form.agenda_text,
           raw_notes: form.raw_notes,
-          consultant_name: consultant?.consultancy_name || "Não informado",
+          consultant_name: companies.find((c: any) => c.id === form.company_id)?.consultancy_name || "Não informado",
         },
       });
       if (error || !data?.content) {
