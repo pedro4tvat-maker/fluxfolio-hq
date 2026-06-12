@@ -32,54 +32,83 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `Você é um assistente de consultoria financeira que escreve atas de reunião profissionais em português do Brasil.
-Transforme as anotações livres do consultor em uma ata estruturada, clara, objetiva e formal.
-Use Markdown. Mantenha tudo em português. Não invente informações que não estão nas anotações.`;
+    const systemPrompt = `Você é um assistente especializado em atas de reunião para consultoria financeira empresarial. Sua função é transformar um relato livre, informal e possivelmente incompleto em uma ata profissional, clara, organizada e editável.
 
-    const defaultTemplate = `# Ata de Reunião — {{empresa}}
+Não copie o relato bruto. Interprete, organize e redija de forma formal.
 
-## 1. Dados da reunião
-- Empresa: {{empresa}}
-- Data: {{data}}
-- Horário: {{horario}}
-- Tipo: {{tipo}}
-- Participantes: {{participantes}}
+Preencha todas as seções da ata com base nas informações disponíveis. Se alguma informação não estiver disponível, use ‘Não informado’ ou ‘A definir’, conforme o caso.
 
-## 2. Pauta
-{{pauta}}
+A ata deve ter linguagem profissional, objetiva e adequada para ser compartilhada com o cliente.`;
 
-## 3. Resumo da reunião
-(escreva um resumo organizado)
+    const userPrompt = `DADOS RECEBIDOS:
+Empresa: ${company_name ?? "Não informado"}
+Data da reunião: ${meeting_date ?? "Não informado"}
+Horário: ${meeting_time ?? "Não informado"}
+Tipo de reunião: ${meeting_type ?? "Não informado"}
+Participantes: ${Array.isArray(participants) ? participants.join(", ") : (participants ?? "Não informado")}
+Consultor responsável: ${body.consultant_name ?? "Não informado"}
+Pauta inicial: ${agenda_text ?? "Não informado"}
+Relato livre: ${raw_notes ?? "Não informado"}
 
-## 4. Pontos discutidos
-- ...
+Gere a ata no seguinte formato Markdown:
 
-## 5. Decisões tomadas
-- Decisão — Responsável — Prazo
+# ATA DE REUNIÃO — CONSULTORIA FINANCEIRA
 
-## 6. Pendências
-- Pendência — Responsável — Prazo — Status
+## 1. Identificação da reunião
+* Empresa:
+* CNPJ: (se não informado, use 'Não informado')
+* Data:
+* Horário:
+* Tipo de reunião:
+* Participantes:
+* Consultor responsável:
 
-## 7. Próximos passos
-- Ação — Responsável — Data prevista
+## 2. Objetivo da reunião
+Redija um parágrafo explicando o objetivo principal da reunião com base no relato.
 
-## 8. Observações finais
-- ...`;
+## 3. Pauta tratada
+Liste de 3 a 8 itens de pauta identificados no relato.
 
-    const userPrompt = `Empresa: ${company_name ?? "—"}
-Data: ${meeting_date ?? "—"}
-Horário: ${meeting_time ?? "—"}
-Tipo de reunião: ${meeting_type ?? "—"}
-Participantes: ${Array.isArray(participants) ? participants.join(", ") : (participants ?? "—")}
+## 4. Resumo executivo
+Redija um resumo profissional da reunião em 1 a 3 parágrafos, destacando o contexto, os assuntos principais e o direcionamento definido.
 
-PAUTA:
-${agenda_text ?? "—"}
+## 5. Pontos discutidos
+Organize os pontos discutidos em tópicos detalhados. Cada tópico deve ter título e descrição.
 
-ANOTAÇÕES LIVRES DO CONSULTOR:
-${raw_notes ?? "—"}
+## 6. Decisões tomadas
+Liste as decisões identificadas. Para cada decisão, informar:
+* Decisão:
+* Responsável:
+* Prazo:
+(Se responsável ou prazo não forem informados, usar “A definir”)
 
-MODELO A SEGUIR (preencha cada seção com base nas anotações):
-${template || defaultTemplate}`;
+## 7. Pendências identificadas
+Liste as pendências que precisam ser resolvidas. Para cada pendência, informar:
+* Pendência:
+* Responsável:
+* Prazo:
+* Status: (Padrão: Pendente)
+
+## 8. Plano de ação e próximos passos
+Liste as próximas ações práticas. Para cada ação, informar:
+* Ação:
+* Responsável:
+* Data prevista:
+* Observação:
+
+## 9. Encaminhamentos para o SISTEMAFP PJ
+Informe quais módulos ou processos do sistema deverão ser utilizados ou atualizados a partir da reunião (ex: fluxo de caixa, estoque, vendas, precificação, relatórios, BPO, documentos ou plano de ação).
+
+## 10. Observações finais
+Redija um fechamento profissional, objetivo e adequado para ata.
+
+REGRAS CRÍTICAS:
+* Não deixar campos vazios.
+* Não usar apenas hífen.
+* Não repetir o relato bruto.
+* Não inventar informações sensíveis ou fatos não mencionados.
+* Usar linguagem formal e consultiva.
+* Se uma seção não tiver informações, use textos como: "Não foram registradas decisões formais adicionais nesta reunião." ou "Não foram identificadas pendências específicas além dos próximos passos descritos."`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -88,11 +117,12 @@ ${template || defaultTemplate}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.0-flash-exp",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        temperature: 0.3,
       }),
     });
 
