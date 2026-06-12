@@ -131,7 +131,7 @@ Escreva um fechamento profissional.`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "openai/gpt-5-mini",
+          model: "google/gemini-3.1-flash-lite-preview",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
