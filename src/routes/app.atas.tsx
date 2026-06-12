@@ -412,6 +412,8 @@ function MinuteFormDialog({
     participants: [] as string[],
     agenda_text: "",
     raw_notes: "",
+    next_meeting_date: "",
+    attachments_summary: "",
     generated_content: "",
     final_content: "",
     status: "rascunho",
