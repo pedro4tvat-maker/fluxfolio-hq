@@ -490,14 +490,12 @@ function MinuteFormDialog({
       });
 
       if (error) {
-        const errorMsg = error.message || "";
-        if (errorMsg.includes("503") || errorMsg.includes("AI não configurada")) {
-          toast.error("A geração inteligente de atas ainda não está configurada.");
-        } else if (errorMsg.includes("402")) {
-          toast.error("Créditos de IA insuficientes. Verifique seu saldo em Cloud & AI balance.");
-        } else {
-          toast.error("Erro ao gerar ata com IA. Tente novamente em instantes.");
-        }
+        toast.error("Erro de comunicação com a IA. Tente novamente.");
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
         return;
       }
 
