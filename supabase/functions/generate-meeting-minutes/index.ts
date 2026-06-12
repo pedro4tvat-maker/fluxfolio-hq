@@ -34,94 +34,54 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `Você é um especialista em atas de reunião para consultoria financeira empresarial. Sua função é transformar relatos livres, informais e incompletos em atas profissionais, completas, claras e editáveis.
+    const systemPrompt = `Você é um especialista em atas de reunião para consultoria financeira empresarial. Sua função é transformar relatos livres em atas profissionais e estruturadas.
 
-Você não deve copiar o relato bruto. Você deve interpretar, organizar, reescrever e preencher todas as seções possíveis da ata.
+REGRAS CRÍTICAS DE FORMATO:
+1. JAMAIS repita as linhas de exemplo (placeholders) como "Decisão — Responsável — Prazo" ou "Pendência — Responsável — Prazo".
+2. Se houver uma decisão, escreva diretamente a decisão, o responsável e o prazo.
+3. Se NÃO houver informações para uma seção, use frases completas como "Nenhuma decisão formal foi registrada" em vez de deixar placeholders vazios ou apenas hífen.
+4. Use Markdown puro.
+5. Não invente dados. Se não souber o responsável, use "A definir".
+6. Mantenha um tom altamente profissional e executivo.`;
 
-A ata será usada por um consultor financeiro para documentar reuniões com clientes empresariais.
-
-Regras obrigatórias:
-* Não deixar seções vazias.
-* Não usar apenas hífen.
-* Não usar placeholders genéricos como “Decisão — Responsável — Prazo”.
-* Se uma informação não foi fornecida, usar “Não informado” ou “A definir”.
-* Não inventar fatos, valores, pessoas ou prazos.
-* Pode inferir objetivo, pauta, pontos discutidos, pendências e próximos passos com base no relato.
-* Usar linguagem formal, consultiva e profissional.
-* Gerar uma ata pronta para revisão e compartilhamento.
-* Retornar somente o conteúdo da ata em markdown.`;
-
-    const userPrompt = `Dados da reunião:
-
+    const userPrompt = `DADOS DA REUNIÃO:
 Empresa: ${company_name || "Não informado"}
 CNPJ: ${company_cnpj || "Não informado"}
 Data: ${meeting_date || "Não informado"}
 Horário: ${meeting_time || "Não informado"}
-Tipo de reunião: ${meeting_type || "A definir"}
+Tipo: ${meeting_type || "A definir"}
 Participantes: ${Array.isArray(participants) ? participants.join(", ") : (participants || "Não informado")}
-Consultor responsável: ${consultant_name || "Não informado"}
-Próxima reunião prevista: ${next_meeting_date || "Não informado"}
-Documentos/Anexos: ${attachments_summary || "Nenhum informado"}
+Consultor: ${consultant_name || "Não informado"}
+Próxima reunião: ${next_meeting_date || "Não informado"}
+Anexos: ${attachments_summary || "Nenhum"}
 
-Relato livre da reunião:
+RELATO LIVRE:
 ${raw_notes}
 
-Com base nos dados acima, gere uma ata profissional no seguinte formato:
+ESTRUTURA DA ATA (SIGA RIGOROSAMENTE):
 
 # ATA DE REUNIÃO — CONSULTORIA FINANCEIRA
 
-## 1. Identificação da reunião
-* Empresa:
-* CNPJ:
-* Data:
-* Horário:
-* Tipo de reunião:
-* Participantes:
-* Consultor responsável:
+## 1. Identificação
+(Liste os dados básicos: Empresa, Data, Horário, Participantes, Consultor)
 
-## 2. Objetivo da reunião
-Escreva um parágrafo profissional explicando o objetivo da reunião.
+## 2. Objetivo da Reunião
+(Um parágrafo descrevendo o propósito do encontro)
 
-## 3. Pauta tratada
-Liste de 3 a 8 itens de pauta identificados a partir do relato.
+## 3. Pauta e Pontos Discutidos
+(Organize o relato em tópicos claros e profissionais, agrupando assuntos correlatos)
 
-## 4. Resumo executivo
-Escreva de 1 a 3 parágrafos profissionais resumindo a reunião.
+## 4. Decisões Tomadas
+(Liste cada decisão. Exemplo: "Decisão: Compra de software / Responsável: João / Prazo: 30 dias". NÃO use a linha "Decisão — Responsável — Prazo")
 
-## 5. Pontos discutidos
-Organize os pontos discutidos em subtópicos com título e explicação.
+## 5. Pendências e Próximos Passos
+(Liste ações futuras. Exemplo: "Ação: Revisar fluxo de caixa / Responsável: Consultor / Prazo: Próxima reunião")
 
-## 6. Decisões tomadas
-Liste as decisões identificadas. Cada decisão deve conter:
-* Decisão:
-* Responsável:
-* Prazo:
+## 6. Encaminhamentos SISTEMAFP PJ
+(Sugestões de quais módulos do sistema devem ser usados ou alimentados)
 
-Se não houver decisões explícitas, escreva:
-“Não foram registradas decisões formais adicionais nesta reunião.”
-
-## 7. Pendências identificadas
-Liste as pendências identificadas. Cada pendência deve conter:
-* Pendência:
-* Responsável:
-* Prazo:
-* Status:
-
-Se não houver pendências explícitas, escreva:
-“Não foram identificadas pendências específicas além dos próximos passos descritos.”
-
-## 8. Plano de ação e próximos passos
-Liste ações práticas decorrentes da reunião. Cada ação deve conter:
-* Ação:
-* Responsável:
-* Data prevista:
-* Observação:
-
-## 9. Encaminhamentos para o SISTEMAFP PJ
-Explique quais módulos do sistema devem ser atualizados ou utilizados a partir da reunião.
-
-## 10. Observações finais
-Escreva um fechamento profissional.`;
+## 7. Observações Finais
+(Fechamento profissional)`;
 
     const fetchAI = async () => {
       const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -155,24 +115,36 @@ Escreva um fechamento profissional.`;
     const json = await aiResp.json();
     let content = json?.choices?.[0]?.message?.content ?? "";
 
-    // Validation
+    // Security check to avoid returning empty or placeholder content
     const placeholders = [
       "Decisão — Responsável — Prazo",
-      "Pendência — Responsável — Prazo — Status",
-      "Ação — Responsável — Data prevista",
-      "## 2. Pauta\n-",
-      "## 4. Pontos discutidos\n-",
-      "## 8. Observações finais\n-"
+      "Pendência — Responsável — Prazo",
+      "Ação — Responsável — Data prevista"
     ];
 
-    const hasPlaceholders = placeholders.some(p => content.includes(p));
-    
-    if (hasPlaceholders) {
-      console.log("Placeholders detected, retrying...");
-      aiResp = await fetchAI();
-      if (aiResp.ok) {
-        const json2 = await aiResp.json();
-        content = json2?.choices?.[0]?.message?.content ?? content;
+    if (placeholders.some(p => content.includes(p))) {
+      // One retry with a more forceful prompt if placeholders are detected
+      const retryResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+            { role: "assistant", content: content },
+            { role: "user", content: "Você incluiu placeholders de exemplo (como 'Decisão — Responsável — Prazo'). Por favor, refaça a ata removendo essas linhas e preenchendo os dados reais ou indicando 'Nenhum' ou 'A definir'." }
+          ],
+          temperature: 0.1,
+        }),
+      });
+      
+      if (retryResp.ok) {
+        const retryJson = await retryResp.json();
+        content = retryJson?.choices?.[0]?.message?.content ?? content;
       }
     }
 
