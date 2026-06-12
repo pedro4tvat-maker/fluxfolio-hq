@@ -3185,9 +3185,7 @@ export type Database = {
         Returns: {
           city: string
           consultancy_name: string
-          email: string
           id: string
-          invite_code: string
           responsible_name: string
           state: string
         }[]
