@@ -2331,6 +2331,7 @@ export type Database = {
           agenda_activity_id: string | null
           agenda_text: string | null
           ai_generated: boolean
+          attachments_summary: string | null
           branch_id: string | null
           company_id: string
           consultant_id: string
@@ -2343,6 +2344,7 @@ export type Database = {
           meeting_date: string
           meeting_time: string | null
           meeting_type: string
+          next_meeting_date: string | null
           participants: Json
           raw_notes: string | null
           related_module: string | null
@@ -2357,6 +2359,7 @@ export type Database = {
           agenda_activity_id?: string | null
           agenda_text?: string | null
           ai_generated?: boolean
+          attachments_summary?: string | null
           branch_id?: string | null
           company_id: string
           consultant_id: string
@@ -2369,6 +2372,7 @@ export type Database = {
           meeting_date?: string
           meeting_time?: string | null
           meeting_type?: string
+          next_meeting_date?: string | null
           participants?: Json
           raw_notes?: string | null
           related_module?: string | null
@@ -2383,6 +2387,7 @@ export type Database = {
           agenda_activity_id?: string | null
           agenda_text?: string | null
           ai_generated?: boolean
+          attachments_summary?: string | null
           branch_id?: string | null
           company_id?: string
           consultant_id?: string
@@ -2395,6 +2400,7 @@ export type Database = {
           meeting_date?: string
           meeting_time?: string | null
           meeting_type?: string
+          next_meeting_date?: string | null
           participants?: Json
           raw_notes?: string | null
           related_module?: string | null
