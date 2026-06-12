@@ -22,6 +22,8 @@ serve(async (req) => {
       participants,
       consultant_name,
       raw_notes,
+      next_meeting_date,
+      attachments_summary,
     } = body ?? {};
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -58,6 +60,8 @@ Horário: ${meeting_time || "Não informado"}
 Tipo de reunião: ${meeting_type || "A definir"}
 Participantes: ${Array.isArray(participants) ? participants.join(", ") : (participants || "Não informado")}
 Consultor responsável: ${consultant_name || "Não informado"}
+Próxima reunião prevista: ${next_meeting_date || "Não informado"}
+Documentos/Anexos: ${attachments_summary || "Nenhum informado"}
 
 Relato livre da reunião:
 ${raw_notes}
@@ -141,9 +145,9 @@ Escreva um fechamento profissional.`;
     let aiResp = await fetchAI();
     
     if (!aiResp.ok) {
-       // Error handling...
-       const errorData = await aiResp.json().catch(() => ({}));
-       return new Response(JSON.stringify({ error: "Erro na IA", details: errorData }), {
+       const errorText = await aiResp.text();
+       console.error("AI Gateway Error:", aiResp.status, errorText);
+       return new Response(JSON.stringify({ error: "Erro na IA", status: aiResp.status }), {
          status: aiResp.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
        });
     }
