@@ -412,6 +412,8 @@ function MinuteFormDialog({
     participants: [] as string[],
     agenda_text: "",
     raw_notes: "",
+    next_meeting_date: "",
+    attachments_summary: "",
     generated_content: "",
     final_content: "",
     status: "rascunho",
@@ -435,6 +437,8 @@ function MinuteFormDialog({
         participants: form.participants ?? [],
         agenda_text: form.agenda_text || null,
         raw_notes: form.raw_notes || null,
+        next_meeting_date: form.next_meeting_date || null,
+        attachments_summary: form.attachments_summary || null,
         generated_content: form.generated_content || null,
         final_content: form.final_content || null,
         ai_generated: form.ai_generated,
@@ -478,26 +482,53 @@ function MinuteFormDialog({
           meeting_time: form.meeting_time,
           meeting_type: MEETING_TYPES.find(t => t.v === form.meeting_type)?.l || form.meeting_type,
           participants: form.participants,
-          agenda_text: form.agenda_text,
           raw_notes: form.raw_notes,
           consultant_name: consultantName || "Não informado",
+          next_meeting_date: form.next_meeting_date,
+          attachments_summary: form.attachments_summary,
         },
       });
-      if (error || !data?.content) {
-        // Fallback: local template
-        const fallback = defaultTemplate(companyName)
-          .replace("## 3. Resumo da reunião\n", `## 3. Resumo da reunião\n${form.raw_notes}\n`);
-        setForm((f: any) => ({ ...f, generated_content: fallback, final_content: fallback, status: "rascunho", ai_generated: false }));
-        toast.warning("Geração com IA indisponível. Preenchemos um modelo padrão — edite manualmente.");
-      } else {
-        setForm((f: any) => ({
-          ...f, generated_content: data.content, final_content: data.content,
-          status: "gerada_ia", ai_generated: true,
-        }));
-        toast.success("Ata gerada por IA. Revise antes de finalizar.");
+
+      if (error) {
+        // Check if it's a 503 error (AI not configured)
+        const errorMsg = error.message || "";
+        if (errorMsg.includes("503") || errorMsg.includes("AI não configurada")) {
+          toast.error("A geração inteligente de atas ainda não está configurada.");
+        } else {
+          toast.error("Erro ao gerar ata com IA. Tente novamente em instantes.");
+        }
+        return;
       }
+
+      if (!data?.content) {
+        toast.error("A IA retornou um conteúdo vazio. Tente reformular seu relato.");
+        return;
+      }
+
+      // Final validation on client side for placeholders
+      const placeholders = [
+        "Decisão — Responsável — Prazo",
+        "Pendência — Responsável — Prazo — Status",
+        "Ação — Responsável — Data prevista"
+      ];
+      
+      const hasPlaceholders = placeholders.some(p => data.content.includes(p));
+      if (hasPlaceholders) {
+        toast.warning("A ata gerada parece conter placeholders não preenchidos. Por favor, revise e ajuste manualmente.");
+      } else {
+        toast.success("Ata gerada por IA com sucesso! Revise antes de finalizar.");
+      }
+
+      setForm((f: any) => ({
+        ...f, 
+        generated_content: data.content, 
+        final_content: data.content,
+        status: "gerada_ia", 
+        ai_generated: true,
+      }));
     } catch (e: any) {
-      toast.error(e.message ?? "Erro ao gerar ata");
+      toast.error("Erro técnico na geração da ata.");
+      console.error(e);
     } finally {
       setGenerating(false);
     }
@@ -552,6 +583,14 @@ function MinuteFormDialog({
               <Label>Horário</Label>
               <Input type="time" value={form.meeting_time ?? ""} onChange={(e) => setForm({ ...form, meeting_time: e.target.value })} />
             </div>
+            <div>
+              <Label>Próxima reunião (opcional)</Label>
+              <Input type="date" value={form.next_meeting_date ?? ""} onChange={(e) => setForm({ ...form, next_meeting_date: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Resumo de anexos/documentos (opcional)</Label>
+              <Input value={form.attachments_summary ?? ""} onChange={(e) => setForm({ ...form, attachments_summary: e.target.value })} placeholder="Ex: Planilha de custos, Relatório de vendas..." />
+            </div>
             <div className="md:col-span-2">
               <Label>Participantes</Label>
               <div className="flex gap-2">
@@ -572,7 +611,7 @@ function MinuteFormDialog({
               </div>
             </div>
             <div className="md:col-span-2">
-              <Label>Pauta</Label>
+              <Label>Pauta (opcional)</Label>
               <Textarea value={form.agenda_text ?? ""} onChange={(e) => setForm({ ...form, agenda_text: e.target.value })} rows={2} placeholder="O que será tratado nesta reunião..." />
             </div>
             <div className="md:col-span-2">
