@@ -3179,7 +3179,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_consultant: { Args: { _user_id: string }; Returns: boolean }
       search_consultants: {
         Args: { _q: string }
         Returns: {
@@ -3195,10 +3194,6 @@ export type Database = {
         Returns: undefined
       }
       seed_demo_data: { Args: { _owner: string }; Returns: undefined }
-      user_has_company_access: {
-        Args: { _company_id: string; _user_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
       app_role: "consultant" | "client_manager" | "operator"
