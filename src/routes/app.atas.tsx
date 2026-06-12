@@ -482,6 +482,8 @@ function MinuteFormDialog({
           participants: form.participants,
           raw_notes: form.raw_notes,
           consultant_name: consultantName || "Não informado",
+          next_meeting_date: form.next_meeting_date,
+          attachments_summary: form.attachments_summary,
         },
       });
 
