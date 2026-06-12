@@ -387,6 +387,7 @@ function AtasPage() {
           editing={editing}
           companies={companies}
           consultantId={consultant.id}
+          consultantName={consultant.consultancy_name}
           userId={user!.id}
         />
       )}
@@ -395,10 +396,10 @@ function AtasPage() {
 }
 
 function MinuteFormDialog({
-  open, onClose, editing, companies, consultantId, userId,
+  open, onClose, editing, companies, consultantId, consultantName, userId,
 }: {
   open: boolean; onClose: () => void; editing: Minute | null;
-  companies: any[]; consultantId: string; userId: string;
+  companies: any[]; consultantId: string; consultantName?: string; userId: string;
 }) {
   const qc = useQueryClient();
   const [form, setForm] = useState(() => editing ?? {
@@ -467,17 +468,19 @@ function MinuteFormDialog({
     }
     setGenerating(true);
     try {
-      const companyName = companies.find((c) => c.id === form.company_id)?.nome ?? "";
+      const company = companies.find((c: any) => c.id === form.company_id);
+      const companyName = company?.nome ?? "";
       const { data, error } = await supabase.functions.invoke("generate-meeting-minutes", {
         body: {
           company_name: companyName,
+          company_cnpj: company?.cnpj || "Não informado",
           meeting_date: form.meeting_date,
           meeting_time: form.meeting_time,
-          meeting_type: form.meeting_type,
+          meeting_type: MEETING_TYPES.find(t => t.v === form.meeting_type)?.l || form.meeting_type,
           participants: form.participants,
           agenda_text: form.agenda_text,
           raw_notes: form.raw_notes,
-          template: defaultTemplate(companyName),
+          consultant_name: consultantName || "Não informado",
         },
       });
       if (error || !data?.content) {
