@@ -437,6 +437,8 @@ function MinuteFormDialog({
         participants: form.participants ?? [],
         agenda_text: form.agenda_text || null,
         raw_notes: form.raw_notes || null,
+        next_meeting_date: form.next_meeting_date || null,
+        attachments_summary: form.attachments_summary || null,
         generated_content: form.generated_content || null,
         final_content: form.final_content || null,
         ai_generated: form.ai_generated,
