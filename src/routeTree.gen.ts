@@ -15,6 +15,7 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppVendasRouteImport } from './routes/app.vendas'
+import { Route as AppRevendedoresRouteImport } from './routes/app.revendedores'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppPrecificacaoRouteImport } from './routes/app.precificacao'
 import { Route as AppPlanoAcaoRouteImport } from './routes/app.plano-acao'
@@ -72,6 +73,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppVendasRoute = AppVendasRouteImport.update({
   id: '/vendas',
   path: '/vendas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRevendedoresRoute = AppRevendedoresRouteImport.update({
+  id: '/revendedores',
+  path: '/revendedores',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/revendedores': typeof AppRevendedoresRoute
   '/app/vendas': typeof AppVendasRoute
   '/app/': typeof AppIndexRoute
   '/app/biblioteca/criar': typeof AppBibliotecaCriarRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByTo {
   '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/revendedores': typeof AppRevendedoresRoute
   '/app/vendas': typeof AppVendasRoute
   '/app': typeof AppIndexRoute
   '/app/biblioteca/criar': typeof AppBibliotecaCriarRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/app/plano-acao': typeof AppPlanoAcaoRoute
   '/app/precificacao': typeof AppPrecificacaoRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/revendedores': typeof AppRevendedoresRoute
   '/app/vendas': typeof AppVendasRoute
   '/app/': typeof AppIndexRoute
   '/app/biblioteca/criar': typeof AppBibliotecaCriarRoute
@@ -353,6 +362,7 @@ export interface FileRouteTypes {
     | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
+    | '/app/revendedores'
     | '/app/vendas'
     | '/app/'
     | '/app/biblioteca/criar'
@@ -388,6 +398,7 @@ export interface FileRouteTypes {
     | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
+    | '/app/revendedores'
     | '/app/vendas'
     | '/app'
     | '/app/biblioteca/criar'
@@ -424,6 +435,7 @@ export interface FileRouteTypes {
     | '/app/plano-acao'
     | '/app/precificacao'
     | '/app/relatorios'
+    | '/app/revendedores'
     | '/app/vendas'
     | '/app/'
     | '/app/biblioteca/criar'
@@ -483,6 +495,13 @@ declare module '@tanstack/react-router' {
       path: '/vendas'
       fullPath: '/app/vendas'
       preLoaderRoute: typeof AppVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/revendedores': {
+      id: '/app/revendedores'
+      path: '/revendedores'
+      fullPath: '/app/revendedores'
+      preLoaderRoute: typeof AppRevendedoresRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/relatorios': {
@@ -746,6 +765,7 @@ interface AppRouteChildren {
   AppPlanoAcaoRoute: typeof AppPlanoAcaoRoute
   AppPrecificacaoRoute: typeof AppPrecificacaoRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
+  AppRevendedoresRoute: typeof AppRevendedoresRoute
   AppVendasRoute: typeof AppVendasRoute
   AppIndexRoute: typeof AppIndexRoute
   AppEmpresaIdRoute: typeof AppEmpresaIdRoute
@@ -774,6 +794,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPlanoAcaoRoute: AppPlanoAcaoRoute,
   AppPrecificacaoRoute: AppPrecificacaoRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,
+  AppRevendedoresRoute: AppRevendedoresRoute,
   AppVendasRoute: AppVendasRoute,
   AppIndexRoute: AppIndexRoute,
   AppEmpresaIdRoute: AppEmpresaIdRoute,
