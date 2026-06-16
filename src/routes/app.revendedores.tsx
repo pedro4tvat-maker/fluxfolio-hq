@@ -528,7 +528,11 @@ function Card({ label, value, highlight }: { label: string; value: string; highl
 // ============= Visualizar estoque de um centro =============
 
 function StockViewDialog({ companyId, location }: { companyId: string; location: StockLocationRow }) {
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<{ product_id: string; nome: string; saldo: number } | null>(null);
+  const [novaQtd, setNovaQtd] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["location-stock", companyId, location.id],
@@ -540,9 +544,9 @@ function StockViewDialog({ companyId, location }: { companyId: string; location:
         .eq("company_id", companyId)
         .eq("stock_location_id", location.id);
       if (error) throw error;
-      const map = new Map<string, { nome: string; saldo: number; preco_venda: number; custo: number }>();
+      const map = new Map<string, { product_id: string; nome: string; saldo: number; preco_venda: number; custo: number }>();
       for (const m of (data ?? []) as Array<{ product_id: string; quantidade: number; tipo: string; products: { nome: string; preco_venda: number; custo_unitario: number } | null }>) {
-        const cur = map.get(m.product_id) ?? { nome: m.products?.nome ?? "?", saldo: 0, preco_venda: Number(m.products?.preco_venda ?? 0), custo: Number(m.products?.custo_unitario ?? 0) };
+        const cur = map.get(m.product_id) ?? { product_id: m.product_id, nome: m.products?.nome ?? "?", saldo: 0, preco_venda: Number(m.products?.preco_venda ?? 0), custo: Number(m.products?.custo_unitario ?? 0) };
         const q = Number(m.quantidade) || 0;
         cur.saldo += m.tipo === "entrada" ? q : -q;
         map.set(m.product_id, cur);
@@ -553,6 +557,30 @@ function StockViewDialog({ companyId, location }: { companyId: string; location:
 
   const totalItens = rows.reduce((a, r) => a + r.saldo, 0);
   const valorEstoque = rows.reduce((a, r) => a + r.saldo * r.custo, 0);
+
+  async function handleSaveAdjust() {
+    if (!editing) return;
+    const nova = Number(novaQtd);
+    if (isNaN(nova) || nova < 0) { toast.error("Quantidade inválida"); return; }
+    const diff = nova - editing.saldo;
+    if (diff === 0) { setEditing(null); return; }
+    setSaving(true);
+    const { error } = await supabase.from("stock_movements").insert({
+      company_id: companyId,
+      product_id: editing.product_id,
+      stock_location_id: location.id,
+      tipo: diff > 0 ? "entrada" : "saida",
+      quantidade: Math.abs(diff),
+      motivo: `Ajuste manual · ${location.nome}`,
+      data: new Date().toISOString().slice(0, 10),
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Estoque ajustado");
+    setEditing(null);
+    qc.invalidateQueries({ queryKey: ["location-stock", companyId, location.id] });
+    qc.invalidateQueries({ queryKey: ["estoque-products"] });
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -565,21 +593,41 @@ function StockViewDialog({ companyId, location }: { companyId: string; location:
         </div>
         <div className="border rounded-lg max-h-[60vh] overflow-auto">
           <Table>
-            <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Saldo</TableHead><TableHead className="text-right">Custo unit.</TableHead><TableHead className="text-right">Preço venda</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Saldo</TableHead><TableHead className="text-right">Custo unit.</TableHead><TableHead className="text-right">Preço venda</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
             <TableBody>
-              {isLoading ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
-                rows.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Nenhum produto neste centro.</TableCell></TableRow> :
+              {isLoading ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
+                rows.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nenhum produto neste centro.</TableCell></TableRow> :
                 rows.map((r) => (
-                  <TableRow key={r.nome}>
+                  <TableRow key={r.product_id}>
                     <TableCell className="font-medium">{r.nome}</TableCell>
                     <TableCell className="text-right font-semibold">{r.saldo}</TableCell>
                     <TableCell className="text-right">{formatMoney(r.custo)}</TableCell>
                     <TableCell className="text-right">{formatMoney(r.preco_venda)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="ghost" title="Ajustar saldo" onClick={() => { setEditing({ product_id: r.product_id, nome: r.nome, saldo: r.saldo }); setNovaQtd(String(r.saldo)); }}>
+                        <Pencil className="size-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
             </TableBody>
           </Table>
         </div>
+
+        <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>Ajustar estoque · {editing?.nome}</DialogTitle></DialogHeader>
+            <div className="space-y-2">
+              <Label>Nova quantidade</Label>
+              <Input type="number" min="0" value={novaQtd} onChange={(e) => setNovaQtd(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Saldo atual: {editing?.saldo}. A diferença será registrada como entrada ou saída neste centro.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
+              <Button onClick={handleSaveAdjust} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
