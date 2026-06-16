@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Boxes } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/revendedores")({ component: RevendedoresPage });
@@ -120,21 +120,36 @@ function LocationsTab({ companyId }: { companyId: string }) {
         // garante único default por empresa
         await supabase.from("stock_locations").update({ is_default: false }).eq("company_id", companyId).neq("id", editing?.id ?? "00000000-0000-0000-0000-000000000000");
       }
+      let locationId = editing?.id ?? null;
       if (editing) {
         const { error } = await supabase.from("stock_locations").update({
           nome: form.nome, tipo: form.tipo, responsavel: form.responsavel || null, ativa: form.ativa, is_default: form.is_default,
         }).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("stock_locations").insert({
+        const { data: ins, error } = await supabase.from("stock_locations").insert({
           company_id: companyId, nome: form.nome, tipo: form.tipo, responsavel: form.responsavel || null, ativa: form.ativa, is_default: form.is_default,
-        });
+        }).select("id").single();
         if (error) throw error;
+        locationId = ins?.id ?? null;
+      }
+      // Se o centro for do tipo "revendedor", garante um registro na aba Revendedores vinculado a ele
+      if (form.tipo === "revendedor" && locationId) {
+        const { data: existing } = await supabase.from("resellers").select("id").eq("company_id", companyId).eq("stock_location_id", locationId).maybeSingle();
+        if (!existing) {
+          await supabase.from("resellers").insert({
+            company_id: companyId, nome: form.nome, stock_location_id: locationId,
+            commission_pct: 0, ativo: form.ativa,
+          });
+          toast.success("Revendedor criado automaticamente");
+        }
       }
       toast.success("Centro de estoque salvo");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["stock-locations-admin", companyId] });
       qc.invalidateQueries({ queryKey: ["stock-locations", companyId] });
+      qc.invalidateQueries({ queryKey: ["resellers-admin", companyId] });
+      qc.invalidateQueries({ queryKey: ["resellers", companyId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
     }
@@ -180,7 +195,7 @@ function LocationsTab({ companyId }: { companyId: string }) {
       </div>
       <div className="border rounded-lg">
         <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Responsável</TableHead><TableHead>Status</TableHead><TableHead className="w-28 text-right">Ações</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Responsável</TableHead><TableHead>Status</TableHead><TableHead className="w-44 text-right">Ações</TableHead></TableRow></TableHeader>
           <TableBody>
             {isLoading ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
               locations.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nenhum centro cadastrado.</TableCell></TableRow> :
@@ -191,6 +206,7 @@ function LocationsTab({ companyId }: { companyId: string }) {
                   <TableCell>{l.responsavel ?? "-"}</TableCell>
                   <TableCell>{l.ativa ? "Ativo" : "Inativo"}</TableCell>
                   <TableCell className="text-right">
+                    <StockViewDialog companyId={companyId} location={l} />
                     <Button variant="ghost" size="icon" onClick={() => openEdit(l)}><Pencil className="size-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => remove(l)}><Trash2 className="size-4 text-destructive" /></Button>
                   </TableCell>
@@ -506,6 +522,66 @@ function Card({ label, value, highlight }: { label: string; value: string; highl
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="text-lg font-bold">{value}</div>
     </div>
+  );
+}
+
+// ============= Visualizar estoque de um centro =============
+
+function StockViewDialog({ companyId, location }: { companyId: string; location: StockLocationRow }) {
+  const [open, setOpen] = useState(false);
+
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ["location-stock", companyId, location.id],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("product_id, quantidade, tipo, products(nome, preco_venda, custo_unitario)")
+        .eq("company_id", companyId)
+        .eq("stock_location_id", location.id);
+      if (error) throw error;
+      const map = new Map<string, { nome: string; saldo: number; preco_venda: number; custo: number }>();
+      for (const m of (data ?? []) as Array<{ product_id: string; quantidade: number; tipo: string; products: { nome: string; preco_venda: number; custo_unitario: number } | null }>) {
+        const cur = map.get(m.product_id) ?? { nome: m.products?.nome ?? "?", saldo: 0, preco_venda: Number(m.products?.preco_venda ?? 0), custo: Number(m.products?.custo_unitario ?? 0) };
+        const q = Number(m.quantidade) || 0;
+        cur.saldo += m.tipo === "entrada" ? q : -q;
+        map.set(m.product_id, cur);
+      }
+      return Array.from(map.values()).filter((r) => r.saldo !== 0).sort((a, b) => a.nome.localeCompare(b.nome));
+    },
+  });
+
+  const totalItens = rows.reduce((a, r) => a + r.saldo, 0);
+  const valorEstoque = rows.reduce((a, r) => a + r.saldo * r.custo, 0);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button variant="ghost" size="icon" title="Ver estoque"><Boxes className="size-4" /></Button></DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader><DialogTitle>Estoque · {location.nome}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-2 gap-3 mb-2">
+          <Card label="Itens em estoque" value={String(totalItens)} />
+          <Card label="Valor (a custo)" value={formatMoney(valorEstoque)} />
+        </div>
+        <div className="border rounded-lg max-h-[60vh] overflow-auto">
+          <Table>
+            <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Saldo</TableHead><TableHead className="text-right">Custo unit.</TableHead><TableHead className="text-right">Preço venda</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {isLoading ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
+                rows.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Nenhum produto neste centro.</TableCell></TableRow> :
+                rows.map((r) => (
+                  <TableRow key={r.nome}>
+                    <TableCell className="font-medium">{r.nome}</TableCell>
+                    <TableCell className="text-right font-semibold">{r.saldo}</TableCell>
+                    <TableCell className="text-right">{formatMoney(r.custo)}</TableCell>
+                    <TableCell className="text-right">{formatMoney(r.preco_venda)}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
