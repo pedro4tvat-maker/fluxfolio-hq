@@ -239,6 +239,7 @@ function VendasPage() {
           preco_unitario: String(p.preco_venda ?? ""),
           custo_unitario: String(p.custo_unitario ?? ""),
           custo_padrao: String(p.custo_unitario ?? ""),
+          stock_location_id: defaultLocationId,
         },
       ];
     });
@@ -248,7 +249,7 @@ function VendasPage() {
   function addServiceLine() {
     setItems((prev) => [
       ...prev,
-      { product_id: "", nome: "Serviço", quantidade: "1", preco_unitario: "", custo_unitario: "", custo_padrao: "" },
+      { product_id: "", nome: "Serviço", quantidade: "1", preco_unitario: "", custo_unitario: "", custo_padrao: "", stock_location_id: "" },
     ]);
   }
 
