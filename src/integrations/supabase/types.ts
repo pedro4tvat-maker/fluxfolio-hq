@@ -2474,6 +2474,7 @@ export type Database = {
           branch_id: string | null
           categoria_id: string | null
           centro_custo_id: string | null
+          commission_value: number | null
           company_id: string
           conta_id: string | null
           created_at: string
@@ -2486,6 +2487,7 @@ export type Database = {
           observacoes: string | null
           parcelas: number | null
           recorrencia: Database["public"]["Enums"]["recurrence"] | null
+          reseller_id: string | null
           status: Database["public"]["Enums"]["payable_status"]
           updated_at: string
           valor: number
@@ -2495,6 +2497,7 @@ export type Database = {
           branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
+          commission_value?: number | null
           company_id: string
           conta_id?: string | null
           created_at?: string
@@ -2507,6 +2510,7 @@ export type Database = {
           observacoes?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
+          reseller_id?: string | null
           status?: Database["public"]["Enums"]["payable_status"]
           updated_at?: string
           valor: number
@@ -2516,6 +2520,7 @@ export type Database = {
           branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
+          commission_value?: number | null
           company_id?: string
           conta_id?: string | null
           created_at?: string
@@ -2528,6 +2533,7 @@ export type Database = {
           observacoes?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
+          reseller_id?: string | null
           status?: Database["public"]["Enums"]["payable_status"]
           updated_at?: string
           valor?: number
@@ -2560,6 +2566,13 @@ export type Database = {
             columns: ["conta_id"]
             isOneToOne: false
             referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payables_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
         ]
