@@ -1253,12 +1253,12 @@ function VendasPage() {
                           </Button>
                         </div>
                       </div>
-                      {it.product_id && (
-                        <div className="grid grid-cols-12 gap-2 items-end">
-                          <div className="col-span-12 md:col-span-8">
-                            <Label className="text-xs text-muted-foreground">
-                              De onde este produto está saindo? (Centro de estoque de origem)
-                            </Label>
+                      <div className="grid grid-cols-12 gap-2 items-end rounded-md bg-muted/40 p-2 border border-dashed">
+                        <div className="col-span-12 md:col-span-8">
+                          <Label className="text-xs font-medium flex items-center gap-1">
+                            <Building2 className="size-3" /> De onde este item vai sair? (Centro de estoque de origem)
+                          </Label>
+                          {it.product_id ? (
                             <Select
                               value={it.stock_location_id || ""}
                               onValueChange={(v) => updateItem(idx, { stock_location_id: v })}
@@ -1274,17 +1274,25 @@ function VendasPage() {
                                 ))}
                               </SelectContent>
                             </Select>
+                          ) : (
+                            <p className="text-[11px] text-muted-foreground mt-1 italic">
+                              Serviço avulso — não há baixa de estoque. Use "Adicionar produto" para escolher o centro de origem.
+                            </p>
+                          )}
+                          {it.product_id && (
                             <p className="text-[11px] text-muted-foreground mt-1">
                               Escolha o local correto para evitar baixa duplicada ou erro de estoque.
                             </p>
-                          </div>
+                          )}
+                        </div>
+                        {it.product_id && (
                           <ItemLocationBalance
                             productId={it.product_id}
                             locationId={it.stock_location_id}
                             requested={Number(it.quantidade) || 0}
                           />
-                        </div>
-                      )}
+                        )}
+                      </div>
                       <div className="flex items-center justify-between text-xs text-muted-foreground pl-1">
                         <div className="flex gap-3">
                           <span>Subtotal: <b className="text-foreground">{formatMoney(subtotal)}</b></span>
