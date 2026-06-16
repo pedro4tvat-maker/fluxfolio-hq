@@ -201,6 +201,23 @@ function VendasPage() {
     ?? stockLocations[0]?.id
     ?? "";
 
+  const { data: resellers = [] } = useQuery({
+    queryKey: ["resellers", selected],
+    enabled: !!selected,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("resellers")
+        .select("id, nome, stock_location_id, commission_pct, ativo")
+        .eq("company_id", selected!)
+        .eq("ativo", true)
+        .order("nome");
+      return (data ?? []) as Array<{ id: string; nome: string; stock_location_id: string | null; commission_pct: number; ativo: boolean }>;
+    },
+  });
+
+  const selectedReseller = resellers.find((r) => r.id === resellerId) ?? null;
+
+
   const { data: vendas, isLoading } = useQuery({
     queryKey: ["vendas-list", selected],
     enabled: !!selected,
