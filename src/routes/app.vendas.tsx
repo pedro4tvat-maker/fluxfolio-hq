@@ -18,6 +18,34 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/vendas")({ component: VendasPage });
 
+function ItemLocationBalance({ productId, locationId, requested }: { productId: string; locationId: string; requested: number }) {
+  const { data: saldo } = useQuery({
+    queryKey: ["product-stock-by-location", productId, locationId],
+    enabled: !!productId && !!locationId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("product_stock_by_location", {
+        _product_id: productId,
+        _location_id: locationId,
+      });
+      if (error) throw error;
+      return Number(data ?? 0);
+    },
+  });
+  if (!productId || !locationId) {
+    return <div className="col-span-12 md:col-span-4 text-xs text-muted-foreground">Selecione um local para ver o saldo.</div>;
+  }
+  const s = Number(saldo ?? 0);
+  const insuf = requested > s;
+  return (
+    <div className="col-span-12 md:col-span-4 text-xs">
+      <Label className="text-xs text-muted-foreground">Saldo disponível</Label>
+      <div className={cn("font-semibold", insuf ? "text-destructive" : "text-foreground")}>
+        {s} {insuf && <span className="ml-1 text-destructive">(insuficiente)</span>}
+      </div>
+    </div>
+  );
+}
+
 type CrmContact = {
   id: string;
   name: string;
@@ -34,6 +62,15 @@ type SaleItem = {
   preco_unitario: string;
   custo_unitario: string; // custo desta venda (pode sobrescrever o cadastrado)
   custo_padrao: string;   // custo cadastrado no produto (referência)
+  stock_location_id: string; // centro/local de estoque de origem da baixa
+};
+
+type StockLocation = {
+  id: string;
+  nome: string;
+  tipo: string;
+  ativa: boolean;
+  is_default: boolean;
 };
 
 type CompanyData = {
@@ -127,6 +164,42 @@ function VendasPage() {
     },
   });
 
+  const { data: stockLocations = [] } = useQuery({
+    queryKey: ["stock-locations", selected],
+    enabled: !!selected,
+    queryFn: async (): Promise<StockLocation[]> => {
+      let { data } = await supabase
+        .from("stock_locations")
+        .select("id, nome, tipo, ativa, is_default")
+        .eq("company_id", selected!)
+        .eq("ativa", true)
+        .order("is_default", { ascending: false })
+        .order("nome");
+      if (!data || data.length === 0) {
+        // Auto-cria local default se a empresa não tiver nenhum
+        await supabase.from("stock_locations").insert({
+          company_id: selected!,
+          nome: "Estoque Principal",
+          tipo: "principal",
+          is_default: true,
+        });
+        const refetch = await supabase
+          .from("stock_locations")
+          .select("id, nome, tipo, ativa, is_default")
+          .eq("company_id", selected!)
+          .eq("ativa", true)
+          .order("is_default", { ascending: false })
+          .order("nome");
+        data = refetch.data ?? [];
+      }
+      return (data ?? []) as StockLocation[];
+    },
+  });
+
+  const defaultLocationId = stockLocations.find((l) => l.is_default)?.id
+    ?? stockLocations[0]?.id
+    ?? "";
+
   const { data: vendas, isLoading } = useQuery({
     queryKey: ["vendas-list", selected],
     enabled: !!selected,
@@ -194,6 +267,7 @@ function VendasPage() {
           preco_unitario: String(p.preco_venda ?? ""),
           custo_unitario: String(p.custo_unitario ?? ""),
           custo_padrao: String(p.custo_unitario ?? ""),
+          stock_location_id: defaultLocationId,
         },
       ];
     });
@@ -203,7 +277,7 @@ function VendasPage() {
   function addServiceLine() {
     setItems((prev) => [
       ...prev,
-      { product_id: "", nome: "Serviço", quantidade: "1", preco_unitario: "", custo_unitario: "", custo_padrao: "" },
+      { product_id: "", nome: "Serviço", quantidade: "1", preco_unitario: "", custo_unitario: "", custo_padrao: "", stock_location_id: "" },
     ]);
   }
 
@@ -243,6 +317,32 @@ function VendasPage() {
         toast.error(`Informe quantidade e preço para "${it.nome}"`);
         return;
       }
+      if (it.product_id && !it.stock_location_id) {
+        toast.error(`Selecione o centro de estoque de origem para "${it.nome}"`);
+        return;
+      }
+    }
+    // Valida saldo por local de origem
+    for (const it of items) {
+      if (!it.product_id || !it.stock_location_id) continue;
+      const { data: saldo, error: saldoErr } = await supabase
+        .rpc("product_stock_by_location", {
+          _product_id: it.product_id,
+          _location_id: it.stock_location_id,
+        });
+      if (saldoErr) {
+        toast.error(`Erro ao consultar saldo de "${it.nome}": ${saldoErr.message}`);
+        return;
+      }
+      const saldoNum = Number(saldo ?? 0);
+      const qtdNum = Number(it.quantidade) || 0;
+      if (qtdNum > saldoNum) {
+        const localNome = stockLocations.find((l) => l.id === it.stock_location_id)?.nome ?? "selecionado";
+        toast.error(
+          `Saldo insuficiente de "${it.nome}" em ${localNome}: disponível ${saldoNum}, tentando vender ${qtdNum}. Escolha outro centro ou faça uma transferência.`,
+        );
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -266,6 +366,7 @@ function VendasPage() {
             quantidade: Number(it.quantidade),
             custo_unitario: Number.isFinite(custoVenda) && custoVenda > 0 ? custoVenda : null,
             motivo: "Venda",
+            stock_location_id: it.stock_location_id || null,
           });
           if (smErr) throw smErr;
         }
@@ -803,6 +904,7 @@ function VendasPage() {
         custo_unitario: Number.isFinite(custo) && custo > 0 ? custo : Number(prod.custo_unitario ?? 0) || null,
         motivo: "Estorno de venda",
         data: dataRef,
+        stock_location_id: defaultLocationId || null,
       });
       if (smErr) throw smErr;
     }
@@ -873,6 +975,7 @@ function VendasPage() {
           preco_unitario: preco || String(prod?.preco_venda ?? ""),
           custo_unitario: custo || String(prod?.custo_unitario ?? ""),
           custo_padrao: String(prod?.custo_unitario ?? ""),
+          stock_location_id: defaultLocationId,
         };
       });
 
@@ -1063,6 +1166,38 @@ function VendasPage() {
                           </Button>
                         </div>
                       </div>
+                      {it.product_id && (
+                        <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-12 md:col-span-8">
+                            <Label className="text-xs text-muted-foreground">
+                              De onde este produto está saindo? (Centro de estoque de origem)
+                            </Label>
+                            <Select
+                              value={it.stock_location_id || ""}
+                              onValueChange={(v) => updateItem(idx, { stock_location_id: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o local de estoque" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {stockLocations.map((loc) => (
+                                  <SelectItem key={loc.id} value={loc.id}>
+                                    {loc.nome} <span className="text-muted-foreground text-xs">({loc.tipo})</span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Escolha o local correto para evitar baixa duplicada ou erro de estoque.
+                            </p>
+                          </div>
+                          <ItemLocationBalance
+                            productId={it.product_id}
+                            locationId={it.stock_location_id}
+                            requested={Number(it.quantidade) || 0}
+                          />
+                        </div>
+                      )}
                       <div className="flex items-center justify-between text-xs text-muted-foreground pl-1">
                         <div className="flex gap-3">
                           <span>Subtotal: <b className="text-foreground">{formatMoney(subtotal)}</b></span>

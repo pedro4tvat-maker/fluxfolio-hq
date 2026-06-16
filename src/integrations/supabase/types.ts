@@ -2905,6 +2905,63 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_locations: {
+        Row: {
+          ativa: boolean
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          nome: string
+          observacoes: string | null
+          responsavel: string | null
+          tipo: Database["public"]["Enums"]["stock_location_type"]
+          updated_at: string
+        }
+        Insert: {
+          ativa?: boolean
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          nome: string
+          observacoes?: string | null
+          responsavel?: string | null
+          tipo?: Database["public"]["Enums"]["stock_location_type"]
+          updated_at?: string
+        }
+        Update: {
+          ativa?: boolean
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          nome?: string
+          observacoes?: string | null
+          responsavel?: string | null
+          tipo?: Database["public"]["Enums"]["stock_location_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_locations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           branch_id: string | null
@@ -2918,6 +2975,7 @@ export type Database = {
           observacoes: string | null
           product_id: string
           quantidade: number
+          stock_location_id: string | null
           tipo: Database["public"]["Enums"]["transaction_type"]
         }
         Insert: {
@@ -2932,6 +2990,7 @@ export type Database = {
           observacoes?: string | null
           product_id: string
           quantidade: number
+          stock_location_id?: string | null
           tipo: Database["public"]["Enums"]["transaction_type"]
         }
         Update: {
@@ -2946,6 +3005,7 @@ export type Database = {
           observacoes?: string | null
           product_id?: string
           quantidade?: number
+          stock_location_id?: string | null
           tipo?: Database["public"]["Enums"]["transaction_type"]
         }
         Relationships: [
@@ -2961,6 +3021,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_stock_location_id_fkey"
+            columns: ["stock_location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
             referencedColumns: ["id"]
           },
         ]
@@ -3179,6 +3246,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      product_stock_by_location: {
+        Args: { _location_id: string; _product_id: string }
+        Returns: number
+      }
       search_consultants: {
         Args: { _q: string }
         Returns: {
@@ -3200,6 +3271,16 @@ export type Database = {
       payable_status: "em_aberto" | "pago" | "vencido"
       receivable_status: "em_aberto" | "recebido" | "vencido"
       recurrence: "unica" | "semanal" | "mensal" | "anual"
+      stock_location_type:
+        | "principal"
+        | "deposito"
+        | "loja"
+        | "filial"
+        | "revendedor"
+        | "consignado"
+        | "producao"
+        | "transito"
+        | "outros"
       transaction_status: "realizado" | "pendente" | "previsto"
       transaction_type: "entrada" | "saida"
     }
@@ -3333,6 +3414,17 @@ export const Constants = {
       payable_status: ["em_aberto", "pago", "vencido"],
       receivable_status: ["em_aberto", "recebido", "vencido"],
       recurrence: ["unica", "semanal", "mensal", "anual"],
+      stock_location_type: [
+        "principal",
+        "deposito",
+        "loja",
+        "filial",
+        "revendedor",
+        "consignado",
+        "producao",
+        "transito",
+        "outros",
+      ],
       transaction_status: ["realizado", "pendente", "previsto"],
       transaction_type: ["entrada", "saida"],
     },
