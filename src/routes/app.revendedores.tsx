@@ -435,6 +435,13 @@ function SettlementTab({ companyId }: { companyId: string }) {
         <p className="text-sm text-warning">Este revendedor não tem centro de estoque vinculado. Edite o cadastro na aba "Revendedores".</p>
       ) : (
         <>
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => exportSettlementPDF({
+              resellerNome: reseller.nome, dateFrom, dateTo,
+              totals: { totalEnviados, totalVendidos, totalDevolvidos, totalEmPosse, totalVendidoValor, totalComissao, liquido },
+              produtos: resumoProdutos, commissions,
+            })}>Exportar PDF</Button>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card label="Enviados" value={totalEnviados.toString()} />
             <Card label="Vendidos" value={totalVendidos.toString()} />
