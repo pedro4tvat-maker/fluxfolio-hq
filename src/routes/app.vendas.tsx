@@ -404,6 +404,10 @@ function VendasPage() {
         }
       }
 
+      const commissionValue = selectedReseller
+        ? Number(((Number(selectedReseller.commission_pct) || 0) * valor / 100).toFixed(2))
+        : null;
+
       if (form.forma === "vista") {
         const { error } = await supabase.from("transactions").insert({
           company_id: selected,
@@ -416,6 +420,8 @@ function VendasPage() {
           data: form.data_venda,
           crm_contact_id: cliente?.id ?? null,
           centro_custo_id: items[0]?.product_id ? products?.find(p => p.id === items[0].product_id)?.centro_custo_id : null,
+          reseller_id: selectedReseller?.id ?? null,
+          commission_value: commissionValue,
         });
         if (error) throw error;
       } else {
@@ -430,6 +436,8 @@ function VendasPage() {
           conta_id: account?.id,
           status: "em_aberto",
           centro_custo_id: items[0]?.product_id ? products?.find(p => p.id === items[0].product_id)?.centro_custo_id : null,
+          reseller_id: selectedReseller?.id ?? null,
+          commission_value: commissionValue,
         });
         if (error) throw error;
       }
