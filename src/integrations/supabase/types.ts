@@ -2783,6 +2783,7 @@ export type Database = {
           categoria_id: string | null
           centro_custo_id: string | null
           cliente: string | null
+          commission_value: number | null
           company_id: string
           conta_id: string | null
           created_at: string
@@ -2795,6 +2796,7 @@ export type Database = {
           observacoes: string | null
           parcelas: number | null
           recorrencia: Database["public"]["Enums"]["recurrence"] | null
+          reseller_id: string | null
           status: Database["public"]["Enums"]["receivable_status"]
           updated_at: string
           valor: number
@@ -2805,6 +2807,7 @@ export type Database = {
           categoria_id?: string | null
           centro_custo_id?: string | null
           cliente?: string | null
+          commission_value?: number | null
           company_id: string
           conta_id?: string | null
           created_at?: string
@@ -2817,6 +2820,7 @@ export type Database = {
           observacoes?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
+          reseller_id?: string | null
           status?: Database["public"]["Enums"]["receivable_status"]
           updated_at?: string
           valor: number
@@ -2827,6 +2831,7 @@ export type Database = {
           categoria_id?: string | null
           centro_custo_id?: string | null
           cliente?: string | null
+          commission_value?: number | null
           company_id?: string
           conta_id?: string | null
           created_at?: string
@@ -2839,6 +2844,7 @@ export type Database = {
           observacoes?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
+          reseller_id?: string | null
           status?: Database["public"]["Enums"]["receivable_status"]
           updated_at?: string
           valor?: number
@@ -2871,6 +2877,73 @@ export type Database = {
             columns: ["conta_id"]
             isOneToOne: false
             referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivables_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resellers: {
+        Row: {
+          ativo: boolean
+          commission_pct: number
+          company_id: string
+          created_at: string
+          documento: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          stock_location_id: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          commission_pct?: number
+          company_id: string
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          stock_location_id?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          commission_pct?: number
+          company_id?: string
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          stock_location_id?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resellers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resellers_stock_location_id_fkey"
+            columns: ["stock_location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
             referencedColumns: ["id"]
           },
         ]
@@ -3061,6 +3134,7 @@ export type Database = {
           branch_id: string | null
           categoria_id: string | null
           centro_custo_id: string | null
+          commission_value: number | null
           company_id: string
           conta_id: string | null
           created_at: string
@@ -3076,6 +3150,7 @@ export type Database = {
           reconciled_with_id: string | null
           reconciled_with_type: string | null
           reconciliation_status: string | null
+          reseller_id: string | null
           status: Database["public"]["Enums"]["transaction_status"]
           tipo: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
@@ -3085,6 +3160,7 @@ export type Database = {
           branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
+          commission_value?: number | null
           company_id: string
           conta_id?: string | null
           created_at?: string
@@ -3100,6 +3176,7 @@ export type Database = {
           reconciled_with_id?: string | null
           reconciled_with_type?: string | null
           reconciliation_status?: string | null
+          reseller_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           tipo: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -3109,6 +3186,7 @@ export type Database = {
           branch_id?: string | null
           categoria_id?: string | null
           centro_custo_id?: string | null
+          commission_value?: number | null
           company_id?: string
           conta_id?: string | null
           created_at?: string
@@ -3124,6 +3202,7 @@ export type Database = {
           reconciled_with_id?: string | null
           reconciled_with_type?: string | null
           reconciliation_status?: string | null
+          reseller_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           tipo?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -3170,6 +3249,13 @@ export type Database = {
             columns: ["receivable_id"]
             isOneToOne: false
             referencedRelation: "receivables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
         ]
