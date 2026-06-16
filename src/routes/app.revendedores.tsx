@@ -120,21 +120,36 @@ function LocationsTab({ companyId }: { companyId: string }) {
         // garante único default por empresa
         await supabase.from("stock_locations").update({ is_default: false }).eq("company_id", companyId).neq("id", editing?.id ?? "00000000-0000-0000-0000-000000000000");
       }
+      let locationId = editing?.id ?? null;
       if (editing) {
         const { error } = await supabase.from("stock_locations").update({
           nome: form.nome, tipo: form.tipo, responsavel: form.responsavel || null, ativa: form.ativa, is_default: form.is_default,
         }).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("stock_locations").insert({
+        const { data: ins, error } = await supabase.from("stock_locations").insert({
           company_id: companyId, nome: form.nome, tipo: form.tipo, responsavel: form.responsavel || null, ativa: form.ativa, is_default: form.is_default,
-        });
+        }).select("id").single();
         if (error) throw error;
+        locationId = ins?.id ?? null;
+      }
+      // Se o centro for do tipo "revendedor", garante um registro na aba Revendedores vinculado a ele
+      if (form.tipo === "revendedor" && locationId) {
+        const { data: existing } = await supabase.from("resellers").select("id").eq("company_id", companyId).eq("stock_location_id", locationId).maybeSingle();
+        if (!existing) {
+          await supabase.from("resellers").insert({
+            company_id: companyId, nome: form.nome, stock_location_id: locationId,
+            commission_pct: 0, ativo: form.ativa,
+          });
+          toast.success("Revendedor criado automaticamente");
+        }
       }
       toast.success("Centro de estoque salvo");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["stock-locations-admin", companyId] });
       qc.invalidateQueries({ queryKey: ["stock-locations", companyId] });
+      qc.invalidateQueries({ queryKey: ["resellers-admin", companyId] });
+      qc.invalidateQueries({ queryKey: ["resellers", companyId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
     }
