@@ -1138,6 +1138,38 @@ function VendasPage() {
                           </Button>
                         </div>
                       </div>
+                      {it.product_id && (
+                        <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-12 md:col-span-8">
+                            <Label className="text-xs text-muted-foreground">
+                              De onde este produto está saindo? (Centro de estoque de origem)
+                            </Label>
+                            <Select
+                              value={it.stock_location_id || ""}
+                              onValueChange={(v) => updateItem(idx, { stock_location_id: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o local de estoque" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {stockLocations.map((loc) => (
+                                  <SelectItem key={loc.id} value={loc.id}>
+                                    {loc.nome} <span className="text-muted-foreground text-xs">({loc.tipo})</span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Escolha o local correto para evitar baixa duplicada ou erro de estoque.
+                            </p>
+                          </div>
+                          <ItemLocationBalance
+                            productId={it.product_id}
+                            locationId={it.stock_location_id}
+                            requested={Number(it.quantidade) || 0}
+                          />
+                        </div>
+                      )}
                       <div className="flex items-center justify-between text-xs text-muted-foreground pl-1">
                         <div className="flex gap-3">
                           <span>Subtotal: <b className="text-foreground">{formatMoney(subtotal)}</b></span>
