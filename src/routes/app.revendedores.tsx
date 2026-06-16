@@ -525,6 +525,66 @@ function Card({ label, value, highlight }: { label: string; value: string; highl
   );
 }
 
+// ============= Visualizar estoque de um centro =============
+
+function StockViewDialog({ companyId, location }: { companyId: string; location: StockLocationRow }) {
+  const [open, setOpen] = useState(false);
+
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ["location-stock", companyId, location.id],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("product_id, quantidade, tipo, products(nome, preco_venda, custo_unitario)")
+        .eq("company_id", companyId)
+        .eq("stock_location_id", location.id);
+      if (error) throw error;
+      const map = new Map<string, { nome: string; saldo: number; preco_venda: number; custo: number }>();
+      for (const m of (data ?? []) as Array<{ product_id: string; quantidade: number; tipo: string; products: { nome: string; preco_venda: number; custo_unitario: number } | null }>) {
+        const cur = map.get(m.product_id) ?? { nome: m.products?.nome ?? "?", saldo: 0, preco_venda: Number(m.products?.preco_venda ?? 0), custo: Number(m.products?.custo_unitario ?? 0) };
+        const q = Number(m.quantidade) || 0;
+        cur.saldo += m.tipo === "entrada" ? q : -q;
+        map.set(m.product_id, cur);
+      }
+      return Array.from(map.values()).filter((r) => r.saldo !== 0).sort((a, b) => a.nome.localeCompare(b.nome));
+    },
+  });
+
+  const totalItens = rows.reduce((a, r) => a + r.saldo, 0);
+  const valorEstoque = rows.reduce((a, r) => a + r.saldo * r.custo, 0);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button variant="ghost" size="icon" title="Ver estoque"><Boxes className="size-4" /></Button></DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader><DialogTitle>Estoque · {location.nome}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-2 gap-3 mb-2">
+          <Card label="Itens em estoque" value={String(totalItens)} />
+          <Card label="Valor (a custo)" value={formatMoney(valorEstoque)} />
+        </div>
+        <div className="border rounded-lg max-h-[60vh] overflow-auto">
+          <Table>
+            <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Saldo</TableHead><TableHead className="text-right">Custo unit.</TableHead><TableHead className="text-right">Preço venda</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {isLoading ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
+                rows.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Nenhum produto neste centro.</TableCell></TableRow> :
+                rows.map((r) => (
+                  <TableRow key={r.nome}>
+                    <TableCell className="font-medium">{r.nome}</TableCell>
+                    <TableCell className="text-right font-semibold">{r.saldo}</TableCell>
+                    <TableCell className="text-right">{formatMoney(r.custo)}</TableCell>
+                    <TableCell className="text-right">{formatMoney(r.preco_venda)}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ============= Transferência entre centros =============
 
 function TransferDialog({ companyId, locations }: { companyId: string; locations: StockLocationRow[] }) {
