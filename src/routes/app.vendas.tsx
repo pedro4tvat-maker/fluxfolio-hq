@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -96,6 +96,7 @@ function VendasPage() {
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [contactDialog, setContactDialog] = useState(false);
   const [cliente, setCliente] = useState<CrmContact | null>(null);
+  const [resellerId, setResellerId] = useState<string>("");
   const [items, setItems] = useState<SaleItem[]>([]);
   const today = new Date().toISOString().slice(0, 10);
   const sevenAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -200,6 +201,23 @@ function VendasPage() {
     ?? stockLocations[0]?.id
     ?? "";
 
+  const { data: resellers = [] } = useQuery({
+    queryKey: ["resellers", selected],
+    enabled: !!selected,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("resellers")
+        .select("id, nome, stock_location_id, commission_pct, ativo")
+        .eq("company_id", selected!)
+        .eq("ativo", true)
+        .order("nome");
+      return (data ?? []) as Array<{ id: string; nome: string; stock_location_id: string | null; commission_pct: number; ativo: boolean }>;
+    },
+  });
+
+  const selectedReseller = resellers.find((r) => r.id === resellerId) ?? null;
+
+
   const { data: vendas, isLoading } = useQuery({
     queryKey: ["vendas-list", selected],
     enabled: !!selected,
@@ -246,6 +264,20 @@ function VendasPage() {
 
   const filteredContacts = useMemo(() => contacts, [contacts]);
 
+  // Quando o revendedor muda, sugerir o local de estoque dele para itens que ainda estão no default
+  useEffect(() => {
+    if (!selectedReseller?.stock_location_id) return;
+    const newLoc = selectedReseller.stock_location_id;
+    setItems((prev) =>
+      prev.map((it) =>
+        it.product_id && (it.stock_location_id === defaultLocationId || !it.stock_location_id)
+          ? { ...it, stock_location_id: newLoc }
+          : it,
+      ),
+    );
+  }, [resellerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   function addProduct(productId: string) {
     const p = products?.find((x) => x.id === productId);
     if (!p) return;
@@ -267,7 +299,7 @@ function VendasPage() {
           preco_unitario: String(p.preco_venda ?? ""),
           custo_unitario: String(p.custo_unitario ?? ""),
           custo_padrao: String(p.custo_unitario ?? ""),
-          stock_location_id: defaultLocationId,
+          stock_location_id: selectedReseller?.stock_location_id || defaultLocationId,
         },
       ];
     });
@@ -291,6 +323,7 @@ function VendasPage() {
 
   function resetForm() {
     setCliente(null);
+    setResellerId("");
     setItems([]);
     setForm({
       forma: "vista",
@@ -372,6 +405,10 @@ function VendasPage() {
         }
       }
 
+      const commissionValue = selectedReseller
+        ? Number(((Number(selectedReseller.commission_pct) || 0) * valor / 100).toFixed(2))
+        : null;
+
       if (form.forma === "vista") {
         const { error } = await supabase.from("transactions").insert({
           company_id: selected,
@@ -384,6 +421,8 @@ function VendasPage() {
           data: form.data_venda,
           crm_contact_id: cliente?.id ?? null,
           centro_custo_id: items[0]?.product_id ? products?.find(p => p.id === items[0].product_id)?.centro_custo_id : null,
+          reseller_id: selectedReseller?.id ?? null,
+          commission_value: commissionValue,
         });
         if (error) throw error;
       } else {
@@ -398,6 +437,8 @@ function VendasPage() {
           conta_id: account?.id,
           status: "em_aberto",
           centro_custo_id: items[0]?.product_id ? products?.find(p => p.id === items[0].product_id)?.centro_custo_id : null,
+          reseller_id: selectedReseller?.id ?? null,
+          commission_value: commissionValue,
         });
         if (error) throw error;
       }
@@ -1080,6 +1121,34 @@ function VendasPage() {
               </Button>
             </div>
           </div>
+
+          <div className="space-y-1 md:col-span-2">
+            <Label>Vendedor / Revendedor (opcional)</Label>
+            <Select value={resellerId || "__none__"} onValueChange={(v) => setResellerId(v === "__none__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sem revendedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Sem revendedor (venda direta)</SelectItem>
+                {resellers.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.nome} <span className="text-muted-foreground text-xs">· {Number(r.commission_pct)}% comissão</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedReseller?.stock_location_id && (
+              <p className="text-[11px] text-muted-foreground">
+                Centro de estoque sugerido: <b>{stockLocations.find((l) => l.id === selectedReseller.stock_location_id)?.nome ?? "-"}</b>. Você pode alterar por item.
+              </p>
+            )}
+            {selectedReseller && Number(selectedReseller.commission_pct) > 0 && total > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Comissão estimada: <b className="text-foreground">{formatMoney(Number(selectedReseller.commission_pct) * total / 100)}</b>
+              </p>
+            )}
+          </div>
+
 
           <div className="md:col-span-2 space-y-2">
             <div className="flex items-center justify-between">
