@@ -136,6 +136,42 @@ function VendasPage() {
     },
   });
 
+  const { data: stockLocations = [] } = useQuery({
+    queryKey: ["stock-locations", selected],
+    enabled: !!selected,
+    queryFn: async (): Promise<StockLocation[]> => {
+      let { data } = await supabase
+        .from("stock_locations")
+        .select("id, nome, tipo, ativa, is_default")
+        .eq("company_id", selected!)
+        .eq("ativa", true)
+        .order("is_default", { ascending: false })
+        .order("nome");
+      if (!data || data.length === 0) {
+        // Auto-cria local default se a empresa não tiver nenhum
+        await supabase.from("stock_locations").insert({
+          company_id: selected!,
+          nome: "Estoque Principal",
+          tipo: "principal",
+          is_default: true,
+        });
+        const refetch = await supabase
+          .from("stock_locations")
+          .select("id, nome, tipo, ativa, is_default")
+          .eq("company_id", selected!)
+          .eq("ativa", true)
+          .order("is_default", { ascending: false })
+          .order("nome");
+        data = refetch.data ?? [];
+      }
+      return (data ?? []) as StockLocation[];
+    },
+  });
+
+  const defaultLocationId = stockLocations.find((l) => l.is_default)?.id
+    ?? stockLocations[0]?.id
+    ?? "";
+
   const { data: vendas, isLoading } = useQuery({
     queryKey: ["vendas-list", selected],
     enabled: !!selected,
