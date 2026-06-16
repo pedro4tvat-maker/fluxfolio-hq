@@ -876,6 +876,7 @@ function VendasPage() {
         custo_unitario: Number.isFinite(custo) && custo > 0 ? custo : Number(prod.custo_unitario ?? 0) || null,
         motivo: "Estorno de venda",
         data: dataRef,
+        stock_location_id: defaultLocationId || null,
       });
       if (smErr) throw smErr;
     }
