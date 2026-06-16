@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.tg_client_pending_items_restrict_client_update() FROM PUBLIC, anon, authenticated;
