@@ -18,6 +18,34 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/vendas")({ component: VendasPage });
 
+function ItemLocationBalance({ productId, locationId, requested }: { productId: string; locationId: string; requested: number }) {
+  const { data: saldo } = useQuery({
+    queryKey: ["product-stock-by-location", productId, locationId],
+    enabled: !!productId && !!locationId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("product_stock_by_location", {
+        _product_id: productId,
+        _location_id: locationId,
+      });
+      if (error) throw error;
+      return Number(data ?? 0);
+    },
+  });
+  if (!productId || !locationId) {
+    return <div className="col-span-12 md:col-span-4 text-xs text-muted-foreground">Selecione um local para ver o saldo.</div>;
+  }
+  const s = Number(saldo ?? 0);
+  const insuf = requested > s;
+  return (
+    <div className="col-span-12 md:col-span-4 text-xs">
+      <Label className="text-xs text-muted-foreground">Saldo disponível</Label>
+      <div className={cn("font-semibold", insuf ? "text-destructive" : "text-foreground")}>
+        {s} {insuf && <span className="ml-1 text-destructive">(insuficiente)</span>}
+      </div>
+    </div>
+  );
+}
+
 type CrmContact = {
   id: string;
   name: string;
