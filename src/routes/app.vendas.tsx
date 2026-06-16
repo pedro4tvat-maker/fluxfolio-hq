@@ -34,6 +34,15 @@ type SaleItem = {
   preco_unitario: string;
   custo_unitario: string; // custo desta venda (pode sobrescrever o cadastrado)
   custo_padrao: string;   // custo cadastrado no produto (referência)
+  stock_location_id: string; // centro/local de estoque de origem da baixa
+};
+
+type StockLocation = {
+  id: string;
+  nome: string;
+  tipo: string;
+  ativa: boolean;
+  is_default: boolean;
 };
 
 type CompanyData = {
