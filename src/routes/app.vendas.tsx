@@ -323,6 +323,7 @@ function VendasPage() {
 
   function resetForm() {
     setCliente(null);
+    setResellerId("");
     setItems([]);
     setForm({
       forma: "vista",
