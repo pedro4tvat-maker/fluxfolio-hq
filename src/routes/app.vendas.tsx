@@ -299,7 +299,7 @@ function VendasPage() {
           preco_unitario: String(p.preco_venda ?? ""),
           custo_unitario: String(p.custo_unitario ?? ""),
           custo_padrao: String(p.custo_unitario ?? ""),
-          stock_location_id: defaultLocationId,
+          stock_location_id: selectedReseller?.stock_location_id || defaultLocationId,
         },
       ];
     });
