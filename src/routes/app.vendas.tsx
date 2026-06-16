@@ -264,6 +264,20 @@ function VendasPage() {
 
   const filteredContacts = useMemo(() => contacts, [contacts]);
 
+  // Quando o revendedor muda, sugerir o local de estoque dele para itens que ainda estão no default
+  useEffect(() => {
+    if (!selectedReseller?.stock_location_id) return;
+    const newLoc = selectedReseller.stock_location_id;
+    setItems((prev) =>
+      prev.map((it) =>
+        it.product_id && (it.stock_location_id === defaultLocationId || !it.stock_location_id)
+          ? { ...it, stock_location_id: newLoc }
+          : it,
+      ),
+    );
+  }, [resellerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   function addProduct(productId: string) {
     const p = products?.find((x) => x.id === productId);
     if (!p) return;
