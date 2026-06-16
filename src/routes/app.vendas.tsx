@@ -96,6 +96,7 @@ function VendasPage() {
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [contactDialog, setContactDialog] = useState(false);
   const [cliente, setCliente] = useState<CrmContact | null>(null);
+  const [resellerId, setResellerId] = useState<string>("");
   const [items, setItems] = useState<SaleItem[]>([]);
   const today = new Date().toISOString().slice(0, 10);
   const sevenAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
