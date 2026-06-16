@@ -289,6 +289,32 @@ function VendasPage() {
         toast.error(`Informe quantidade e preço para "${it.nome}"`);
         return;
       }
+      if (it.product_id && !it.stock_location_id) {
+        toast.error(`Selecione o centro de estoque de origem para "${it.nome}"`);
+        return;
+      }
+    }
+    // Valida saldo por local de origem
+    for (const it of items) {
+      if (!it.product_id || !it.stock_location_id) continue;
+      const { data: saldo, error: saldoErr } = await supabase
+        .rpc("product_stock_by_location", {
+          _product_id: it.product_id,
+          _location_id: it.stock_location_id,
+        });
+      if (saldoErr) {
+        toast.error(`Erro ao consultar saldo de "${it.nome}": ${saldoErr.message}`);
+        return;
+      }
+      const saldoNum = Number(saldo ?? 0);
+      const qtdNum = Number(it.quantidade) || 0;
+      if (qtdNum > saldoNum) {
+        const localNome = stockLocations.find((l) => l.id === it.stock_location_id)?.nome ?? "selecionado";
+        toast.error(
+          `Saldo insuficiente de "${it.nome}" em ${localNome}: disponível ${saldoNum}, tentando vender ${qtdNum}. Escolha outro centro ou faça uma transferência.`,
+        );
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -312,6 +338,7 @@ function VendasPage() {
             quantidade: Number(it.quantidade),
             custo_unitario: Number.isFinite(custoVenda) && custoVenda > 0 ? custoVenda : null,
             motivo: "Venda",
+            stock_location_id: it.stock_location_id || null,
           });
           if (smErr) throw smErr;
         }
