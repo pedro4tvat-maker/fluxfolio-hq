@@ -1122,6 +1122,34 @@ function VendasPage() {
             </div>
           </div>
 
+          <div className="space-y-1 md:col-span-2">
+            <Label>Vendedor / Revendedor (opcional)</Label>
+            <Select value={resellerId || "__none__"} onValueChange={(v) => setResellerId(v === "__none__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sem revendedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Sem revendedor (venda direta)</SelectItem>
+                {resellers.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.nome} <span className="text-muted-foreground text-xs">· {Number(r.commission_pct)}% comissão</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedReseller?.stock_location_id && (
+              <p className="text-[11px] text-muted-foreground">
+                Centro de estoque sugerido: <b>{stockLocations.find((l) => l.id === selectedReseller.stock_location_id)?.nome ?? "-"}</b>. Você pode alterar por item.
+              </p>
+            )}
+            {selectedReseller && Number(selectedReseller.commission_pct) > 0 && total > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Comissão estimada: <b className="text-foreground">{formatMoney(Number(selectedReseller.commission_pct) * total / 100)}</b>
+              </p>
+            )}
+          </div>
+
+
           <div className="md:col-span-2 space-y-2">
             <div className="flex items-center justify-between">
               <Label>Itens da venda</Label>
