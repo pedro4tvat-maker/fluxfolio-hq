@@ -508,3 +508,144 @@ function Card({ label, value, highlight }: { label: string; value: string; highl
     </div>
   );
 }
+
+// ============= Transferência entre centros =============
+
+function TransferDialog({ companyId, locations }: { companyId: string; locations: StockLocationRow[] }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [origemId, setOrigemId] = useState("");
+  const [destinoId, setDestinoId] = useState("");
+  const [productId, setProductId] = useState("");
+  const [quantidade, setQuantidade] = useState("");
+  const [obs, setObs] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["products-transfer", companyId],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase.from("products").select("id, nome").eq("company_id", companyId).order("nome");
+      return (data ?? []) as Array<{ id: string; nome: string }>;
+    },
+  });
+
+  const { data: saldo = 0 } = useQuery({
+    queryKey: ["transfer-balance", productId, origemId],
+    enabled: !!productId && !!origemId,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("product_stock_by_location", { _product_id: productId, _location_id: origemId });
+      return Number(data ?? 0);
+    },
+  });
+
+  async function transfer() {
+    if (!origemId || !destinoId || !productId || !quantidade) { toast.error("Preencha todos os campos"); return; }
+    if (origemId === destinoId) { toast.error("Origem e destino devem ser diferentes"); return; }
+    const q = Number(quantidade);
+    if (!Number.isFinite(q) || q <= 0) { toast.error("Quantidade inválida"); return; }
+    if (q > saldo) { toast.error(`Saldo insuficiente na origem (${saldo}).`); return; }
+    setSaving(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const motivo = `Transferência${obs ? ` - ${obs}` : ""}`;
+      const { error: e1 } = await supabase.from("stock_movements").insert({
+        company_id: companyId, product_id: productId, tipo: "saida", quantidade: q, motivo, stock_location_id: origemId, data: today,
+      });
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from("stock_movements").insert({
+        company_id: companyId, product_id: productId, tipo: "entrada", quantidade: q, motivo, stock_location_id: destinoId, data: today,
+      });
+      if (e2) throw e2;
+      toast.success("Transferência concluída");
+      setOpen(false);
+      setOrigemId(""); setDestinoId(""); setProductId(""); setQuantidade(""); setObs("");
+      qc.invalidateQueries({ queryKey: ["reseller-movements"] });
+      qc.invalidateQueries({ queryKey: ["transfer-balance"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button variant="outline">Transferir estoque</Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Transferência entre centros de estoque</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Origem</Label>
+              <Select value={origemId} onValueChange={setOrigemId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{locations.filter((l) => l.ativa).map((l) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Destino</Label>
+              <Select value={destinoId} onValueChange={setDestinoId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{locations.filter((l) => l.ativa).map((l) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Produto</Label>
+            <Select value={productId} onValueChange={setProductId}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
+            </Select>
+            {productId && origemId && <p className="text-xs text-muted-foreground mt-1">Saldo na origem: <b>{saldo}</b></p>}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Quantidade</Label><Input type="number" min="0" step="any" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} /></div>
+            <div><Label>Observação</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="opcional" /></div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button onClick={transfer} disabled={saving}>{saving ? "Transferindo..." : "Confirmar transferência"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============= Exportar PDF (via janela de impressão) =============
+
+type SettlementExport = {
+  resellerNome: string; dateFrom: string; dateTo: string;
+  totals: { totalEnviados: number; totalVendidos: number; totalDevolvidos: number; totalEmPosse: number; totalVendidoValor: number; totalComissao: number; liquido: number };
+  produtos: Array<{ nome: string; enviados: number; vendidos: number; devolvidos: number; valorVendido: number }>;
+  commissions: Array<{ id: string; valor: number; comissao: number; data: string; descricao: string; kind: string }>;
+};
+
+function exportSettlementPDF(s: SettlementExport) {
+  const fmt = (n: number) => formatMoney(n);
+  const rowsProd = s.produtos.map((p) => `<tr><td>${p.nome}</td><td style="text-align:right">${p.enviados}</td><td style="text-align:right">${p.vendidos}</td><td style="text-align:right">${p.devolvidos}</td><td style="text-align:right"><b>${p.enviados - p.vendidos - p.devolvidos}</b></td><td style="text-align:right">${fmt(p.valorVendido)}</td></tr>`).join("");
+  const rowsCom = s.commissions.map((c) => `<tr><td>${c.data}</td><td>${c.kind}</td><td>${c.descricao}</td><td style="text-align:right">${fmt(c.valor)}</td><td style="text-align:right">${fmt(c.comissao)}</td></tr>`).join("");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Prestação de contas - ${s.resellerNome}</title>
+  <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}h2{margin:24px 0 8px;font-size:14px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:6px 8px}th{background:#f5f5f5;text-align:left}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.card{border:1px solid #ddd;border-radius:6px;padding:8px}.card .l{font-size:10px;color:#666}.card .v{font-size:16px;font-weight:700}</style>
+  </head><body>
+  <h1>Prestação de Contas</h1>
+  <div>Revendedor: <b>${s.resellerNome}</b> · Período: ${s.dateFrom} a ${s.dateTo}</div>
+  <div class="cards">
+    <div class="card"><div class="l">Enviados</div><div class="v">${s.totals.totalEnviados}</div></div>
+    <div class="card"><div class="l">Vendidos</div><div class="v">${s.totals.totalVendidos}</div></div>
+    <div class="card"><div class="l">Devolvidos</div><div class="v">${s.totals.totalDevolvidos}</div></div>
+    <div class="card"><div class="l">Em posse</div><div class="v">${s.totals.totalEmPosse}</div></div>
+    <div class="card"><div class="l">Valor vendido</div><div class="v">${fmt(s.totals.totalVendidoValor)}</div></div>
+    <div class="card"><div class="l">Comissão</div><div class="v">${fmt(s.totals.totalComissao)}</div></div>
+    <div class="card"><div class="l">Líquido empresa</div><div class="v">${fmt(s.totals.liquido)}</div></div>
+  </div>
+  <h2>Produtos no centro do revendedor</h2>
+  <table><thead><tr><th>Produto</th><th style="text-align:right">Enviados</th><th style="text-align:right">Vendidos</th><th style="text-align:right">Devolvidos</th><th style="text-align:right">Em posse</th><th style="text-align:right">Valor vendido</th></tr></thead><tbody>${rowsProd || '<tr><td colspan="6" style="text-align:center;color:#666">Sem movimentações</td></tr>'}</tbody></table>
+  <h2>Vendas atribuídas</h2>
+  <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th style="text-align:right">Comissão</th></tr></thead><tbody>${rowsCom || '<tr><td colspan="5" style="text-align:center;color:#666">Sem vendas</td></tr>'}</tbody></table>
+  <script>window.onload=()=>{window.print();}</script>
+  </body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) { toast.error("Permita pop-ups para exportar"); return; }
+  w.document.write(html); w.document.close();
+}
+
