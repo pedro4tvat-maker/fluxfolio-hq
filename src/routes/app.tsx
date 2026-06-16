@@ -59,6 +59,7 @@ const clientNav: NavEntry[] = [
       { to: "/app/fluxo-caixa", label: "Fluxo de Caixa", icon: ArrowLeftRight },
       { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
       { to: "/app/estoque", label: "Fluxo de Estoque", icon: Package },
+      { to: "/app/revendedores", label: "Revendedores", icon: ShoppingCart },
     ],
   },
   {

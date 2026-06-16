@@ -1,0 +1,502 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useSelectedCompany } from "@/hooks/use-selected-company";
+import { formatMoney } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/app/revendedores")({ component: RevendedoresPage });
+
+const LOCATION_TYPES = [
+  "principal", "deposito", "loja", "filial", "revendedor", "consignado", "producao", "transito", "outros",
+] as const;
+type LocType = (typeof LOCATION_TYPES)[number];
+
+type StockLocationRow = {
+  id: string;
+  nome: string;
+  tipo: LocType;
+  responsavel: string | null;
+  ativa: boolean;
+  is_default: boolean;
+};
+
+type ResellerRow = {
+  id: string;
+  nome: string;
+  email: string | null;
+  telefone: string | null;
+  documento: string | null;
+  stock_location_id: string | null;
+  commission_pct: number;
+  ativo: boolean;
+};
+
+function RevendedoresPage() {
+  const { selected } = useSelectedCompany();
+
+  if (!selected) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold">Revendedores e Centros de Estoque</h1>
+        <p className="text-sm text-muted-foreground mt-2">Selecione uma empresa para continuar.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold">Revendedores e Centros de Estoque</h1>
+        <p className="text-sm text-muted-foreground">
+          Gerencie locais de estoque, revendedores e acompanhe a prestação de contas.
+        </p>
+      </div>
+      <Tabs defaultValue="locations">
+        <TabsList>
+          <TabsTrigger value="locations">Centros de Estoque</TabsTrigger>
+          <TabsTrigger value="resellers">Revendedores</TabsTrigger>
+          <TabsTrigger value="settlement">Prestação de Contas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="locations" className="mt-4">
+          <LocationsTab companyId={selected} />
+        </TabsContent>
+        <TabsContent value="resellers" className="mt-4">
+          <ResellersTab companyId={selected} />
+        </TabsContent>
+        <TabsContent value="settlement" className="mt-4">
+          <SettlementTab companyId={selected} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// ============= Centros de Estoque =============
+
+function LocationsTab({ companyId }: { companyId: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<StockLocationRow | null>(null);
+  const [form, setForm] = useState({ nome: "", tipo: "principal" as LocType, responsavel: "", ativa: true, is_default: false });
+
+  const { data: locations = [], isLoading } = useQuery({
+    queryKey: ["stock-locations-admin", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("stock_locations")
+        .select("id, nome, tipo, responsavel, ativa, is_default")
+        .eq("company_id", companyId)
+        .order("is_default", { ascending: false })
+        .order("nome");
+      return (data ?? []) as StockLocationRow[];
+    },
+  });
+
+  function openCreate() {
+    setEditing(null);
+    setForm({ nome: "", tipo: "principal", responsavel: "", ativa: true, is_default: false });
+    setOpen(true);
+  }
+  function openEdit(row: StockLocationRow) {
+    setEditing(row);
+    setForm({ nome: row.nome, tipo: row.tipo, responsavel: row.responsavel ?? "", ativa: row.ativa, is_default: row.is_default });
+    setOpen(true);
+  }
+
+  async function save() {
+    if (!form.nome.trim()) { toast.error("Informe o nome"); return; }
+    try {
+      if (form.is_default) {
+        // garante único default por empresa
+        await supabase.from("stock_locations").update({ is_default: false }).eq("company_id", companyId).neq("id", editing?.id ?? "00000000-0000-0000-0000-000000000000");
+      }
+      if (editing) {
+        const { error } = await supabase.from("stock_locations").update({
+          nome: form.nome, tipo: form.tipo, responsavel: form.responsavel || null, ativa: form.ativa, is_default: form.is_default,
+        }).eq("id", editing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("stock_locations").insert({
+          company_id: companyId, nome: form.nome, tipo: form.tipo, responsavel: form.responsavel || null, ativa: form.ativa, is_default: form.is_default,
+        });
+        if (error) throw error;
+      }
+      toast.success("Centro de estoque salvo");
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["stock-locations-admin", companyId] });
+      qc.invalidateQueries({ queryKey: ["stock-locations", companyId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+    }
+  }
+
+  async function remove(row: StockLocationRow) {
+    if (!window.confirm(`Excluir o centro "${row.nome}"? Movimentos existentes perderão a referência.`)) return;
+    const { error } = await supabase.from("stock_locations").delete().eq("id", row.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Excluído");
+    qc.invalidateQueries({ queryKey: ["stock-locations-admin", companyId] });
+    qc.invalidateQueries({ queryKey: ["stock-locations", companyId] });
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={openCreate}><Plus className="size-4" /> Novo centro</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{editing ? "Editar centro" : "Novo centro de estoque"}</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Nome</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
+              <div>
+                <Label>Tipo</Label>
+                <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as LocType })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{LOCATION_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label>Responsável</Label><Input value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} /></div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.ativa} onChange={(e) => setForm({ ...form, ativa: e.target.checked })} /> Ativo</label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_default} onChange={(e) => setForm({ ...form, is_default: e.target.checked })} /> Padrão da empresa</label>
+              </div>
+            </div>
+            <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button onClick={save}>Salvar</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Responsável</TableHead><TableHead>Status</TableHead><TableHead className="w-28 text-right">Ações</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
+              locations.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nenhum centro cadastrado.</TableCell></TableRow> :
+              locations.map((l) => (
+                <TableRow key={l.id}>
+                  <TableCell className="font-medium">{l.nome} {l.is_default && <span className="text-xs text-muted-foreground">(padrão)</span>}</TableCell>
+                  <TableCell>{l.tipo}</TableCell>
+                  <TableCell>{l.responsavel ?? "-"}</TableCell>
+                  <TableCell>{l.ativa ? "Ativo" : "Inativo"}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(l)}><Pencil className="size-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => remove(l)}><Trash2 className="size-4 text-destructive" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+// ============= Revendedores =============
+
+function ResellersTab({ companyId }: { companyId: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ResellerRow | null>(null);
+  const [form, setForm] = useState({ nome: "", email: "", telefone: "", documento: "", stock_location_id: "", commission_pct: "0", ativo: true });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ["stock-locations-for-reseller", companyId],
+    queryFn: async () => {
+      const { data } = await supabase.from("stock_locations").select("id, nome, tipo").eq("company_id", companyId).eq("ativa", true).order("nome");
+      return data ?? [];
+    },
+  });
+
+  const { data: resellers = [], isLoading } = useQuery({
+    queryKey: ["resellers-admin", companyId],
+    queryFn: async () => {
+      const { data } = await supabase.from("resellers").select("id, nome, email, telefone, documento, stock_location_id, commission_pct, ativo").eq("company_id", companyId).order("nome");
+      return (data ?? []) as ResellerRow[];
+    },
+  });
+
+  function openCreate() {
+    setEditing(null);
+    setForm({ nome: "", email: "", telefone: "", documento: "", stock_location_id: "", commission_pct: "0", ativo: true });
+    setOpen(true);
+  }
+  function openEdit(r: ResellerRow) {
+    setEditing(r);
+    setForm({ nome: r.nome, email: r.email ?? "", telefone: r.telefone ?? "", documento: r.documento ?? "", stock_location_id: r.stock_location_id ?? "", commission_pct: String(r.commission_pct ?? 0), ativo: r.ativo });
+    setOpen(true);
+  }
+
+  async function save() {
+    if (!form.nome.trim()) { toast.error("Informe o nome"); return; }
+    const payload = {
+      company_id: companyId, nome: form.nome, email: form.email || null, telefone: form.telefone || null,
+      documento: form.documento || null, stock_location_id: form.stock_location_id || null,
+      commission_pct: Number(form.commission_pct) || 0, ativo: form.ativo,
+    };
+    try {
+      if (editing) {
+        const { company_id, ...rest } = payload;
+        const { error } = await supabase.from("resellers").update(rest).eq("id", editing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("resellers").insert(payload);
+        if (error) throw error;
+      }
+      toast.success("Revendedor salvo");
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["resellers-admin", companyId] });
+      qc.invalidateQueries({ queryKey: ["resellers", companyId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    }
+  }
+
+  async function remove(r: ResellerRow) {
+    if (!window.confirm(`Excluir revendedor "${r.nome}"?`)) return;
+    const { error } = await supabase.from("resellers").delete().eq("id", r.id);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["resellers-admin", companyId] });
+    qc.invalidateQueries({ queryKey: ["resellers", companyId] });
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild><Button onClick={openCreate}><Plus className="size-4" /> Novo revendedor</Button></DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{editing ? "Editar revendedor" : "Novo revendedor"}</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Nome</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>E-mail</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                <div><Label>Telefone</Label><Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} /></div>
+              </div>
+              <div><Label>CPF/CNPJ</Label><Input value={form.documento} onChange={(e) => setForm({ ...form, documento: e.target.value })} /></div>
+              <div>
+                <Label>Centro de estoque vinculado</Label>
+                <Select value={form.stock_location_id || "__none__"} onValueChange={(v) => setForm({ ...form, stock_location_id: v === "__none__" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sem vínculo</SelectItem>
+                    {locations.map((l) => <SelectItem key={l.id} value={l.id}>{l.nome} ({l.tipo})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground mt-1">Vendas com este revendedor sugerem este local automaticamente.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Comissão (%)</Label><Input type="number" min="0" step="0.01" value={form.commission_pct} onChange={(e) => setForm({ ...form, commission_pct: e.target.value })} /></div>
+                <label className="flex items-center gap-2 text-sm self-end pb-2"><input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} /> Ativo</label>
+              </div>
+            </div>
+            <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button onClick={save}>Salvar</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Centro vinculado</TableHead><TableHead>Comissão</TableHead><TableHead>Status</TableHead><TableHead className="w-28 text-right">Ações</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
+              resellers.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nenhum revendedor cadastrado.</TableCell></TableRow> :
+              resellers.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.nome}</TableCell>
+                  <TableCell>{locations.find((l) => l.id === r.stock_location_id)?.nome ?? "-"}</TableCell>
+                  <TableCell>{Number(r.commission_pct)}%</TableCell>
+                  <TableCell>{r.ativo ? "Ativo" : "Inativo"}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil className="size-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => remove(r)}><Trash2 className="size-4 text-destructive" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+// ============= Prestação de Contas =============
+
+function SettlementTab({ companyId }: { companyId: string }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [resellerId, setResellerId] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState(monthAgo);
+  const [dateTo, setDateTo] = useState(today);
+
+  const { data: resellers = [] } = useQuery({
+    queryKey: ["resellers-settlement", companyId],
+    queryFn: async () => {
+      const { data } = await supabase.from("resellers").select("id, nome, stock_location_id, commission_pct").eq("company_id", companyId).eq("ativo", true).order("nome");
+      return (data ?? []) as Array<{ id: string; nome: string; stock_location_id: string | null; commission_pct: number }>;
+    },
+  });
+
+  const reseller = resellers.find((r) => r.id === resellerId) ?? null;
+  const locationId = reseller?.stock_location_id ?? null;
+
+  const { data: movs = [] } = useQuery({
+    queryKey: ["reseller-movements", companyId, locationId, dateFrom, dateTo],
+    enabled: !!locationId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("stock_movements")
+        .select("id, product_id, quantidade, tipo, motivo, custo_unitario, data, products(nome, preco_venda)")
+        .eq("company_id", companyId)
+        .eq("stock_location_id", locationId!)
+        .gte("data", dateFrom)
+        .lte("data", dateTo)
+        .order("data", { ascending: true });
+      return (data ?? []) as Array<{
+        id: string; product_id: string; quantidade: number; tipo: "entrada" | "saida";
+        motivo: string | null; custo_unitario: number | null; data: string;
+        products: { nome: string; preco_venda: number } | null;
+      }>;
+    },
+  });
+
+  const { data: commissions = [] } = useQuery({
+    queryKey: ["reseller-commissions", companyId, resellerId, dateFrom, dateTo],
+    enabled: !!resellerId,
+    queryFn: async () => {
+      const [tx, rec] = await Promise.all([
+        supabase.from("transactions").select("id, valor, commission_value, data, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).gte("data", dateFrom).lte("data", dateTo),
+        supabase.from("receivables").select("id, valor, commission_value, vencimento, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).gte("vencimento", dateFrom).lte("vencimento", dateTo),
+      ]);
+      return [
+        ...(tx.data ?? []).map((t) => ({ id: t.id, valor: Number(t.valor) || 0, comissao: Number(t.commission_value) || 0, data: t.data, descricao: t.descricao, kind: "À vista" })),
+        ...(rec.data ?? []).map((r) => ({ id: r.id, valor: Number(r.valor) || 0, comissao: Number(r.commission_value) || 0, data: r.vencimento, descricao: r.descricao, kind: "A prazo" })),
+      ];
+    },
+  });
+
+  const resumoProdutos = useMemo(() => {
+    const map = new Map<string, { nome: string; enviados: number; vendidos: number; devolvidos: number; valorVendido: number }>();
+    for (const m of movs) {
+      const key = m.product_id;
+      const cur = map.get(key) ?? { nome: m.products?.nome ?? "?", enviados: 0, vendidos: 0, devolvidos: 0, valorVendido: 0 };
+      const q = Number(m.quantidade) || 0;
+      if (m.tipo === "entrada") cur.enviados += q;
+      else if (m.tipo === "saida") {
+        if ((m.motivo ?? "").toLowerCase().startsWith("devolu")) cur.devolvidos += q;
+        else if ((m.motivo ?? "") === "Venda") {
+          cur.vendidos += q;
+          cur.valorVendido += q * Number(m.products?.preco_venda ?? 0);
+        }
+      }
+      map.set(key, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [movs]);
+
+  const totalEnviados = resumoProdutos.reduce((a, b) => a + b.enviados, 0);
+  const totalVendidos = resumoProdutos.reduce((a, b) => a + b.vendidos, 0);
+  const totalDevolvidos = resumoProdutos.reduce((a, b) => a + b.devolvidos, 0);
+  const totalEmPosse = totalEnviados - totalVendidos - totalDevolvidos;
+  const totalVendidoValor = commissions.reduce((a, c) => a + c.valor, 0);
+  const totalComissao = commissions.reduce((a, c) => a + c.comissao, 0);
+  const liquido = totalVendidoValor - totalComissao;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid md:grid-cols-3 gap-3">
+        <div>
+          <Label>Revendedor</Label>
+          <Select value={resellerId || "__none__"} onValueChange={(v) => setResellerId(v === "__none__" ? "" : v)}>
+            <SelectTrigger><SelectValue placeholder="Selecione um revendedor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">—</SelectItem>
+              {resellers.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div><Label>De</Label><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} /></div>
+        <div><Label>Até</Label><Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} /></div>
+      </div>
+
+      {!reseller ? (
+        <p className="text-sm text-muted-foreground">Escolha um revendedor para ver a prestação de contas.</p>
+      ) : !locationId ? (
+        <p className="text-sm text-warning">Este revendedor não tem centro de estoque vinculado. Edite o cadastro na aba "Revendedores".</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card label="Enviados" value={totalEnviados.toString()} />
+            <Card label="Vendidos" value={totalVendidos.toString()} />
+            <Card label="Devolvidos" value={totalDevolvidos.toString()} />
+            <Card label="Em posse" value={totalEmPosse.toString()} highlight />
+            <Card label="Valor vendido (período)" value={formatMoney(totalVendidoValor)} />
+            <Card label="Comissão" value={formatMoney(totalComissao)} />
+            <Card label="Líquido para empresa" value={formatMoney(liquido)} highlight />
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold mb-2">Produtos no centro do revendedor</h3>
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Enviados</TableHead><TableHead className="text-right">Vendidos</TableHead><TableHead className="text-right">Devolvidos</TableHead><TableHead className="text-right">Em posse</TableHead><TableHead className="text-right">Valor vendido</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {resumoProdutos.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Sem movimentações no período.</TableCell></TableRow> :
+                    resumoProdutos.map((p) => (
+                      <TableRow key={p.nome}>
+                        <TableCell className="font-medium">{p.nome}</TableCell>
+                        <TableCell className="text-right">{p.enviados}</TableCell>
+                        <TableCell className="text-right">{p.vendidos}</TableCell>
+                        <TableCell className="text-right">{p.devolvidos}</TableCell>
+                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidos - p.devolvidos}</TableCell>
+                        <TableCell className="text-right">{formatMoney(p.valorVendido)}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold mb-2">Vendas atribuídas ao revendedor</h3>
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Comissão</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {commissions.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Sem vendas atribuídas no período.</TableCell></TableRow> :
+                    commissions.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell>{c.data}</TableCell>
+                        <TableCell>{c.kind}</TableCell>
+                        <TableCell className="truncate max-w-[400px]">{c.descricao}</TableCell>
+                        <TableCell className="text-right">{formatMoney(c.valor)}</TableCell>
+                        <TableCell className="text-right">{formatMoney(c.comissao)}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Card({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`border rounded-lg p-3 ${highlight ? "bg-accent/30" : ""}`}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-lg font-bold">{value}</div>
+    </div>
+  );
+}
