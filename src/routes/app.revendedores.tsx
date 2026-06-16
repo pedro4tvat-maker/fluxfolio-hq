@@ -195,7 +195,7 @@ function LocationsTab({ companyId }: { companyId: string }) {
       </div>
       <div className="border rounded-lg">
         <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Responsável</TableHead><TableHead>Status</TableHead><TableHead className="w-28 text-right">Ações</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Responsável</TableHead><TableHead>Status</TableHead><TableHead className="w-44 text-right">Ações</TableHead></TableRow></TableHeader>
           <TableBody>
             {isLoading ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
               locations.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nenhum centro cadastrado.</TableCell></TableRow> :
@@ -206,6 +206,7 @@ function LocationsTab({ companyId }: { companyId: string }) {
                   <TableCell>{l.responsavel ?? "-"}</TableCell>
                   <TableCell>{l.ativa ? "Ativo" : "Inativo"}</TableCell>
                   <TableCell className="text-right">
+                    <StockViewDialog companyId={companyId} location={l} />
                     <Button variant="ghost" size="icon" onClick={() => openEdit(l)}><Pencil className="size-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => remove(l)}><Trash2 className="size-4 text-destructive" /></Button>
                   </TableCell>
