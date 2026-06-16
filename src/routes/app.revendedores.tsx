@@ -151,7 +151,8 @@ function LocationsTab({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <TransferDialog companyId={companyId} locations={locations} />
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button onClick={openCreate}><Plus className="size-4" /> Novo centro</Button>
