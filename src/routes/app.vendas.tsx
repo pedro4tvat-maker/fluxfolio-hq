@@ -443,6 +443,24 @@ function VendasPage() {
         if (error) throw error;
       }
 
+      // Gera conta a pagar de comissão automaticamente
+      if (selectedReseller && commissionValue && commissionValue > 0) {
+        const baseDate = form.forma === "vista" ? form.data_venda : form.vencimento;
+        const venc = new Date(baseDate);
+        venc.setDate(venc.getDate() + 7);
+        const { error: payErr } = await supabase.from("payables").insert({
+          company_id: selected,
+          descricao: `Comissão venda${cliente?.name ? ` - ${cliente.name}` : ""} (${selectedReseller.nome})`,
+          fornecedor: selectedReseller.nome,
+          valor: commissionValue,
+          vencimento: venc.toISOString().slice(0, 10),
+          status: "em_aberto",
+          conta_id: account?.id,
+          reseller_id: selectedReseller.id,
+          commission_value: commissionValue,
+        });
+        if (payErr) console.warn("Falha ao gerar comissão:", payErr.message);
+      }
 
       toast.success("Venda registrada");
       generateOrderHTML({ openPrint: true });
