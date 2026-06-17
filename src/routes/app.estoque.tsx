@@ -61,6 +61,7 @@ const emptyMovement = {
   custo_unitario: "",
   motivo: "",
   data: new Date().toISOString().slice(0, 10),
+  stock_location_id: "",
 };
 
 function EstoquePage() {
