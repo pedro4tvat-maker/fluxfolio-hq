@@ -778,7 +778,19 @@ function ClientDashboard() {
       {/* 2. Visão rápida */}
       <section>
         <SectionTitle>Visão rápida</SectionTitle>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickCard
+            label="Faturamento do mês"
+            value={formatMoney(data.entradas)}
+            hint={
+              data.entradasDelta != null
+                ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior`
+                : "Entradas realizadas no mês"
+            }
+            tone={data.entradas > 0 ? "success" : "neutral"}
+            featured
+            className="sm:col-span-2 lg:col-span-2 lg:row-span-2"
+          />
           <QuickCard
             label="Saldo disponível"
             value={formatMoney(data.saldo)}
@@ -936,19 +948,21 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 function QuickCard({
-  label, value, hint, tone = "neutral",
+  label, value, hint, tone = "neutral", featured = false, className = "",
 }: {
   label: string;
   value: string;
   hint?: string;
   tone?: "success" | "danger" | "warn" | "neutral";
+  featured?: boolean;
+  className?: string;
 }) {
   const valueTone =
     tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning-foreground" : "";
   return (
-    <div className="bg-card border-l-4 border-l-primary rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
-      <div className={`mt-3 font-display font-bold text-[26px] leading-tight tabular-nums ${valueTone}`}>{value}</div>
+    <div className={`bg-card border-l-4 border-l-primary rounded-2xl shadow-sm hover:shadow-md transition-shadow ${featured ? "p-8 bg-gradient-to-br from-primary/5 to-card" : "p-6"} ${className}`}>
+      <div className={`uppercase tracking-wider text-muted-foreground font-semibold ${featured ? "text-xs" : "text-[10px]"}`}>{label}</div>
+      <div className={`mt-3 font-display font-bold leading-tight tabular-nums ${featured ? "text-[40px]" : "text-[26px]"} ${valueTone}`}>{value}</div>
       {hint && <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
         <div className="size-1 rounded-full bg-primary/40" />
         {hint}
