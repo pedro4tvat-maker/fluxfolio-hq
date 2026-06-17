@@ -69,6 +69,7 @@ function EstoquePage() {
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "low" | "out">("all");
+  const [filterLocation, setFilterLocation] = useState<string>("all");
 
   const [productOpen, setProductOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
