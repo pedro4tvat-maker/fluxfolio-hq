@@ -61,6 +61,7 @@ const emptyMovement = {
   custo_unitario: "",
   motivo: "",
   data: new Date().toISOString().slice(0, 10),
+  stock_location_id: "",
 };
 
 function EstoquePage() {
@@ -80,7 +81,7 @@ function EstoquePage() {
   const [saving, setSaving] = useState(false);
 
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [adjustForm, setAdjustForm] = useState({ product_id: "", nova_quantidade: "" });
+  const [adjustForm, setAdjustForm] = useState({ product_id: "", nova_quantidade: "", stock_location_id: "" });
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["estoque-products", selected],
@@ -275,7 +276,7 @@ function EstoquePage() {
   }
 
   function openAdjustQuantity(p: Product) {
-    setAdjustForm({ product_id: p.id, nova_quantidade: String(p.quantidade) });
+    setAdjustForm({ product_id: p.id, nova_quantidade: String(p.quantidade), stock_location_id: filterLocation !== "all" ? filterLocation : "" });
     setAdjustOpen(true);
   }
 
@@ -304,12 +305,14 @@ function EstoquePage() {
         custo_unitario: p.custo_unitario || null,
         motivo: "Ajuste de estoque",
         data: new Date().toISOString().slice(0, 10),
+        stock_location_id: adjustForm.stock_location_id || null,
       });
       if (error) throw error;
       toast.success("Quantidade ajustada");
       setAdjustOpen(false);
       qc.invalidateQueries({ queryKey: ["estoque-products"] });
       qc.invalidateQueries({ queryKey: ["estoque-movements"] });
+      qc.invalidateQueries({ queryKey: ["estoque-location-balances"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao ajustar quantidade");
     } finally {
@@ -318,7 +321,7 @@ function EstoquePage() {
   }
 
   function openNewMovement(productId?: string) {
-    setMoveForm({ ...emptyMovement, product_id: productId ?? "" });
+    setMoveForm({ ...emptyMovement, product_id: productId ?? "", stock_location_id: filterLocation !== "all" ? filterLocation : "" });
     setMoveOpen(true);
   }
 
@@ -350,12 +353,14 @@ function EstoquePage() {
         custo_unitario: moveForm.custo_unitario ? Number(moveForm.custo_unitario) : null,
         motivo: moveForm.motivo || (moveForm.tipo === "entrada" ? "Entrada manual" : "Saída manual"),
         data: moveForm.data,
+        stock_location_id: moveForm.stock_location_id || null,
       });
       if (error) throw error;
       toast.success("Movimentação registrada");
       setMoveOpen(false);
       qc.invalidateQueries({ queryKey: ["estoque-products"] });
       qc.invalidateQueries({ queryKey: ["estoque-movements"] });
+      qc.invalidateQueries({ queryKey: ["estoque-location-balances"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao registrar movimentação");
     } finally {
@@ -641,6 +646,18 @@ function EstoquePage() {
               </div>
             </div>
             <div className="space-y-1">
+              <Label>Centro de estoque</Label>
+              <Select value={moveForm.stock_location_id || "none"} onValueChange={(v) => setMoveForm({ ...moveForm, stock_location_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Estoque geral" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Estoque geral (sem centro)</SelectItem>
+                  {(locations ?? []).map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <Label>Motivo</Label>
               <Input value={moveForm.motivo} onChange={(e) => setMoveForm({ ...moveForm, motivo: e.target.value })} placeholder="Compra, ajuste, perda, venda manual..." />
             </div>
@@ -665,6 +682,18 @@ function EstoquePage() {
                 <SelectContent>
                   {(products ?? []).map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.nome} (estoque atual: {Number(p.quantidade)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Centro de estoque</Label>
+              <Select value={adjustForm.stock_location_id || "none"} onValueChange={(v) => setAdjustForm({ ...adjustForm, stock_location_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Estoque geral" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Estoque geral (sem centro)</SelectItem>
+                  {(locations ?? []).map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
