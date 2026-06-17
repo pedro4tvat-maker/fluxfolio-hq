@@ -481,16 +481,17 @@ function SettlementTab({ companyId }: { companyId: string }) {
             <h3 className="text-sm font-semibold mb-2">Produtos no centro do revendedor</h3>
             <div className="border rounded-lg">
               <Table>
-                <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Enviados</TableHead><TableHead className="text-right">Vendidos</TableHead><TableHead className="text-right">Devolvidos</TableHead><TableHead className="text-right">Em posse</TableHead><TableHead className="text-right">Valor vendido</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Enviados</TableHead><TableHead className="text-right">Vendidos</TableHead><TableHead className="text-right">Devolvidos</TableHead><TableHead className="text-right">Transf./Saídas</TableHead><TableHead className="text-right">Em posse</TableHead><TableHead className="text-right">Valor vendido</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {resumoProdutos.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Sem movimentações no período.</TableCell></TableRow> :
+                  {resumoProdutos.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Sem movimentações no período.</TableCell></TableRow> :
                     resumoProdutos.map((p) => (
                       <TableRow key={p.nome}>
                         <TableCell className="font-medium">{p.nome}</TableCell>
                         <TableCell className="text-right">{p.enviados}</TableCell>
                         <TableCell className="text-right">{p.vendidos}</TableCell>
                         <TableCell className="text-right">{p.devolvidos}</TableCell>
-                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidos - p.devolvidos}</TableCell>
+                        <TableCell className="text-right">{p.transferidos}</TableCell>
+                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidos - p.devolvidos - p.transferidos}</TableCell>
                         <TableCell className="text-right">{formatMoney(p.valorVendido)}</TableCell>
                       </TableRow>
                     ))}
