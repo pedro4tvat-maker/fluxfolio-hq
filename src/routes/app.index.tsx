@@ -775,88 +775,46 @@ function ClientDashboard() {
         </div>
       </header>
 
-      {/* 2. Visão rápida — Editorial Executive */}
+      {/* 2. Visão rápida */}
       <section>
-        <div className="flex items-end justify-between border-b border-border pb-3 mb-5">
-          <div>
-            <span className="text-[10px] font-bold tracking-[0.22em] text-muted-foreground uppercase">Visão Rápida</span>
-            <h2 className="text-lg font-display font-semibold text-foreground mt-0.5">Panorama financeiro do mês</h2>
-          </div>
-          <span className="hidden sm:inline-flex items-center gap-2 text-xs text-muted-foreground font-medium">
-            <span className="size-1.5 rounded-full bg-success animate-pulse" /> Atualizado agora
-          </span>
-        </div>
-
-        <div className="grid grid-cols-12 gap-5">
-          {/* Faturamento — Hero */}
-          <div className="col-span-12 lg:col-span-7">
-            <div className="relative overflow-hidden bg-slate-950 dark:bg-slate-900 rounded-[28px] p-8 md:p-10 text-slate-50 shadow-2xl shadow-slate-300/40 dark:shadow-black/40 min-h-[260px] flex flex-col justify-between">
-              <div className="relative z-10 flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-slate-400 text-[11px] font-semibold uppercase tracking-[0.2em]">Faturamento do mês</p>
-                  <h3
-                    className="mt-3 text-5xl md:text-6xl leading-none tabular-nums text-[#e2d1b3]"
-                    style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 600 }}
-                  >
-                    {formatMoney(data.entradas)}
-                  </h3>
-                </div>
-                {data.entradasDelta != null && (
-                  <span className={`shrink-0 text-xs px-3 py-1 rounded-full border ${
-                    data.entradasDelta >= 0
-                      ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
-                      : "bg-rose-500/10 text-rose-300 border-rose-500/30"
-                  }`}>
-                    {data.entradasDelta >= 0 ? "+" : ""}{data.entradasDelta.toFixed(1)}%
-                  </span>
-                )}
-              </div>
-              <div className="relative z-10 grid grid-cols-2 gap-8 pt-6 mt-6 border-t border-slate-800">
-                <div>
-                  <p className="text-slate-500 text-[10px] uppercase tracking-[0.18em] mb-1">Saídas do mês</p>
-                  <p className="text-lg font-medium tabular-nums">{formatMoney(data.saidas)}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-[10px] uppercase tracking-[0.18em] mb-1">Comparativo</p>
-                  <p className="text-lg font-medium text-slate-300">
-                    {data.entradasDelta != null ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior` : "Sem histórico ainda"}
-                  </p>
-                </div>
-              </div>
-              <div className="absolute -right-24 -bottom-24 size-80 rounded-full bg-[#e2d1b3]/5 blur-3xl pointer-events-none" />
-              <div className="absolute -left-10 -top-10 size-40 rounded-full bg-slate-800/60 blur-2xl pointer-events-none" />
-            </div>
-          </div>
-
-          {/* 4 KPIs secundários */}
-          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-4">
-            <EditorialKpi
-              label="Saldo disponível"
-              value={formatMoney(data.saldo)}
-              hint="Disponível nas contas"
-              tone={data.saldo < 0 ? "danger" : "neutral"}
-            />
-            <EditorialKpi
-              label="Resultado do mês"
-              value={formatMoney(data.resultado)}
-              hint={!data.hasAnyMovement ? "Sem movimentação" : data.resultado > 0 ? "Mês positivo" : data.resultado < 0 ? "Mês negativo" : "Equilibrado"}
-              tone={data.resultado > 0 ? "success" : data.resultado < 0 ? "danger" : "neutral"}
-            />
-            <EditorialKpi
-              label="A pagar — 7 dias"
-              value={data.payNext7Count === 0 ? "—" : formatMoney(data.payNext7Total)}
-              hint={data.payNext7Count === 0 ? "Nenhuma conta próxima" : `${data.payNext7Count} ${data.payNext7Count === 1 ? "conta" : "contas"}`}
-              tone={data.payNext7Count > 0 ? "danger" : "neutral"}
-            />
-            <EditorialKpi
-              label="A receber — 7 dias"
-              value={data.recNext7Count === 0 ? "—" : formatMoney(data.recNext7Total)}
-              hint={data.recNext7Count === 0 ? "Nenhum recebimento próximo" : `${data.recNext7Count} ${data.recNext7Count === 1 ? "recebimento" : "recebimentos"}`}
-              tone="neutral"
-            />
-          </div>
+        <SectionTitle>Visão rápida</SectionTitle>
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <QuickCard
+            label="Faturamento do mês"
+            value={formatMoney(data.entradas)}
+            hint={data.entradasDelta != null ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior` : "Sem histórico ainda"}
+            tone={data.entradasDelta != null && data.entradasDelta < 0 ? "danger" : "success"}
+            featured
+            className="md:col-span-2 lg:col-span-3"
+          />
+          <QuickCard
+            label="Saldo disponível"
+            value={formatMoney(data.saldo)}
+            hint="Disponível nas contas"
+            tone={data.saldo < 0 ? "danger" : "neutral"}
+          />
+          <QuickCard
+            label="Resultado do mês"
+            value={formatMoney(data.resultado)}
+            hint={!data.hasAnyMovement ? "Sem movimentação" : data.resultado > 0 ? "Mês positivo" : data.resultado < 0 ? "Mês negativo" : "Equilibrado"}
+            tone={data.resultado > 0 ? "success" : data.resultado < 0 ? "danger" : "neutral"}
+          />
+          <QuickCard
+            label="A pagar — 7 dias"
+            value={data.payNext7Count === 0 ? "—" : formatMoney(data.payNext7Total)}
+            hint={data.payNext7Count === 0 ? "Nenhuma conta próxima" : `${data.payNext7Count} ${data.payNext7Count === 1 ? "conta" : "contas"}`}
+            tone={data.payNext7Count > 0 ? "danger" : "neutral"}
+          />
+          <QuickCard
+            label="A receber — 7 dias"
+            value={data.recNext7Count === 0 ? "—" : formatMoney(data.recNext7Total)}
+            hint={data.recNext7Count === 0 ? "Nenhum recebimento próximo" : `${data.recNext7Count} ${data.recNext7Count === 1 ? "recebimento" : "recebimentos"}`}
+            tone="neutral"
+            className="md:col-span-2 lg:col-span-2"
+          />
         </div>
       </section>
+
 
       {/* 3. Ações rápidas */}
       <section>
