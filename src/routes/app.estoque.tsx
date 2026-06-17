@@ -81,7 +81,7 @@ function EstoquePage() {
   const [saving, setSaving] = useState(false);
 
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [adjustForm, setAdjustForm] = useState({ product_id: "", nova_quantidade: "" });
+  const [adjustForm, setAdjustForm] = useState({ product_id: "", nova_quantidade: "", stock_location_id: "" });
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["estoque-products", selected],
