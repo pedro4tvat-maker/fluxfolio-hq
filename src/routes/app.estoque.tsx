@@ -276,7 +276,7 @@ function EstoquePage() {
   }
 
   function openAdjustQuantity(p: Product) {
-    setAdjustForm({ product_id: p.id, nova_quantidade: String(p.quantidade) });
+    setAdjustForm({ product_id: p.id, nova_quantidade: String(p.quantidade), stock_location_id: filterLocation !== "all" ? filterLocation : "" });
     setAdjustOpen(true);
   }
 
