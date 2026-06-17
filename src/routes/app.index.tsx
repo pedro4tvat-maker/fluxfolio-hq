@@ -778,14 +778,14 @@ function ClientDashboard() {
       {/* 2. Visão rápida */}
       <section>
         <SectionTitle>Visão rápida</SectionTitle>
-        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           <QuickCard
             label="Faturamento do mês"
             value={formatMoney(data.entradas)}
             hint={data.entradasDelta != null ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior` : "Sem histórico ainda"}
             tone={data.entradasDelta != null && data.entradasDelta < 0 ? "danger" : "success"}
             featured
-            className="md:col-span-2 lg:col-span-3"
+            className="md:col-span-2"
           />
           <QuickCard
             label="Saldo disponível"
@@ -800,19 +800,14 @@ function ClientDashboard() {
             tone={data.resultado > 0 ? "success" : data.resultado < 0 ? "danger" : "neutral"}
           />
           <QuickCard
-            label="A pagar — 7 dias"
-            value={data.payNext7Count === 0 ? "—" : formatMoney(data.payNext7Total)}
-            hint={data.payNext7Count === 0 ? "Nenhuma conta próxima" : `${data.payNext7Count} ${data.payNext7Count === 1 ? "conta" : "contas"}`}
-            tone={data.payNext7Count > 0 ? "danger" : "neutral"}
-          />
-          <QuickCard
             label="A receber — 7 dias"
             value={data.recNext7Count === 0 ? "—" : formatMoney(data.recNext7Total)}
             hint={data.recNext7Count === 0 ? "Nenhum recebimento próximo" : `${data.recNext7Count} ${data.recNext7Count === 1 ? "recebimento" : "recebimentos"}`}
             tone="neutral"
-            className="md:col-span-2 lg:col-span-2"
+            className="md:col-span-2"
           />
         </div>
+
       </section>
 
 
@@ -950,17 +945,29 @@ function QuickCard({
 }) {
   const valueTone =
     tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning-foreground" : "";
+  const accent =
+    tone === "success" ? "from-success/15 via-success/5"
+    : tone === "danger" ? "from-destructive/15 via-destructive/5"
+    : tone === "warn" ? "from-warning/15 via-warning/5"
+    : "from-primary/10 via-primary/[0.03]";
+  const dot =
+    tone === "success" ? "bg-success" : tone === "danger" ? "bg-destructive" : tone === "warn" ? "bg-warning" : "bg-primary/50";
   return (
-    <div className={`bg-card border-l-4 border-l-primary rounded-2xl shadow-sm hover:shadow-md transition-shadow ${featured ? "p-8 bg-gradient-to-br from-primary/5 to-card" : "p-6"} ${className}`}>
-      <div className={`uppercase tracking-wider text-muted-foreground font-semibold ${featured ? "text-xs" : "text-[10px]"}`}>{label}</div>
-      <div className={`mt-3 font-display font-bold leading-tight tabular-nums ${featured ? "text-[40px]" : "text-[26px]"} ${valueTone}`}>{value}</div>
-      {hint && <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-        <div className="size-1 rounded-full bg-primary/40" />
-        {hint}
-      </div>}
+    <div className={`group relative overflow-hidden bg-card border border-border/70 rounded-2xl shadow-sm hover:shadow-lg hover:border-primary/40 transition-all duration-300 ${featured ? "p-8" : "p-6"} ${className}`}>
+      <div className={`absolute inset-0 bg-gradient-to-br ${accent} to-transparent opacity-80 pointer-events-none`} />
+      <div className={`absolute -right-16 -top-16 size-44 rounded-full bg-gradient-to-br ${accent} to-transparent blur-2xl opacity-60 pointer-events-none transition-opacity duration-500 group-hover:opacity-100`} />
+      <div className="relative">
+        <div className={`uppercase tracking-[0.18em] text-muted-foreground font-semibold ${featured ? "text-xs" : "text-[10px]"}`}>{label}</div>
+        <div className={`mt-3 font-display font-bold leading-tight tabular-nums ${featured ? "text-[44px] md:text-[52px]" : "text-[28px]"} ${valueTone}`}>{value}</div>
+        {hint && <div className="text-xs text-muted-foreground mt-3 flex items-center gap-2">
+          <div className={`size-1.5 rounded-full ${dot}`} />
+          {hint}
+        </div>}
+      </div>
     </div>
   );
 }
+
 
 function AlertRow({
   tone, icon: Icon, title, desc, cta, to,
