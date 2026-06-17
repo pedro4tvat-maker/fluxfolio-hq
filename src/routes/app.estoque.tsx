@@ -260,6 +260,7 @@ function EstoquePage() {
             quantidade: qtdInicial,
             custo_unitario: Number(productForm.custo_unitario) || null,
             motivo: "Estoque inicial",
+            stock_location_id: defaultLocationId,
           });
           if (smErr) throw smErr;
         }
