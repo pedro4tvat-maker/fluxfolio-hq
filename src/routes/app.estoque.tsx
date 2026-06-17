@@ -119,14 +119,25 @@ function EstoquePage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock_locations")
-        .select("id, nome, tipo, ativa")
+        .select("id, nome, tipo, ativa, is_default")
         .eq("company_id", selected!)
         .eq("ativa", true)
         .order("nome");
       if (error) throw error;
-      return (data ?? []) as { id: string; nome: string; tipo: string; ativa: boolean }[];
+      return (data ?? []) as { id: string; nome: string; tipo: string; ativa: boolean; is_default: boolean }[];
     },
   });
+
+  const defaultLocationId = useMemo(() => {
+    const list = locations ?? [];
+    return (
+      list.find((l) => l.is_default)?.id ??
+      list.find((l) => l.tipo === "principal")?.id ??
+      list[0]?.id ??
+      null
+    );
+  }, [locations]);
+
 
   const { data: locationBalances } = useQuery({
     queryKey: ["estoque-location-balances", selected],
