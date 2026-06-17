@@ -69,6 +69,7 @@ function EstoquePage() {
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "low" | "out">("all");
+  const [filterLocation, setFilterLocation] = useState<string>("all");
 
   const [productOpen, setProductOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -111,30 +112,73 @@ function EstoquePage() {
     },
   });
 
+  const { data: locations } = useQuery({
+    queryKey: ["estoque-locations", selected],
+    enabled: !!selected,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_locations")
+        .select("id, nome, tipo, ativa")
+        .eq("company_id", selected!)
+        .eq("ativa", true)
+        .order("nome");
+      if (error) throw error;
+      return (data ?? []) as { id: string; nome: string; tipo: string; ativa: boolean }[];
+    },
+  });
+
+  const { data: locationBalances } = useQuery({
+    queryKey: ["estoque-location-balances", selected],
+    enabled: !!selected,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("product_id, stock_location_id, tipo, quantidade")
+        .eq("company_id", selected!);
+      if (error) throw error;
+      const map = new Map<string, number>();
+      for (const m of data ?? []) {
+        if (!m.stock_location_id) continue;
+        const key = `${m.product_id}:${m.stock_location_id}`;
+        const delta = m.tipo === "entrada" ? Number(m.quantidade) : -Number(m.quantidade);
+        map.set(key, (map.get(key) ?? 0) + delta);
+      }
+      return map;
+    },
+  });
+
   const productMap = useMemo(
     () => new Map((products ?? []).map((p) => [p.id, p])),
     [products],
   );
 
+  const getQty = (p: Product): number => {
+    if (filterLocation === "all") return Number(p.quantidade);
+    return locationBalances?.get(`${p.id}:${filterLocation}`) ?? 0;
+  };
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return (products ?? []).filter((p) => {
       if (term && !`${p.nome} ${p.categoria ?? ""} ${p.fornecedor ?? ""}`.toLowerCase().includes(term)) return false;
-      if (filterStatus === "low" && !(Number(p.quantidade) > 0 && Number(p.quantidade) <= Number(p.estoque_minimo))) return false;
-      if (filterStatus === "out" && Number(p.quantidade) > 0) return false;
+      const qtd = getQty(p);
+      if (filterStatus === "low" && !(qtd > 0 && qtd <= Number(p.estoque_minimo))) return false;
+      if (filterStatus === "out" && qtd > 0) return false;
       return true;
     });
-  }, [products, search, filterStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, search, filterStatus, filterLocation, locationBalances]);
 
   const kpis = useMemo(() => {
     const list = products ?? [];
     const total = list.length;
-    const lowCount = list.filter((p) => Number(p.quantidade) > 0 && Number(p.quantidade) <= Number(p.estoque_minimo)).length;
-    const outCount = list.filter((p) => Number(p.quantidade) <= 0).length;
-    const valor = list.reduce((acc, p) => acc + Number(p.quantidade) * Number(p.custo_unitario), 0);
-    const venda = list.reduce((acc, p) => acc + Number(p.quantidade) * Number(p.preco_venda), 0);
+    const lowCount = list.filter((p) => { const q = getQty(p); return q > 0 && q <= Number(p.estoque_minimo); }).length;
+    const outCount = list.filter((p) => getQty(p) <= 0).length;
+    const valor = list.reduce((acc, p) => acc + getQty(p) * Number(p.custo_unitario), 0);
+    const venda = list.reduce((acc, p) => acc + getQty(p) * Number(p.preco_venda), 0);
     return { total, lowCount, outCount, valor, venda };
-  }, [products]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, filterLocation, locationBalances]);
 
   function openNewProduct() {
     setEditing(null);
@@ -393,6 +437,18 @@ function EstoquePage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1">
+            <Label>Centro de estoque</Label>
+            <Select value={filterLocation} onValueChange={setFilterLocation}>
+              <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos (estoque geral)</SelectItem>
+                {(locations ?? []).map((l) => (
+                  <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -416,7 +472,7 @@ function EstoquePage() {
                 <tr><td colSpan={8} className="py-6 text-muted-foreground">Nenhum produto encontrado.</td></tr>
               ) : (
                 filtered.map((p) => {
-                  const qtd = Number(p.quantidade);
+                  const qtd = getQty(p);
                   const min = Number(p.estoque_minimo);
                   const status: "ok" | "low" | "out" = qtd <= 0 ? "out" : qtd <= min ? "low" : "ok";
                   return (
