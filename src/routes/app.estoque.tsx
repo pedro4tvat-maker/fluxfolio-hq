@@ -646,6 +646,18 @@ function EstoquePage() {
               </div>
             </div>
             <div className="space-y-1">
+              <Label>Centro de estoque</Label>
+              <Select value={moveForm.stock_location_id || "none"} onValueChange={(v) => setMoveForm({ ...moveForm, stock_location_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Estoque geral" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Estoque geral (sem centro)</SelectItem>
+                  {(locations ?? []).map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <Label>Motivo</Label>
               <Input value={moveForm.motivo} onChange={(e) => setMoveForm({ ...moveForm, motivo: e.target.value })} placeholder="Compra, ajuste, perda, venda manual..." />
             </div>
