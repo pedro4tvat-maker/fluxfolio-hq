@@ -979,6 +979,45 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function EditorialKpi({
+  label, value, hint, tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "success" | "danger" | "warn" | "neutral";
+}) {
+  const valueTone =
+    tone === "success" ? "text-success"
+    : tone === "danger" ? "text-destructive"
+    : tone === "warn" ? "text-warning-foreground"
+    : "text-foreground";
+  const dot =
+    tone === "success" ? "bg-success"
+    : tone === "danger" ? "bg-destructive"
+    : tone === "warn" ? "bg-warning"
+    : "bg-muted-foreground/40";
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col justify-between min-h-[120px]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <div>
+        <p
+          className={`text-2xl leading-tight tabular-nums ${valueTone}`}
+          style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 600 }}
+        >
+          {value}
+        </p>
+        {hint && (
+          <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1.5">
+            <span className={`size-1 rounded-full ${dot}`} />
+            {hint}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function QuickCard({
   label, value, hint, tone = "neutral", featured = false, className = "",
 }: {
