@@ -352,12 +352,14 @@ function EstoquePage() {
         custo_unitario: moveForm.custo_unitario ? Number(moveForm.custo_unitario) : null,
         motivo: moveForm.motivo || (moveForm.tipo === "entrada" ? "Entrada manual" : "Saída manual"),
         data: moveForm.data,
+        stock_location_id: moveForm.stock_location_id || null,
       });
       if (error) throw error;
       toast.success("Movimentação registrada");
       setMoveOpen(false);
       qc.invalidateQueries({ queryKey: ["estoque-products"] });
       qc.invalidateQueries({ queryKey: ["estoque-movements"] });
+      qc.invalidateQueries({ queryKey: ["estoque-location-balances"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao registrar movimentação");
     } finally {
