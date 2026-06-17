@@ -472,7 +472,7 @@ function EstoquePage() {
                 <tr><td colSpan={8} className="py-6 text-muted-foreground">Nenhum produto encontrado.</td></tr>
               ) : (
                 filtered.map((p) => {
-                  const qtd = Number(p.quantidade);
+                  const qtd = getQty(p);
                   const min = Number(p.estoque_minimo);
                   const status: "ok" | "low" | "out" = qtd <= 0 ? "out" : qtd <= min ? "low" : "ok";
                   return (
