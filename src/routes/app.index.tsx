@@ -780,6 +780,7 @@ function ClientDashboard() {
         <SectionTitle>Visão rápida</SectionTitle>
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           <QuickCard
+            to="/app/fluxo-caixa"
             label="Faturamento do mês"
             value={formatMoney(data.entradas)}
             hint={data.entradasDelta != null ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior` : "Sem histórico ainda"}
@@ -788,24 +789,28 @@ function ClientDashboard() {
             className="md:col-span-2"
           />
           <QuickCard
+            to="/app/fluxo-caixa"
             label="Saldo disponível"
             value={formatMoney(data.saldo)}
             hint="Disponível nas contas"
             tone={data.saldo < 0 ? "danger" : "neutral"}
           />
           <QuickCard
+            to="/app/relatorios"
             label="Resultado do mês"
             value={formatMoney(data.resultado)}
             hint={!data.hasAnyMovement ? "Sem movimentação" : data.resultado > 0 ? "Mês positivo" : data.resultado < 0 ? "Mês negativo" : "Equilibrado"}
             tone={data.resultado > 0 ? "success" : data.resultado < 0 ? "danger" : "neutral"}
           />
           <QuickCard
+            to="/app/contas-receber"
             label="A receber — 7 dias"
             value={data.recNext7Count === 0 ? "—" : formatMoney(data.recNext7Total)}
             hint={data.recNext7Count === 0 ? "Nenhum recebimento próximo" : `${data.recNext7Count} ${data.recNext7Count === 1 ? "recebimento" : "recebimentos"}`}
             tone="neutral"
             className="md:col-span-2"
           />
+
         </div>
 
       </section>
@@ -934,7 +939,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 
 function QuickCard({
-  label, value, hint, tone = "neutral", featured = false, className = "",
+  label, value, hint, tone = "neutral", featured = false, className = "", to,
 }: {
   label: string;
   value: string;
@@ -942,6 +947,7 @@ function QuickCard({
   tone?: "success" | "danger" | "warn" | "neutral";
   featured?: boolean;
   className?: string;
+  to?: string;
 }) {
   const valueTone =
     tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning-foreground" : "";
@@ -952,21 +958,31 @@ function QuickCard({
     : "from-primary/10 via-primary/[0.03]";
   const dot =
     tone === "success" ? "bg-success" : tone === "danger" ? "bg-destructive" : tone === "warn" ? "bg-warning" : "bg-primary/50";
-  return (
-    <div className={`group relative overflow-hidden bg-card border border-border/70 rounded-2xl shadow-sm hover:shadow-lg hover:border-primary/40 transition-all duration-300 ${featured ? "p-8" : "p-6"} ${className}`}>
+  const interactive = to ? "cursor-pointer hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" : "";
+  const inner = (
+    <>
       <div className={`absolute inset-0 bg-gradient-to-br ${accent} to-transparent opacity-80 pointer-events-none`} />
       <div className={`absolute -right-16 -top-16 size-44 rounded-full bg-gradient-to-br ${accent} to-transparent blur-2xl opacity-60 pointer-events-none transition-opacity duration-500 group-hover:opacity-100`} />
       <div className="relative">
-        <div className={`uppercase tracking-[0.18em] text-muted-foreground font-semibold ${featured ? "text-xs" : "text-[10px]"}`}>{label}</div>
+        <div className="flex items-start justify-between gap-3">
+          <div className={`uppercase tracking-[0.18em] text-muted-foreground font-semibold ${featured ? "text-xs" : "text-[10px]"}`}>{label}</div>
+          {to && <ArrowRight className={`size-4 text-muted-foreground/50 transition-all duration-300 group-hover:text-primary group-hover:translate-x-0.5 shrink-0`} />}
+        </div>
         <div className={`mt-3 font-display font-bold leading-tight tabular-nums ${featured ? "text-[44px] md:text-[52px]" : "text-[28px]"} ${valueTone}`}>{value}</div>
         {hint && <div className="text-xs text-muted-foreground mt-3 flex items-center gap-2">
           <div className={`size-1.5 rounded-full ${dot}`} />
           {hint}
         </div>}
       </div>
-    </div>
+    </>
   );
+  const base = `group relative overflow-hidden bg-card border border-border/70 rounded-2xl shadow-sm hover:shadow-lg hover:border-primary/40 transition-all duration-300 ${featured ? "p-8" : "p-6"} ${interactive} ${className}`;
+  if (to) {
+    return <Link to={to} className={`block text-left ${base}`}>{inner}</Link>;
+  }
+  return <div className={base}>{inner}</div>;
 }
+
 
 
 function AlertRow({
