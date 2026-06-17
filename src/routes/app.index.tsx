@@ -778,14 +778,14 @@ function ClientDashboard() {
       {/* 2. Visão rápida */}
       <section>
         <SectionTitle>Visão rápida</SectionTitle>
-        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           <QuickCard
             label="Faturamento do mês"
             value={formatMoney(data.entradas)}
             hint={data.entradasDelta != null ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior` : "Sem histórico ainda"}
             tone={data.entradasDelta != null && data.entradasDelta < 0 ? "danger" : "success"}
             featured
-            className="md:col-span-2 lg:col-span-3"
+            className="md:col-span-2"
           />
           <QuickCard
             label="Saldo disponível"
@@ -800,19 +800,14 @@ function ClientDashboard() {
             tone={data.resultado > 0 ? "success" : data.resultado < 0 ? "danger" : "neutral"}
           />
           <QuickCard
-            label="A pagar — 7 dias"
-            value={data.payNext7Count === 0 ? "—" : formatMoney(data.payNext7Total)}
-            hint={data.payNext7Count === 0 ? "Nenhuma conta próxima" : `${data.payNext7Count} ${data.payNext7Count === 1 ? "conta" : "contas"}`}
-            tone={data.payNext7Count > 0 ? "danger" : "neutral"}
-          />
-          <QuickCard
             label="A receber — 7 dias"
             value={data.recNext7Count === 0 ? "—" : formatMoney(data.recNext7Total)}
             hint={data.recNext7Count === 0 ? "Nenhum recebimento próximo" : `${data.recNext7Count} ${data.recNext7Count === 1 ? "recebimento" : "recebimentos"}`}
             tone="neutral"
-            className="md:col-span-2 lg:col-span-2"
+            className="md:col-span-2"
           />
         </div>
+
       </section>
 
 
