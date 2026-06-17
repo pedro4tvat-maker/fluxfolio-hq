@@ -402,28 +402,37 @@ function SettlementTab({ companyId }: { companyId: string }) {
   });
 
   const resumoProdutos = useMemo(() => {
-    const map = new Map<string, { nome: string; enviados: number; vendidos: number; devolvidos: number; valorVendido: number }>();
+    const map = new Map<string, { nome: string; enviados: number; vendidos: number; devolvidos: number; transferidos: number; valorVendido: number }>();
     for (const m of movs) {
       const key = m.product_id;
-      const cur = map.get(key) ?? { nome: m.products?.nome ?? "?", enviados: 0, vendidos: 0, devolvidos: 0, valorVendido: 0 };
+      const cur = map.get(key) ?? { nome: m.products?.nome ?? "?", enviados: 0, vendidos: 0, devolvidos: 0, transferidos: 0, valorVendido: 0 };
       const q = Number(m.quantidade) || 0;
+      const motivo = (m.motivo ?? "").toLowerCase();
       if (m.tipo === "entrada") cur.enviados += q;
       else if (m.tipo === "saida") {
-        if ((m.motivo ?? "").toLowerCase().startsWith("devolu")) cur.devolvidos += q;
+        if (motivo.startsWith("devolu")) cur.devolvidos += q;
+        else if (motivo.startsWith("transfer")) cur.transferidos += q;
         else if ((m.motivo ?? "") === "Venda") {
           cur.vendidos += q;
           cur.valorVendido += q * Number(m.products?.preco_venda ?? 0);
+        } else {
+          // outras saídas (ajustes, baixas) reduzem o saldo do centro
+          cur.transferidos += q;
         }
       }
       map.set(key, cur);
     }
-    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+    // mantém somente produtos com qualquer movimentação no centro
+    return Array.from(map.values())
+      .filter((p) => p.enviados || p.vendidos || p.devolvidos || p.transferidos)
+      .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [movs]);
 
   const totalEnviados = resumoProdutos.reduce((a, b) => a + b.enviados, 0);
   const totalVendidos = resumoProdutos.reduce((a, b) => a + b.vendidos, 0);
   const totalDevolvidos = resumoProdutos.reduce((a, b) => a + b.devolvidos, 0);
-  const totalEmPosse = totalEnviados - totalVendidos - totalDevolvidos;
+  const totalTransferidos = resumoProdutos.reduce((a, b) => a + b.transferidos, 0);
+  const totalEmPosse = totalEnviados - totalVendidos - totalDevolvidos - totalTransferidos;
   const totalVendidoValor = commissions.reduce((a, c) => a + c.valor, 0);
   const totalComissao = commissions.reduce((a, c) => a + c.comissao, 0);
   const liquido = totalVendidoValor - totalComissao;
@@ -472,16 +481,17 @@ function SettlementTab({ companyId }: { companyId: string }) {
             <h3 className="text-sm font-semibold mb-2">Produtos no centro do revendedor</h3>
             <div className="border rounded-lg">
               <Table>
-                <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Enviados</TableHead><TableHead className="text-right">Vendidos</TableHead><TableHead className="text-right">Devolvidos</TableHead><TableHead className="text-right">Em posse</TableHead><TableHead className="text-right">Valor vendido</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Enviados</TableHead><TableHead className="text-right">Vendidos</TableHead><TableHead className="text-right">Devolvidos</TableHead><TableHead className="text-right">Transf./Saídas</TableHead><TableHead className="text-right">Em posse</TableHead><TableHead className="text-right">Valor vendido</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {resumoProdutos.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Sem movimentações no período.</TableCell></TableRow> :
+                  {resumoProdutos.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Sem movimentações no período.</TableCell></TableRow> :
                     resumoProdutos.map((p) => (
                       <TableRow key={p.nome}>
                         <TableCell className="font-medium">{p.nome}</TableCell>
                         <TableCell className="text-right">{p.enviados}</TableCell>
                         <TableCell className="text-right">{p.vendidos}</TableCell>
                         <TableCell className="text-right">{p.devolvidos}</TableCell>
-                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidos - p.devolvidos}</TableCell>
+                        <TableCell className="text-right">{p.transferidos}</TableCell>
+                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidos - p.devolvidos - p.transferidos}</TableCell>
                         <TableCell className="text-right">{formatMoney(p.valorVendido)}</TableCell>
                       </TableRow>
                     ))}
