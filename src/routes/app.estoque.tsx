@@ -687,6 +687,18 @@ function EstoquePage() {
               </Select>
             </div>
             <div className="space-y-1">
+              <Label>Centro de estoque</Label>
+              <Select value={adjustForm.stock_location_id || "none"} onValueChange={(v) => setAdjustForm({ ...adjustForm, stock_location_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Estoque geral" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Estoque geral (sem centro)</SelectItem>
+                  {(locations ?? []).map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <Label>Nova quantidade</Label>
               <Input type="number" min="0" step="1" placeholder="0" value={adjustForm.nova_quantidade} onChange={(e) => setAdjustForm({ ...adjustForm, nova_quantidade: e.target.value })} />
             </div>
