@@ -778,7 +778,19 @@ function ClientDashboard() {
       {/* 2. Visão rápida */}
       <section>
         <SectionTitle>Visão rápida</SectionTitle>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickCard
+            label="Faturamento do mês"
+            value={formatMoney(data.entradas)}
+            hint={
+              data.entradasDelta != null
+                ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior`
+                : "Entradas realizadas no mês"
+            }
+            tone={data.entradas > 0 ? "success" : "neutral"}
+            featured
+            className="sm:col-span-2 lg:col-span-2 lg:row-span-2"
+          />
           <QuickCard
             label="Saldo disponível"
             value={formatMoney(data.saldo)}
