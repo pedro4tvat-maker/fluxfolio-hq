@@ -364,7 +364,7 @@ function EstoquePage() {
         custo_unitario: moveForm.custo_unitario ? Number(moveForm.custo_unitario) : null,
         motivo: moveForm.motivo || (moveForm.tipo === "entrada" ? "Entrada manual" : "Saída manual"),
         data: moveForm.data,
-        stock_location_id: moveForm.stock_location_id || null,
+        stock_location_id: moveForm.stock_location_id || defaultLocationId || null,
       });
       if (error) throw error;
       toast.success("Movimentação registrada");
