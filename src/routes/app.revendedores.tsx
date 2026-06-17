@@ -402,28 +402,37 @@ function SettlementTab({ companyId }: { companyId: string }) {
   });
 
   const resumoProdutos = useMemo(() => {
-    const map = new Map<string, { nome: string; enviados: number; vendidos: number; devolvidos: number; valorVendido: number }>();
+    const map = new Map<string, { nome: string; enviados: number; vendidos: number; devolvidos: number; transferidos: number; valorVendido: number }>();
     for (const m of movs) {
       const key = m.product_id;
-      const cur = map.get(key) ?? { nome: m.products?.nome ?? "?", enviados: 0, vendidos: 0, devolvidos: 0, valorVendido: 0 };
+      const cur = map.get(key) ?? { nome: m.products?.nome ?? "?", enviados: 0, vendidos: 0, devolvidos: 0, transferidos: 0, valorVendido: 0 };
       const q = Number(m.quantidade) || 0;
+      const motivo = (m.motivo ?? "").toLowerCase();
       if (m.tipo === "entrada") cur.enviados += q;
       else if (m.tipo === "saida") {
-        if ((m.motivo ?? "").toLowerCase().startsWith("devolu")) cur.devolvidos += q;
+        if (motivo.startsWith("devolu")) cur.devolvidos += q;
+        else if (motivo.startsWith("transfer")) cur.transferidos += q;
         else if ((m.motivo ?? "") === "Venda") {
           cur.vendidos += q;
           cur.valorVendido += q * Number(m.products?.preco_venda ?? 0);
+        } else {
+          // outras saídas (ajustes, baixas) reduzem o saldo do centro
+          cur.transferidos += q;
         }
       }
       map.set(key, cur);
     }
-    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+    // mantém somente produtos com qualquer movimentação no centro
+    return Array.from(map.values())
+      .filter((p) => p.enviados || p.vendidos || p.devolvidos || p.transferidos)
+      .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [movs]);
 
   const totalEnviados = resumoProdutos.reduce((a, b) => a + b.enviados, 0);
   const totalVendidos = resumoProdutos.reduce((a, b) => a + b.vendidos, 0);
   const totalDevolvidos = resumoProdutos.reduce((a, b) => a + b.devolvidos, 0);
-  const totalEmPosse = totalEnviados - totalVendidos - totalDevolvidos;
+  const totalTransferidos = resumoProdutos.reduce((a, b) => a + b.transferidos, 0);
+  const totalEmPosse = totalEnviados - totalVendidos - totalDevolvidos - totalTransferidos;
   const totalVendidoValor = commissions.reduce((a, c) => a + c.valor, 0);
   const totalComissao = commissions.reduce((a, c) => a + c.comissao, 0);
   const liquido = totalVendidoValor - totalComissao;
