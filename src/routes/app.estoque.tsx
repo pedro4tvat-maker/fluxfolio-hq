@@ -305,6 +305,7 @@ function EstoquePage() {
         custo_unitario: p.custo_unitario || null,
         motivo: "Ajuste de estoque",
         data: new Date().toISOString().slice(0, 10),
+        stock_location_id: adjustForm.stock_location_id || null,
       });
       if (error) throw error;
       toast.success("Quantidade ajustada");
