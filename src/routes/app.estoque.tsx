@@ -312,6 +312,7 @@ function EstoquePage() {
       setAdjustOpen(false);
       qc.invalidateQueries({ queryKey: ["estoque-products"] });
       qc.invalidateQueries({ queryKey: ["estoque-movements"] });
+      qc.invalidateQueries({ queryKey: ["estoque-location-balances"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao ajustar quantidade");
     } finally {
