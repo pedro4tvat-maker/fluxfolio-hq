@@ -437,6 +437,18 @@ function EstoquePage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1">
+            <Label>Centro de estoque</Label>
+            <Select value={filterLocation} onValueChange={setFilterLocation}>
+              <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos (estoque geral)</SelectItem>
+                {(locations ?? []).map((l) => (
+                  <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
