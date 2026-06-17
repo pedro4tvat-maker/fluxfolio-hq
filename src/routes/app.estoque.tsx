@@ -321,7 +321,7 @@ function EstoquePage() {
   }
 
   function openNewMovement(productId?: string) {
-    setMoveForm({ ...emptyMovement, product_id: productId ?? "" });
+    setMoveForm({ ...emptyMovement, product_id: productId ?? "", stock_location_id: filterLocation !== "all" ? filterLocation : "" });
     setMoveOpen(true);
   }
 
