@@ -652,13 +652,25 @@ function ExtrasSection({ companyId }: { companyId: string }) {
     },
   });
 
+  const { data: costCenters, isLoading: ccLoading } = useQuery({
+    queryKey: ["cost-centers-full", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cost_centers")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const toggle = useMutation({
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: boolean }) => {
       // @ts-ignore - dynamic field names for database types
       const { error } = await supabase.from("categories").update({ [field]: value }).eq("id", id);
       if (error) throw error;
     },
-
     onSuccess: () => {
       toast.success("Classificação atualizada");
       qc.invalidateQueries({ queryKey: ["categories-full", companyId] });
@@ -667,14 +679,97 @@ function ExtrasSection({ companyId }: { companyId: string }) {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (isLoading) return <div className="text-sm text-muted-foreground">Carregando categorias...</div>;
+  // Categoria: criar / excluir
+  const [catNome, setCatNome] = useState("");
+  const [catTipo, setCatTipo] = useState<"entrada" | "saida">("saida");
+  const createCategory = useMutation({
+    mutationFn: async () => {
+      if (!catNome.trim()) throw new Error("Informe o nome da categoria");
+      const { error } = await supabase.from("categories").insert({ company_id: companyId, nome: catNome.trim(), tipo: catTipo });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Categoria criada");
+      setCatNome("");
+      qc.invalidateQueries({ queryKey: ["categories-full", companyId] });
+      qc.invalidateQueries({ queryKey: ["categories", companyId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Categoria excluída");
+      qc.invalidateQueries({ queryKey: ["categories-full", companyId] });
+      qc.invalidateQueries({ queryKey: ["categories", companyId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Centro de custo: criar / excluir
+  const [ccNome, setCcNome] = useState("");
+  const [ccKpi, setCcKpi] = useState("");
+  const createCC = useMutation({
+    mutationFn: async () => {
+      if (!ccNome.trim()) throw new Error("Informe o nome do centro de custo");
+      const { error } = await supabase.from("cost_centers").insert({ company_id: companyId, nome: ccNome.trim(), kpi_classification: ccKpi || null });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Centro de custo criado");
+      setCcNome(""); setCcKpi("");
+      qc.invalidateQueries({ queryKey: ["cost-centers-full", companyId] });
+      qc.invalidateQueries({ queryKey: ["cost-centers", companyId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const deleteCC = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("cost_centers").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Centro de custo excluído");
+      qc.invalidateQueries({ queryKey: ["cost-centers-full", companyId] });
+      qc.invalidateQueries({ queryKey: ["cost-centers", companyId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  if (isLoading || ccLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
+
+  const kpiOptions = ["Receita Bruta","Impostos","Custos Variáveis","Custos Fixos","Despesas Operacionais","Despesas Financeiras"];
 
   return (
     <div className="space-y-6">
+      {/* Categorias */}
       <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
         <div>
-          <h3 className="font-display font-semibold">Estrutura de Categorias e DRE</h3>
-          <p className="text-sm text-muted-foreground mt-1">Configure como cada categoria deve alimentar automaticamente a DRE (Demonstração do Resultado).</p>
+          <h3 className="font-display font-semibold">Categorias do fluxo de caixa</h3>
+          <p className="text-sm text-muted-foreground mt-1">Adicione novas categorias e configure como cada uma alimenta a DRE.</p>
+        </div>
+
+        <div className="grid sm:grid-cols-[1fr_180px_auto] gap-2 items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Nome da categoria</Label>
+            <Input value={catNome} onChange={(e) => setCatNome(e.target.value)} placeholder="Ex.: Vendas online" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tipo</Label>
+            <Select value={catTipo} onValueChange={(v) => setCatTipo(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="entrada">Entrada</SelectItem>
+                <SelectItem value="saida">Saída</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => createCategory.mutate()} disabled={createCategory.isPending}>
+            <Plus className="size-4 mr-1" /> Adicionar
+          </Button>
         </div>
 
         <div className="overflow-x-auto">
@@ -687,6 +782,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
                 <th className="py-2 px-3 font-medium text-center">Fixo</th>
                 <th className="py-2 px-3 font-medium text-center">Dedução/Imp.</th>
                 <th className="py-2 px-3 font-medium text-center">Financeira</th>
+                <th className="py-2 px-3 font-medium text-center w-10"></th>
               </tr>
             </thead>
             <tbody>
@@ -710,8 +806,68 @@ function ExtrasSection({ companyId }: { companyId: string }) {
                   <td className="py-3 px-3 text-center">
                     <input type="checkbox" checked={!!c.is_financial_expense} onChange={(e) => toggle.mutate({ id: c.id, field: "is_financial_expense", value: e.target.checked })} />
                   </td>
+                  <td className="py-3 px-3 text-center">
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Excluir categoria "${c.nome}"? Lançamentos vinculados ficarão sem categoria.`)) deleteCategory.mutate(c.id); }}>
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Centros de custo */}
+      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+        <div>
+          <h3 className="font-display font-semibold">Centros de custo</h3>
+          <p className="text-sm text-muted-foreground mt-1">Adicione centros de custo para atrelar aos lançamentos do fluxo de caixa.</p>
+        </div>
+
+        <div className="grid sm:grid-cols-[1fr_220px_auto] gap-2 items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Nome do centro de custo</Label>
+            <Input value={ccNome} onChange={(e) => setCcNome(e.target.value)} placeholder="Ex.: Marketing" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Classificação KPI (opcional)</Label>
+            <Select value={ccKpi} onValueChange={setCcKpi}>
+              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                {kpiOptions.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => createCC.mutate()} disabled={createCC.isPending}>
+            <Plus className="size-4 mr-1" /> Adicionar
+          </Button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase text-muted-foreground border-b">
+                <th className="py-2 px-3 font-medium">Centro de custo</th>
+                <th className="py-2 px-3 font-medium">Classificação KPI</th>
+                <th className="py-2 px-3 font-medium text-center w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {costCenters?.map((c) => (
+                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="py-3 px-3 font-medium">{c.nome}</td>
+                  <td className="py-3 px-3 text-muted-foreground">{c.kpi_classification ?? "—"}</td>
+                  <td className="py-3 px-3 text-center">
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Excluir centro de custo "${c.nome}"? Lançamentos vinculados ficarão sem centro de custo.`)) deleteCC.mutate(c.id); }}>
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {(!costCenters || costCenters.length === 0) && (
+                <tr><td colSpan={3} className="py-6 text-center text-muted-foreground text-sm">Nenhum centro de custo cadastrado.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
