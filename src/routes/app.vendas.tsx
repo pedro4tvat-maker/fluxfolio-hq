@@ -701,11 +701,41 @@ function VendasPage() {
 
   type ParsedItem = { nome: string; qtd: number; preco: number; custo: number; subtotal: number; custoTotal: number; margem: number };
   type SaleMov = { id: string; product_id: string | null; quantidade: number | string; custo_unitario: number | string | null; data: string | null };
+  function extractItemsBlock(desc: string): string {
+    // Encontra o último bloco "(...)" no fim da descrição, respeitando parênteses aninhados
+    // (ex.: "Venda (2x Café Gourmet grão (500g) @55.00|c39.92)")
+    const s = desc.trimEnd();
+    if (!s.endsWith(")")) return "";
+    let depth = 0;
+    for (let i = s.length - 1; i >= 0; i--) {
+      const ch = s[i];
+      if (ch === ")") depth++;
+      else if (ch === "(") {
+        depth--;
+        if (depth === 0) return s.slice(i + 1, s.length - 1);
+      }
+    }
+    return "";
+  }
+  function splitTopLevel(s: string): string[] {
+    // split por vírgula ignorando vírgulas dentro de parênteses
+    const out: string[] = [];
+    let depth = 0;
+    let buf = "";
+    for (const ch of s) {
+      if (ch === "(") { depth++; buf += ch; }
+      else if (ch === ")") { depth--; buf += ch; }
+      else if (ch === "," && depth === 0) { out.push(buf); buf = ""; }
+      else buf += ch;
+    }
+    if (buf.trim()) out.push(buf);
+    return out.map((x) => x.trim()).filter(Boolean);
+  }
+
   function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[]): ParsedItem[] {
     const desc = descricao || "";
-    const matchItens = desc.match(/\(([^)]+)\)\s*$/);
-    const itensTxt = matchItens ? matchItens[1] : "";
-    const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+    const itensTxt = extractItemsBlock(desc);
+    const partes = splitTopLevel(itensTxt);
     const dateKey = (saleDate || "").slice(0, 10);
     const parsed: ParsedItem[] = partes.map((p) => {
       // Formato novo: "2x Nome @21.00|c17.00" (preço e custo cadastrados NA venda)
