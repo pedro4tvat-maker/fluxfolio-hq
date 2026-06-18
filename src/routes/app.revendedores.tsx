@@ -156,10 +156,22 @@ function LocationsTab({ companyId }: { companyId: string }) {
   }
 
   async function remove(row: StockLocationRow) {
-    if (!window.confirm(`Excluir o centro "${row.nome}"? Movimentos existentes perderão a referência.`)) return;
+    if (row.is_default) { toast.error("Não é possível excluir o centro padrão da empresa."); return; }
+    // Verifica uso: movimentos de estoque e revendedores vinculados
+    const [{ count: movCount }, { count: resCount }] = await Promise.all([
+      supabase.from("stock_movements").select("id", { count: "exact", head: true }).eq("stock_location_id", row.id),
+      supabase.from("resellers").select("id", { count: "exact", head: true }).eq("stock_location_id", row.id),
+    ]);
+    if ((movCount ?? 0) > 0 || (resCount ?? 0) > 0) {
+      toast.error(
+        `Centro "${row.nome}" está em uso (${movCount ?? 0} movimento(s), ${resCount ?? 0} revendedor(es)). Transfira o estoque e remova os vínculos antes de excluir.`,
+      );
+      return;
+    }
+    if (!window.confirm(`Excluir o centro "${row.nome}"? Esta ação não pode ser desfeita.`)) return;
     const { error } = await supabase.from("stock_locations").delete().eq("id", row.id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Excluído");
+    toast.success("Centro excluído");
     qc.invalidateQueries({ queryKey: ["stock-locations-admin", companyId] });
     qc.invalidateQueries({ queryKey: ["stock-locations", companyId] });
   }
