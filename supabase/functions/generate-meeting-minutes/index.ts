@@ -123,12 +123,13 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3.5-flash",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
           temperature: 0.3,
+          max_tokens: 4096,
         }),
       });
       return aiResp;
@@ -169,7 +170,7 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3.5-flash",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
@@ -177,6 +178,7 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
             { role: "user", content: "Você incluiu placeholders de exemplo (como 'Decisão — Responsável — Prazo'). Por favor, refaça a ata removendo essas linhas e preenchendo os dados reais ou indicando 'Nenhum' ou 'A definir'." }
           ],
           temperature: 0.1,
+          max_tokens: 4096,
         }),
       });
       
