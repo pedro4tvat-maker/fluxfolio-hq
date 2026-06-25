@@ -233,6 +233,7 @@ function ReceitasTab({ consultantId }: { consultantId: string }) {
                   <TableCell className="text-right font-semibold text-emerald-600">{formatMoney(r.amount)}</TableCell>
                   <TableCell><StatusBadge status={r.status} /></TableCell>
                   <TableCell className="text-right space-x-1">
+                    {r.status === "recebido" && <Button size="icon" variant="ghost" title="Estornar" onClick={() => confirm("Estornar esta receita?") && revertRecv.mutate(r.id)}><Undo2 className="size-4" /></Button>}
                     <Button size="icon" variant="ghost" onClick={() => { setEditing(r); setOpen(true); }}><Pencil className="size-4" /></Button>
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => confirm("Excluir esta receita?") && remove.mutate(r.id)}><Trash2 className="size-4" /></Button>
                   </TableCell>
