@@ -3061,6 +3061,8 @@ export type Database = {
           observacoes: string | null
           product_id: string
           quantidade: number
+          related_sale_id: string | null
+          related_sale_type: string | null
           stock_location_id: string | null
           tipo: Database["public"]["Enums"]["transaction_type"]
         }
@@ -3076,6 +3078,8 @@ export type Database = {
           observacoes?: string | null
           product_id: string
           quantidade: number
+          related_sale_id?: string | null
+          related_sale_type?: string | null
           stock_location_id?: string | null
           tipo: Database["public"]["Enums"]["transaction_type"]
         }
@@ -3091,6 +3095,8 @@ export type Database = {
           observacoes?: string | null
           product_id?: string
           quantidade?: number
+          related_sale_id?: string | null
+          related_sale_type?: string | null
           stock_location_id?: string | null
           tipo?: Database["public"]["Enums"]["transaction_type"]
         }
