@@ -458,28 +458,15 @@ function VendasPage() {
         .join(", ");
       const descricao = `Venda${cliente?.name ? ` - ${cliente.name}` : ""} (${partes})`;
 
-      for (const it of items) {
-        if (it.product_id) {
-          const custoVenda = Number(it.custo_unitario);
-          const { error: smErr } = await supabase.from("stock_movements").insert({
-            company_id: selected,
-            product_id: it.product_id,
-            tipo: "saida",
-            quantidade: Number(it.quantidade),
-            custo_unitario: Number.isFinite(custoVenda) && custoVenda > 0 ? custoVenda : null,
-            motivo: "Venda",
-            stock_location_id: it.stock_location_id || null,
-          });
-          if (smErr) throw smErr;
-        }
-      }
-
       const commissionValue = selectedReseller
         ? Number(((Number(selectedReseller.commission_pct) || 0) * valor / 100).toFixed(2))
         : null;
 
+      // 1) Cria o lançamento financeiro PRIMEIRO para obter o ID e vincular às movimentações
+      let saleRefId: string | null = null;
+      const saleRefType: "vista" | "prazo" = form.forma === "vista" ? "vista" : "prazo";
       if (form.forma === "vista") {
-        const { error } = await supabase.from("transactions").insert({
+        const { data: ins, error } = await supabase.from("transactions").insert({
           company_id: selected,
           tipo: "entrada",
           descricao,
@@ -492,10 +479,11 @@ function VendasPage() {
           centro_custo_id: items[0]?.product_id ? products?.find(p => p.id === items[0].product_id)?.centro_custo_id : null,
           reseller_id: selectedReseller?.id ?? null,
           commission_value: commissionValue,
-        });
+        }).select("id").single();
         if (error) throw error;
+        saleRefId = ins?.id ?? null;
       } else {
-        const { error } = await supabase.from("receivables").insert({
+        const { data: ins, error } = await supabase.from("receivables").insert({
           company_id: selected,
           descricao,
           cliente: cliente?.name ?? null,
@@ -508,9 +496,32 @@ function VendasPage() {
           centro_custo_id: items[0]?.product_id ? products?.find(p => p.id === items[0].product_id)?.centro_custo_id : null,
           reseller_id: selectedReseller?.id ?? null,
           commission_value: commissionValue,
-        });
+        }).select("id").single();
         if (error) throw error;
+        saleRefId = ins?.id ?? null;
       }
+
+      // 2) Baixa estoque por item, preservando local de origem + vínculo com a venda
+      for (const it of items) {
+        if (it.product_id) {
+          const custoVenda = Number(it.custo_unitario);
+          const { error: smErr } = await supabase.from("stock_movements").insert({
+            company_id: selected,
+            product_id: it.product_id,
+            tipo: "saida",
+            quantidade: Number(it.quantidade),
+            custo_unitario: Number.isFinite(custoVenda) && custoVenda > 0 ? custoVenda : null,
+            motivo: "Venda",
+            stock_location_id: it.stock_location_id || null,
+            data: form.forma === "vista" ? form.data_venda : form.vencimento,
+            related_sale_id: saleRefId,
+            related_sale_type: saleRefType,
+          });
+          if (smErr) throw smErr;
+        }
+      }
+
+
 
       // Gera conta a pagar de comissão automaticamente
       if (selectedReseller && commissionValue && commissionValue > 0) {
