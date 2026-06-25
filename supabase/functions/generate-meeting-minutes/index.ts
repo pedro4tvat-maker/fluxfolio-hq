@@ -123,12 +123,13 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3.5-flash",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
           temperature: 0.3,
+          max_tokens: 4096,
         }),
       });
       return aiResp;
