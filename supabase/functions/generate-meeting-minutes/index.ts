@@ -34,54 +34,86 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `Você é um especialista em atas de reunião para consultoria financeira empresarial. Sua função é transformar relatos livres em atas profissionais e estruturadas.
+    const systemPrompt = `Você é um assistente especializado em atas de reunião para consultoria financeira empresarial. Sua função é transformar um relato livre, informal e possivelmente incompleto em uma ata profissional, clara, organizada e editável.
 
-REGRAS CRÍTICAS DE FORMATO:
-1. JAMAIS repita as linhas de exemplo (placeholders) como "Decisão — Responsável — Prazo" ou "Pendência — Responsável — Prazo".
-2. Se houver uma decisão, escreva diretamente a decisão, o responsável e o prazo.
-3. Se NÃO houver informações para uma seção, use frases completas como "Nenhuma decisão formal foi registrada" em vez de deixar placeholders vazios ou apenas hífen.
-4. Use Markdown puro.
-5. Não invente dados. Se não souber o responsável, use "A definir".
-6. Mantenha um tom altamente profissional e executivo.`;
+REGRAS OBRIGATÓRIAS:
+1. NUNCA copie o relato bruto. Interprete, organize e reescreva em linguagem formal, objetiva e consultiva.
+2. Preencha TODAS as 10 seções da ata. Nenhuma pode ficar vazia ou conter apenas hífen.
+3. Quando faltar informação, use frases completas como "Não informado", "A definir", "Nenhuma decisão formal adicional foi registrada nesta reunião" ou "Não foram identificadas pendências específicas além dos próximos passos descritos".
+4. JAMAIS escreva linhas-modelo como "Decisão — Responsável — Prazo" ou "Pendência — Responsável — Prazo — Status". Escreva os dados reais.
+5. Não invente valores, nomes, datas ou decisões que não estejam no relato.
+6. Identifique no relato: temas (vira pauta), combinações (viram decisões), necessidades futuras (viram pendências/próximos passos) e compromissos (viram plano de ação).
+7. Use Markdown puro. Tom profissional, pronto para compartilhar com o cliente.`;
 
-    const userPrompt = `DADOS DA REUNIÃO:
+    const userPrompt = `DADOS RECEBIDOS:
 Empresa: ${company_name || "Não informado"}
 CNPJ: ${company_cnpj || "Não informado"}
-Data: ${meeting_date || "Não informado"}
+Data da reunião: ${meeting_date || "Não informado"}
 Horário: ${meeting_time || "Não informado"}
-Tipo: ${meeting_type || "A definir"}
-Participantes: ${Array.isArray(participants) ? participants.join(", ") : (participants || "Não informado")}
-Consultor: ${consultant_name || "Não informado"}
-Próxima reunião: ${next_meeting_date || "Não informado"}
-Anexos: ${attachments_summary || "Nenhum"}
+Tipo de reunião: ${meeting_type || "Não informado"}
+Participantes: ${Array.isArray(participants) && participants.length ? participants.join(", ") : "Não informado"}
+Consultor responsável: ${consultant_name || "Não informado"}
+Próxima reunião: ${next_meeting_date || "A definir"}
+Anexos/Documentos: ${attachments_summary || "Nenhum"}
 
-RELATO LIVRE:
+RELATO LIVRE DO CONSULTOR:
 ${raw_notes}
 
-ESTRUTURA DA ATA (SIGA RIGOROSAMENTE):
+Gere a ata EXATAMENTE neste formato, em Markdown, preenchendo todas as 10 seções:
 
 # ATA DE REUNIÃO — CONSULTORIA FINANCEIRA
+## [Título profissional inferido do relato]
 
-## 1. Identificação
-(Liste os dados básicos: Empresa, Data, Horário, Participantes, Consultor)
+## 1. Identificação da reunião
+- **Empresa:** ${company_name || "Não informado"}
+- **CNPJ:** ${company_cnpj || "Não informado"}
+- **Data:** ${meeting_date || "Não informado"}
+- **Horário:** ${meeting_time || "Não informado"}
+- **Tipo de reunião:** ${meeting_type || "Não informado"}
+- **Participantes:** ${Array.isArray(participants) && participants.length ? participants.join(", ") : "Não informado"}
+- **Consultor responsável:** ${consultant_name || "Não informado"}
 
-## 2. Objetivo da Reunião
-(Um parágrafo descrevendo o propósito do encontro)
+## 2. Objetivo da reunião
+(Um parágrafo profissional explicando o propósito principal da reunião, inferido do relato.)
 
-## 3. Pauta e Pontos Discutidos
-(Organize o relato em tópicos claros e profissionais, agrupando assuntos correlatos)
+## 3. Pauta tratada
+(Liste de 3 a 8 itens da pauta identificados no relato, em bullets.)
 
-## 4. Decisões Tomadas
-(Liste cada decisão. Exemplo: "Decisão: Compra de software / Responsável: João / Prazo: 30 dias". NÃO use a linha "Decisão — Responsável — Prazo")
+## 4. Resumo executivo
+(1 a 3 parágrafos profissionais destacando contexto, assuntos principais e direcionamento. NÃO copie o relato bruto — reescreva em linguagem executiva.)
 
-## 5. Pendências e Próximos Passos
-(Liste ações futuras. Exemplo: "Ação: Revisar fluxo de caixa / Responsável: Consultor / Prazo: Próxima reunião")
+## 5. Pontos discutidos
+(Tópicos detalhados, cada um com **Título** em negrito seguido de descrição reescrita formalmente.)
 
-## 6. Encaminhamentos SISTEMAFP PJ
-(Sugestões de quais módulos do sistema devem ser usados ou alimentados)
+## 6. Decisões tomadas
+(Para cada decisão use o formato:
+- **Decisão:** [descrição]
+  - **Responsável:** [nome ou "A definir"]
+  - **Prazo:** [data ou "A definir"]
 
-## 7. Observações Finais
-(Fechamento profissional)`;
+Se não houver decisões: "Nenhuma decisão formal adicional foi registrada nesta reunião.")
+
+## 7. Pendências identificadas
+(Para cada pendência use:
+- **Pendência:** [descrição]
+  - **Responsável:** [nome ou "A definir"]
+  - **Prazo:** [data ou "A definir"]
+  - **Status:** Pendente
+
+Se não houver: "Não foram identificadas pendências específicas além dos próximos passos descritos.")
+
+## 8. Plano de ação e próximos passos
+(Para cada ação:
+- **Ação:** [descrição]
+  - **Responsável:** [nome ou "A definir"]
+  - **Data prevista:** [data ou "A definir"]
+  - **Observação:** [contexto curto ou "—"])
+
+## 9. Encaminhamentos para o SISTEMAFP PJ
+(Indique quais módulos do sistema deverão ser usados/atualizados a partir desta reunião: fluxo de caixa, estoque, vendas, precificação, DRE, relatórios, BPO, documentos, plano de ação, etc.)
+
+## 10. Observações finais
+(Fechamento profissional, objetivo, adequado para ata formal compartilhada com o cliente.)`;
 
     const fetchAI = async () => {
       const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
