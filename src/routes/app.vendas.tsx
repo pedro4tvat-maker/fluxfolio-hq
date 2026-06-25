@@ -1131,19 +1131,9 @@ function VendasPage() {
       }
     }
 
-    // 3) Cancela conta a pagar de comissão vinculada (se ainda em aberto)
-    const { data: comissoes } = await supabase
-      .from("payables")
-      .select("id, status")
-      .eq("company_id", selected)
-      .eq("related_sale_id", row.id);
-    if (comissoes && comissoes.length > 0) {
-      for (const c of comissoes) {
-        if (c.status === "em_aberto") {
-          await supabase.from("payables").delete().eq("id", c.id);
-        }
-      }
-    }
+    // 3) Comissões (payables) não possuem vínculo direto com a venda hoje — usuário ajusta manualmente em Contas a pagar se necessário.
+
+
 
     // 4) Remove o lançamento financeiro da venda
     if (tipo === "vista") {
