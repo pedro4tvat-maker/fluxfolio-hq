@@ -256,8 +256,7 @@ function AppLayout() {
             <Menu className="size-5" />
           </button>
           <span className="font-display font-semibold tracking-tight">SISTEMAFP PJ</span>
-          <span className="h-4 w-px bg-primary-foreground/30" aria-hidden />
-          <img
+        </header>
             src={fepLogo.url}
             alt="Finanças em Propósito"
             title="por Finanças em Propósito"
