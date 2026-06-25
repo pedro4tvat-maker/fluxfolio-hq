@@ -101,6 +101,21 @@ function ContasAPagar() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const revert = useMutation({
+    mutationFn: async (p: Payable) => {
+      const { error } = await supabase.from("payables").update({
+        status: "em_aberto", data_pagamento: null,
+      }).eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Pagamento estornado");
+      qc.invalidateQueries({ queryKey: ["payables"] });
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const del = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("payables").delete().eq("id", id);
