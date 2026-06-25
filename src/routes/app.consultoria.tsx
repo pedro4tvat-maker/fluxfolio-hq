@@ -201,6 +201,11 @@ function ReceitasTab({ consultantId }: { consultantId: string }) {
     mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_receivables").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Receita excluída"); qc.invalidateQueries({ queryKey: ["c-receitas"] }); qc.invalidateQueries({ queryKey: ["c-recv"] }); },
   });
+  const revertRecv = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_receivables").update({ status: "em_aberto", received_date: null }).eq("id", id); if (error) throw error; },
+    onSuccess: () => { toast.success("Receita estornada"); qc.invalidateQueries({ queryKey: ["c-receitas"] }); qc.invalidateQueries({ queryKey: ["c-recv"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <div className="space-y-4">
