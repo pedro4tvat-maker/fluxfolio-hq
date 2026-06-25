@@ -744,7 +744,7 @@ function VendasPage() {
 
 
   <div class="totals">
-    <div class="grand">TOTAL: ${formatMoney(valor)}</div>
+    <div class="grand">TOTAL: ${formatMoney(totalOS)}</div>
   </div>
 
   <div class="signs">
