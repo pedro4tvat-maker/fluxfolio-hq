@@ -809,12 +809,15 @@ function VendasPage() {
     const dateKey = (saleDate || "").slice(0, 10);
     const parsed: ParsedItem[] = partes.map((p) => {
       // Formato novo: "2x Nome @21.00|c17.00" (preço e custo cadastrados NA venda)
-      // Formato legado: "2x Nome"
-      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-      const qtd = m ? Number(m[1].replace(",", ".")) : 1;
-      const nome = m ? m[2].trim() : p;
+      // Formato legado: "2x Nome" ou "Nome @40.00|c31.15" (sem prefixo Nx)
+      const m = p.match(/^(?:(\d+(?:[.,]\d+)?)x\s+)?(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\)?\s*$/i);
+      const qtd = m && m[1] ? Number(m[1].replace(",", ".")) : 1;
+      let nome = m ? m[2].trim() : p;
+      nome = nome.replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?\s*\)?\s*$/i, "").replace(/\)\s*$/, "").trim();
       const precoSale = m && m[3] ? Number(m[3].replace(",", ".")) : NaN;
       const custoSale = m && m[4] ? Number(m[4].replace(",", ".")) : NaN;
+      const isResumo = /^venda\b/i.test(p);
+      if (isResumo) return null as unknown as ParsedItem;
       const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
 
       // CUSTO: 1) custo registrado na venda (descrição); 2) stock_movement da venda; 3) custo atual do produto
