@@ -257,12 +257,6 @@ function AppLayout() {
           </button>
           <span className="font-display font-semibold tracking-tight">SISTEMAFP PJ</span>
         </header>
-            src={fepLogo.url}
-            alt="Finanças em Propósito"
-            title="por Finanças em Propósito"
-            className="h-6 w-auto opacity-95"
-          />
-        </header>
         <main className="flex-1 p-4 md:p-8 overflow-x-auto">
           <Outlet />
         </main>
