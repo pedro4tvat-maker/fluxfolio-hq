@@ -1112,26 +1112,20 @@ function VendasPage() {
     if (!ok) return;
     try {
       const desc = row.descricao || "";
-      const matchItens = desc.match(/\(([^)]+)\)\s*$/);
-      const itensTxt = matchItens ? matchItens[1] : "";
-      const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
-      const parsedItems: SaleItem[] = partes.map((p) => {
-        const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-        const qtd = m ? m[1].replace(",", ".") : "1";
-        const nome = m ? m[2].trim() : p;
-        const preco = m && m[3] ? m[3].replace(",", ".") : "";
-        const custo = m && m[4] ? m[4].replace(",", ".") : "";
-        const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
+      const itensParsed = parseSaleDescription(desc);
+      const parsedItems: SaleItem[] = itensParsed.map((it) => {
+        const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
         return {
           product_id: prod?.id ?? "",
-          nome,
-          quantidade: qtd,
-          preco_unitario: preco || String(prod?.preco_venda ?? ""),
-          custo_unitario: custo || String(prod?.custo_unitario ?? ""),
+          nome: it.nome,
+          quantidade: String(it.qtd),
+          preco_unitario: it.preco > 0 ? String(it.preco) : String(prod?.preco_venda ?? ""),
+          custo_unitario: it.custo > 0 ? String(it.custo) : String(prod?.custo_unitario ?? ""),
           custo_padrao: String(prod?.custo_unitario ?? ""),
           stock_location_id: defaultLocationId,
         };
       });
+
 
       let clienteFound: CrmContact | null = null;
       if (row.crm_contact_id) {
