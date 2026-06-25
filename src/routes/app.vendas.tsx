@@ -87,6 +87,75 @@ type CompanyData = {
   cep: string | null;
 };
 
+// ---------- Shared sale-description parsing ----------
+// Description format stored: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B (250g) @33.00|c28.67)"
+
+function extractItemsBlockTop(desc: string): string {
+  const s = (desc || "").trimEnd();
+  if (!s.endsWith(")")) return "";
+  let depth = 0;
+  for (let i = s.length - 1; i >= 0; i--) {
+    const ch = s[i];
+    if (ch === ")") depth++;
+    else if (ch === "(") {
+      depth--;
+      if (depth === 0) return s.slice(i + 1, s.length - 1);
+    }
+  }
+  return "";
+}
+
+function splitTopLevelTop(s: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let buf = "";
+  for (const ch of s) {
+    if (ch === "(") { depth++; buf += ch; }
+    else if (ch === ")") { depth--; buf += ch; }
+    else if (ch === "," && depth === 0) { out.push(buf); buf = ""; }
+    else buf += ch;
+  }
+  if (buf.trim()) out.push(buf);
+  return out.map((x) => x.trim()).filter(Boolean);
+}
+
+export type SaleDescItem = { qtd: number; nome: string; preco: number; custo: number };
+
+/**
+ * Parser tolerante:
+ *  - "2x Produto @40.00|c31.15"  → qtd=2, nome="Produto", preco=40, custo=31.15
+ *  - "Produto @40.00|c31.15"     → qtd=1, nome="Produto", preco=40, custo=31.15
+ *  - "Produto (250g) @33.00"     → qtd=1, nome="Produto (250g)", preco=33, custo=0
+ *  - "Venda - Cliente (...)"     → marcado como resumo (ignorado quando há outros itens)
+ *
+ * Sempre limpa @price/|cCost do nome exibido.
+ */
+export function parseItemPart(raw: string): SaleDescItem & { isResumo: boolean } {
+  const p = (raw || "").trim();
+  const isResumo = /^venda\b/i.test(p);
+  const m = p.match(
+    /^(?:(\d+(?:[.,]\d+)?)x\s+)?(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\)?\s*$/i,
+  );
+  const qtd = m && m[1] ? Number(m[1].replace(",", ".")) : 1;
+  let nome = m ? m[2].trim() : p;
+  // Salvaguarda: nunca deixar @ ou |c residual no nome
+  nome = nome.replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?\s*\)?\s*$/i, "").replace(/\)\s*$/, "").trim();
+  const preco = m && m[3] ? Number(m[3].replace(",", ".")) : 0;
+  const custo = m && m[4] ? Number(m[4].replace(",", ".")) : 0;
+  return { qtd, nome, preco, custo, isResumo };
+}
+
+/** Itens limpos de uma descrição de venda; descarta "Venda - Cliente (...)" se há itens reais. */
+export function parseSaleDescription(descricao: string | null | undefined): SaleDescItem[] {
+  const desc = descricao || "";
+  const bloco = extractItemsBlockTop(desc);
+  const partes = bloco ? splitTopLevelTop(bloco) : splitTopLevelTop(desc);
+  const parsed = partes.map(parseItemPart);
+  const reais = parsed.filter((x) => !x.isResumo);
+  if (reais.length === 0) return [];
+  return reais.map(({ qtd, nome, preco, custo }) => ({ qtd, nome, preco, custo }));
+}
+
 function VendasPage() {
   const { selected, isLoading: companiesLoading } = useSelectedCompany();
   const qc = useQueryClient();
@@ -596,19 +665,19 @@ function VendasPage() {
     const dataRef = tipo === "vista" ? row.data : row.vencimento;
     const valor = Number(row.valor) || 0;
     const desc = row.descricao || "Venda";
-    // descricao salva no formato: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B)"
-    const matchItens = desc.match(/\(([^)]+)\)\s*$/);
+    // descricao salva no formato: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B (250g) @33.00|c28.67)"
     const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
     const clienteNome = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
-    const itensTxt = matchItens ? matchItens[1] : desc;
-    const itensArr = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
-    const parsedLinhas = itensArr.map((it) => {
-      const m = it.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-      const qtd = m ? Number(m[1].replace(",", ".")) : 1;
-      const nome = m ? m[2].trim() : it;
-      const preco = m && m[3] ? Number(m[3].replace(",", ".")) : 0;
-      return { nome, qtd, preco, total: qtd * preco };
+    const parsedItens = parseSaleDescription(desc);
+    // Enriquece com custo/preço atual do produto se descrição não trouxe (vendas antigas)
+    const parsedLinhas = parsedItens.map((it) => {
+      const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+      const preco = it.preco > 0 ? it.preco : Number(prod?.preco_venda ?? 0);
+      const total = it.qtd * preco;
+      return { nome: it.nome, qtd: it.qtd, preco, total };
     });
+    const somaItens = parsedLinhas.reduce((a, b) => a + b.total, 0);
+    const totalOS = somaItens > 0 ? somaItens : valor;
     const linhas = parsedLinhas
       .map((p) => `<tr>
         <td>${escapeHtml(p.nome)}</td>
@@ -617,6 +686,7 @@ function VendasPage() {
         <td style="text-align:right">${formatMoney(p.total)}</td>
       </tr>`)
       .join("");
+
 
     const html = `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8" />
@@ -674,7 +744,7 @@ function VendasPage() {
 
 
   <div class="totals">
-    <div class="grand">TOTAL: ${formatMoney(valor)}</div>
+    <div class="grand">TOTAL: ${formatMoney(totalOS)}</div>
   </div>
 
   <div class="signs">
@@ -739,12 +809,15 @@ function VendasPage() {
     const dateKey = (saleDate || "").slice(0, 10);
     const parsed: ParsedItem[] = partes.map((p) => {
       // Formato novo: "2x Nome @21.00|c17.00" (preço e custo cadastrados NA venda)
-      // Formato legado: "2x Nome"
-      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-      const qtd = m ? Number(m[1].replace(",", ".")) : 1;
-      const nome = m ? m[2].trim() : p;
+      // Formato legado: "2x Nome" ou "Nome @40.00|c31.15" (sem prefixo Nx)
+      const m = p.match(/^(?:(\d+(?:[.,]\d+)?)x\s+)?(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\)?\s*$/i);
+      const qtd = m && m[1] ? Number(m[1].replace(",", ".")) : 1;
+      let nome = m ? m[2].trim() : p;
+      nome = nome.replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?\s*\)?\s*$/i, "").replace(/\)\s*$/, "").trim();
       const precoSale = m && m[3] ? Number(m[3].replace(",", ".")) : NaN;
       const custoSale = m && m[4] ? Number(m[4].replace(",", ".")) : NaN;
+      const isResumo = /^venda\b/i.test(p);
+      if (isResumo) return null as unknown as ParsedItem;
       const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
 
       // CUSTO: 1) custo registrado na venda (descrição); 2) stock_movement da venda; 3) custo atual do produto
@@ -777,12 +850,10 @@ function VendasPage() {
       const subtotal = qtd * preco;
       const custoTotal = qtd * custo;
       return { nome, qtd, preco, custo, subtotal, custoTotal, margem: subtotal - custoTotal };
-    });
+    }).filter(Boolean) as ParsedItem[];
     if (parsed.length === 0) {
       return [{ nome: desc || "Venda", qtd: 1, preco: valorTotal, custo: 0, subtotal: valorTotal, custoTotal: 0, margem: valorTotal }];
     }
-    // Mantém o preço unitário cadastrado do produto, sem rescalonar pelo total da venda
-    // (rescalonamento causava distorção quando havia desconto/arredondamento na venda).
     return parsed;
   }
 
@@ -972,31 +1043,25 @@ function VendasPage() {
   }, tipo: "vista" | "prazo") {
     if (!selected) return;
     const desc = row.descricao || "";
-    const matchItens = desc.match(/\(([^)]+)\)\s*$/);
-    const itensTxt = matchItens ? matchItens[1] : "";
-    const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+    const itens = parseSaleDescription(desc);
     const dataRef = (tipo === "vista" ? row.data : row.vencimento) || new Date().toISOString().slice(0, 10);
 
-    for (const p of partes) {
-      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-      if (!m) continue;
-      const qtd = Number(m[1].replace(",", "."));
-      const nome = m[2].trim();
-      const custo = m[4] ? Number(m[4].replace(",", ".")) : NaN;
-      const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
-      if (!prod || !(qtd > 0)) continue;
+    for (const it of itens) {
+      const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+      if (!prod || !(it.qtd > 0)) continue;
       const { error: smErr } = await supabase.from("stock_movements").insert({
         company_id: selected,
         product_id: prod.id,
         tipo: "entrada",
-        quantidade: qtd,
-        custo_unitario: Number.isFinite(custo) && custo > 0 ? custo : Number(prod.custo_unitario ?? 0) || null,
+        quantidade: it.qtd,
+        custo_unitario: it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0) || null,
         motivo: "Estorno de venda",
         data: dataRef,
         stock_location_id: defaultLocationId || null,
       });
       if (smErr) throw smErr;
     }
+
 
     if (tipo === "vista") {
       const { error } = await supabase.from("transactions").delete().eq("id", row.id);
@@ -1047,26 +1112,20 @@ function VendasPage() {
     if (!ok) return;
     try {
       const desc = row.descricao || "";
-      const matchItens = desc.match(/\(([^)]+)\)\s*$/);
-      const itensTxt = matchItens ? matchItens[1] : "";
-      const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
-      const parsedItems: SaleItem[] = partes.map((p) => {
-        const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-        const qtd = m ? m[1].replace(",", ".") : "1";
-        const nome = m ? m[2].trim() : p;
-        const preco = m && m[3] ? m[3].replace(",", ".") : "";
-        const custo = m && m[4] ? m[4].replace(",", ".") : "";
-        const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
+      const itensParsed = parseSaleDescription(desc);
+      const parsedItems: SaleItem[] = itensParsed.map((it) => {
+        const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
         return {
           product_id: prod?.id ?? "",
-          nome,
-          quantidade: qtd,
-          preco_unitario: preco || String(prod?.preco_venda ?? ""),
-          custo_unitario: custo || String(prod?.custo_unitario ?? ""),
+          nome: it.nome,
+          quantidade: String(it.qtd),
+          preco_unitario: it.preco > 0 ? String(it.preco) : String(prod?.preco_venda ?? ""),
+          custo_unitario: it.custo > 0 ? String(it.custo) : String(prod?.custo_unitario ?? ""),
           custo_padrao: String(prod?.custo_unitario ?? ""),
           stock_location_id: defaultLocationId,
         };
       });
+
 
       let clienteFound: CrmContact | null = null;
       if (row.crm_contact_id) {
