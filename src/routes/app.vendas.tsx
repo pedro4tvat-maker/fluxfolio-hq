@@ -1043,31 +1043,25 @@ function VendasPage() {
   }, tipo: "vista" | "prazo") {
     if (!selected) return;
     const desc = row.descricao || "";
-    const matchItens = desc.match(/\(([^)]+)\)\s*$/);
-    const itensTxt = matchItens ? matchItens[1] : "";
-    const partes = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
+    const itens = parseSaleDescription(desc);
     const dataRef = (tipo === "vista" ? row.data : row.vencimento) || new Date().toISOString().slice(0, 10);
 
-    for (const p of partes) {
-      const m = p.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-      if (!m) continue;
-      const qtd = Number(m[1].replace(",", "."));
-      const nome = m[2].trim();
-      const custo = m[4] ? Number(m[4].replace(",", ".")) : NaN;
-      const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
-      if (!prod || !(qtd > 0)) continue;
+    for (const it of itens) {
+      const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+      if (!prod || !(it.qtd > 0)) continue;
       const { error: smErr } = await supabase.from("stock_movements").insert({
         company_id: selected,
         product_id: prod.id,
         tipo: "entrada",
-        quantidade: qtd,
-        custo_unitario: Number.isFinite(custo) && custo > 0 ? custo : Number(prod.custo_unitario ?? 0) || null,
+        quantidade: it.qtd,
+        custo_unitario: it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0) || null,
         motivo: "Estorno de venda",
         data: dataRef,
         stock_location_id: defaultLocationId || null,
       });
       if (smErr) throw smErr;
     }
+
 
     if (tipo === "vista") {
       const { error } = await supabase.from("transactions").delete().eq("id", row.id);
