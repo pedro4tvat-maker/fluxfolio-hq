@@ -304,7 +304,8 @@ function ConsultantPanel() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <LinkRequestsBell />
           <div className="flex bg-muted/50 p-1 rounded-lg border">
             <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/agenda">Agenda</Link></Button>
             <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/relatorios">Relatórios</Link></Button>
@@ -312,6 +313,7 @@ function ConsultantPanel() {
           </div>
           <Button asChild size="sm" className="h-10 px-4 shadow-sm"><Link to="/app/clientes"><PlusCircle className="size-4 mr-2" /> Nova empresa</Link></Button>
         </div>
+
       </div>
 
       {/* Seção 1: Resumo Executivo */}
