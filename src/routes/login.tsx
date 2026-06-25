@@ -65,19 +65,22 @@ function LoginPage() {
 
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-background">
-      <div className="hidden md:flex flex-col justify-between p-12 bg-sidebar text-sidebar-foreground">
+      <div className="hidden md:flex flex-col justify-between p-12 bg-secondary text-foreground border-r border-border">
         <div className="flex items-center gap-3">
-          <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-12 w-auto object-contain" />
+          <img src={logoAsset.url} alt="SistemaFP PJ" className="h-12 w-auto object-contain" />
         </div>
         <div className="space-y-3">
-          <h1 className="text-3xl font-display font-bold leading-tight">
-            Gestão financeira operacional <br /> para consultorias e pequenas empresas.
+          <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">Finanças em Propósito</p>
+          <h1 className="text-3xl font-display font-bold leading-tight text-foreground">
+            Gestão financeira com clareza, <br /> rotina e propósito.
           </h1>
-          <p className="text-sidebar-foreground/70 max-w-md">
-            Fluxo de caixa, contas a pagar e receber, orçamento e estoque em um só lugar. Simples, claro e profissional.
+          <p className="text-foreground/70 max-w-md">
+            Organize o financeiro, acompanhe resultados e transforme dados em decisões com o SistemaFP PJ.
           </p>
         </div>
-        <p className="text-xs text-sidebar-foreground/50">© {new Date().getFullYear()} SISTEMAFP PJ</p>
+        <p className="text-xs text-foreground/50">
+          © {new Date().getFullYear()} SistemaFP PJ — por Finanças em Propósito
+        </p>
       </div>
 
       <div className="flex items-center justify-center p-6 md:p-12">
