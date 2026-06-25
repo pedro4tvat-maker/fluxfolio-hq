@@ -243,7 +243,7 @@ function SignupPage() {
       <div className="w-full max-w-xl bg-card p-8 rounded-2xl shadow-card border space-y-6">
         <div className="flex items-center gap-2">
           <div className="size-9 rounded-xl bg-primary grid place-items-center text-primary-foreground">
-            <Wallet className="size-4" />
+            <Wheat className="size-4" />
           </div>
           <span className="font-display font-semibold">SISTEMAFP PJ</span>
         </div>
