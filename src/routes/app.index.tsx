@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
@@ -8,11 +8,13 @@ import { formatDate, formatMoney, monthRange } from "@/lib/format";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight, ShoppingCart, Percent, Box, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Clock, Calendar, DollarSign, FileText, BadgeCheck } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight, ShoppingCart, Percent, Box, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Clock, Calendar, DollarSign, FileText, BadgeCheck, Bell, Check, X } from "lucide-react";
 
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
+
 
 // Apply branch filter to any supabase query builder when a specific branch is selected.
 const withBranch = <T extends { eq: (col: string, v: any) => T }>(q: T, branchId: string | null): T =>
