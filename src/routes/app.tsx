@@ -18,16 +18,10 @@ import { AGENDA_SECTIONS } from "@/routes/app.agenda";
 import fepLogo from "@/assets/financas-em-proposito.png.asset.json";
 
 export const Route = createFileRoute("/app")({
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async () => {
     if (typeof window === "undefined") return;
-    const session = await context.queryClient.ensureQueryData({
-      queryKey: ["auth-session"],
-      queryFn: async () => {
-        const { data } = await supabase.auth.getSession();
-        return data.session;
-      },
-    });
-    if (!session) throw redirect({ to: "/login" });
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) throw redirect({ to: "/login" });
   },
   component: AppLayout,
 });
