@@ -223,7 +223,7 @@ function AppLayout() {
         >
           <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
             <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
-              <Wallet className="size-4" />
+              <Wheat className="size-4" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 leading-tight">
