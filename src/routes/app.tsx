@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CONSULTORIA_SECTIONS } from "@/routes/app.consultoria";
 import { AGENDA_SECTIONS } from "@/routes/app.agenda";
+import fepLogo from "@/assets/financas-em-proposito.png.asset.json";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ context }) => {
