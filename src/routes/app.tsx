@@ -2,10 +2,11 @@ import { cn } from "@/lib/utils";
 import { createFileRoute, Outlet, redirect, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  LayoutDashboard, Wallet, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
+  LayoutDashboard, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Upload, BadgeCheck, Copy, Users, FolderArchive,
   ChevronDown, ChevronRight, CalendarDays, Inbox, Route as RouteIcon, NotebookPen, BookOpen,
+  Wheat,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -222,7 +223,7 @@ function AppLayout() {
         >
           <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
             <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
-              <Wallet className="size-4" />
+              <Wheat className="size-4" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 leading-tight">

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, BadgeCheck, UserCheck } from "lucide-react";
+import { Wheat, Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, BadgeCheck, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -243,7 +243,7 @@ function SignupPage() {
       <div className="w-full max-w-xl bg-card p-8 rounded-2xl shadow-card border space-y-6">
         <div className="flex items-center gap-2">
           <div className="size-9 rounded-xl bg-primary grid place-items-center text-primary-foreground">
-            <Wallet className="size-4" />
+            <Wheat className="size-4" />
           </div>
           <span className="font-display font-semibold">SISTEMAFP PJ</span>
         </div>
