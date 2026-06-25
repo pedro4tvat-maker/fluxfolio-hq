@@ -226,12 +226,16 @@ function ContasAPagar() {
                   <TableCell className="text-center">{p.centro_custo_id ? <CheckCircle2 className="size-3 mx-auto text-success" /> : <AlertTriangle className="size-3 mx-auto text-amber-500" />}</TableCell>
 
                   <TableCell className="text-right whitespace-nowrap">
-                    {p.status !== "pago" && (
+                    {p.status !== "pago" ? (
                       <Button size="sm" variant="outline" onClick={() => markPaid.mutate(p)}>
                         <CheckCircle2 className="size-4" /> Pagar
                       </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => confirm("Estornar este pagamento?") && revert.mutate(p)}>
+                        <Undo2 className="size-4" /> Estornar
+                      </Button>
                     )}
-                    <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
+                    <Button size="icon" variant="ghost" onClick={() => confirm("Excluir este lançamento?") && del.mutate(p.id)}>
                       <Trash2 className="size-4" />
                     </Button>
                   </TableCell>
