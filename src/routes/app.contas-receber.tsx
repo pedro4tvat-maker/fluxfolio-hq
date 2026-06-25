@@ -100,6 +100,21 @@ function ContasAReceber() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const revert = useMutation({
+    mutationFn: async (p: Receivable) => {
+      const { error } = await supabase.from("receivables").update({
+        status: "em_aberto", data_recebimento: null,
+      }).eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Recebimento estornado");
+      qc.invalidateQueries({ queryKey: ["receivables"] });
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const del = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("receivables").delete().eq("id", id);
