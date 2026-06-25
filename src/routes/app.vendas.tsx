@@ -1053,27 +1053,99 @@ function VendasPage() {
     vencimento?: string | null;
   }, tipo: "vista" | "prazo") {
     if (!selected) return;
-    const desc = row.descricao || "";
-    const itens = parseSaleDescription(desc);
     const dataRef = (tipo === "vista" ? row.data : row.vencimento) || new Date().toISOString().slice(0, 10);
 
-    for (const it of itens) {
-      const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
-      if (!prod || !(it.qtd > 0)) continue;
-      const { error: smErr } = await supabase.from("stock_movements").insert({
-        company_id: selected,
-        product_id: prod.id,
-        tipo: "entrada",
-        quantidade: it.qtd,
-        custo_unitario: it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0) || null,
-        motivo: "Estorno de venda",
-        data: dataRef,
-        stock_location_id: defaultLocationId || null,
-      });
-      if (smErr) throw smErr;
+    // 1) Bloqueia estorno duplicado
+    const { data: jaEstornados } = await supabase
+      .from("stock_movements")
+      .select("id")
+      .eq("company_id", selected)
+      .eq("related_sale_id", row.id)
+      .eq("tipo", "entrada")
+      .ilike("motivo", "Estorno%")
+      .limit(1);
+    if (jaEstornados && jaEstornados.length > 0) {
+      throw new Error("Esta venda já foi cancelada e o estoque já foi estornado.");
     }
 
+    // 2) Busca movimentos de saída originais vinculados à venda
+    const { data: saidas } = await supabase
+      .from("stock_movements")
+      .select("id, product_id, quantidade, custo_unitario, stock_location_id, data")
+      .eq("company_id", selected)
+      .eq("related_sale_id", row.id)
+      .eq("tipo", "saida");
 
+    if (saidas && saidas.length > 0) {
+      // Caminho preferencial: devolve cada item ao MESMO local de origem
+      for (const sm of saidas) {
+        const { error: smErr } = await supabase.from("stock_movements").insert({
+          company_id: selected,
+          product_id: sm.product_id,
+          tipo: "entrada",
+          quantidade: sm.quantidade,
+          custo_unitario: sm.custo_unitario,
+          motivo: "Estorno de venda",
+          data: dataRef,
+          stock_location_id: sm.stock_location_id, // mesmo centro/local de origem
+          related_sale_id: row.id,
+          related_sale_type: tipo,
+        });
+        if (smErr) throw smErr;
+      }
+    } else {
+      // Fallback (vendas antigas sem related_sale_id): tenta casar por produto + data + qtd
+      const desc = row.descricao || "";
+      const itens = parseSaleDescription(desc);
+      for (const it of itens) {
+        const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+        if (!prod || !(it.qtd > 0)) continue;
+
+        // tenta achar o stock_location_id real do movimento da venda
+        const { data: candidatas } = await supabase
+          .from("stock_movements")
+          .select("stock_location_id, custo_unitario")
+          .eq("company_id", selected)
+          .eq("product_id", prod.id)
+          .eq("tipo", "saida")
+          .eq("motivo", "Venda")
+          .eq("quantidade", it.qtd)
+          .eq("data", dataRef)
+          .limit(1);
+        const locId = candidatas?.[0]?.stock_location_id ?? defaultLocationId ?? null;
+        const custo = candidatas?.[0]?.custo_unitario ?? (it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0)) ?? null;
+
+        const { error: smErr } = await supabase.from("stock_movements").insert({
+          company_id: selected,
+          product_id: prod.id,
+          tipo: "entrada",
+          quantidade: it.qtd,
+          custo_unitario: custo || null,
+          motivo: "Estorno de venda",
+          data: dataRef,
+          stock_location_id: locId,
+          related_sale_id: row.id,
+          related_sale_type: tipo,
+        });
+        if (smErr) throw smErr;
+      }
+    }
+
+    // 3) Cancela conta a pagar de comissão vinculada (se ainda em aberto)
+    const { data: comissoes } = await supabase
+      .from("payables")
+      .select("id, status")
+      .eq("company_id", selected)
+      .eq("related_sale_id", row.id);
+    if (comissoes && comissoes.length > 0) {
+      for (const c of comissoes) {
+        if (c.status === "em_aberto") {
+          await supabase.from("payables").delete().eq("id", c.id);
+        }
+      }
+    }
+
+    // 4) Remove o lançamento financeiro da venda
     if (tipo === "vista") {
       const { error } = await supabase.from("transactions").delete().eq("id", row.id);
       if (error) throw error;
@@ -1082,6 +1154,7 @@ function VendasPage() {
       if (error) throw error;
     }
   }
+
 
   async function cancelSale(row: {
     id: string;
