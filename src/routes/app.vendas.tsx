@@ -665,19 +665,19 @@ function VendasPage() {
     const dataRef = tipo === "vista" ? row.data : row.vencimento;
     const valor = Number(row.valor) || 0;
     const desc = row.descricao || "Venda";
-    // descricao salva no formato: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B)"
-    const matchItens = desc.match(/\(([^)]+)\)\s*$/);
+    // descricao salva no formato: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B (250g) @33.00|c28.67)"
     const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
     const clienteNome = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
-    const itensTxt = matchItens ? matchItens[1] : desc;
-    const itensArr = itensTxt.split(",").map((s) => s.trim()).filter(Boolean);
-    const parsedLinhas = itensArr.map((it) => {
-      const m = it.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\s*$/i);
-      const qtd = m ? Number(m[1].replace(",", ".")) : 1;
-      const nome = m ? m[2].trim() : it;
-      const preco = m && m[3] ? Number(m[3].replace(",", ".")) : 0;
-      return { nome, qtd, preco, total: qtd * preco };
+    const parsedItens = parseSaleDescription(desc);
+    // Enriquece com custo/preço atual do produto se descrição não trouxe (vendas antigas)
+    const parsedLinhas = parsedItens.map((it) => {
+      const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+      const preco = it.preco > 0 ? it.preco : Number(prod?.preco_venda ?? 0);
+      const total = it.qtd * preco;
+      return { nome: it.nome, qtd: it.qtd, preco, total };
     });
+    const somaItens = parsedLinhas.reduce((a, b) => a + b.total, 0);
+    const totalOS = somaItens > 0 ? somaItens : valor;
     const linhas = parsedLinhas
       .map((p) => `<tr>
         <td>${escapeHtml(p.nome)}</td>
@@ -686,6 +686,7 @@ function VendasPage() {
         <td style="text-align:right">${formatMoney(p.total)}</td>
       </tr>`)
       .join("");
+
 
     const html = `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8" />
