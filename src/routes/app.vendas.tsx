@@ -87,6 +87,75 @@ type CompanyData = {
   cep: string | null;
 };
 
+// ---------- Shared sale-description parsing ----------
+// Description format stored: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B (250g) @33.00|c28.67)"
+
+function extractItemsBlockTop(desc: string): string {
+  const s = (desc || "").trimEnd();
+  if (!s.endsWith(")")) return "";
+  let depth = 0;
+  for (let i = s.length - 1; i >= 0; i--) {
+    const ch = s[i];
+    if (ch === ")") depth++;
+    else if (ch === "(") {
+      depth--;
+      if (depth === 0) return s.slice(i + 1, s.length - 1);
+    }
+  }
+  return "";
+}
+
+function splitTopLevelTop(s: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let buf = "";
+  for (const ch of s) {
+    if (ch === "(") { depth++; buf += ch; }
+    else if (ch === ")") { depth--; buf += ch; }
+    else if (ch === "," && depth === 0) { out.push(buf); buf = ""; }
+    else buf += ch;
+  }
+  if (buf.trim()) out.push(buf);
+  return out.map((x) => x.trim()).filter(Boolean);
+}
+
+export type SaleDescItem = { qtd: number; nome: string; preco: number; custo: number };
+
+/**
+ * Parser tolerante:
+ *  - "2x Produto @40.00|c31.15"  → qtd=2, nome="Produto", preco=40, custo=31.15
+ *  - "Produto @40.00|c31.15"     → qtd=1, nome="Produto", preco=40, custo=31.15
+ *  - "Produto (250g) @33.00"     → qtd=1, nome="Produto (250g)", preco=33, custo=0
+ *  - "Venda - Cliente (...)"     → marcado como resumo (ignorado quando há outros itens)
+ *
+ * Sempre limpa @price/|cCost do nome exibido.
+ */
+export function parseItemPart(raw: string): SaleDescItem & { isResumo: boolean } {
+  const p = (raw || "").trim();
+  const isResumo = /^venda\b/i.test(p);
+  const m = p.match(
+    /^(?:(\d+(?:[.,]\d+)?)x\s+)?(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\)?\s*$/i,
+  );
+  const qtd = m && m[1] ? Number(m[1].replace(",", ".")) : 1;
+  let nome = m ? m[2].trim() : p;
+  // Salvaguarda: nunca deixar @ ou |c residual no nome
+  nome = nome.replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?\s*\)?\s*$/i, "").replace(/\)\s*$/, "").trim();
+  const preco = m && m[3] ? Number(m[3].replace(",", ".")) : 0;
+  const custo = m && m[4] ? Number(m[4].replace(",", ".")) : 0;
+  return { qtd, nome, preco, custo, isResumo };
+}
+
+/** Itens limpos de uma descrição de venda; descarta "Venda - Cliente (...)" se há itens reais. */
+export function parseSaleDescription(descricao: string | null | undefined): SaleDescItem[] {
+  const desc = descricao || "";
+  const bloco = extractItemsBlockTop(desc);
+  const partes = bloco ? splitTopLevelTop(bloco) : splitTopLevelTop(desc);
+  const parsed = partes.map(parseItemPart);
+  const reais = parsed.filter((x) => !x.isResumo);
+  if (reais.length === 0) return [];
+  return reais.map(({ qtd, nome, preco, custo }) => ({ qtd, nome, preco, custo }));
+}
+
 function VendasPage() {
   const { selected, isLoading: companiesLoading } = useSelectedCompany();
   const qc = useQueryClient();
