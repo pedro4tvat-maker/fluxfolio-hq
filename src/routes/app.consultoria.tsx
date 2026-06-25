@@ -334,6 +334,11 @@ function DespesasTab({ consultantId }: { consultantId: string }) {
     mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_payables").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Despesa excluída"); qc.invalidateQueries({ queryKey: ["c-despesas"] }); qc.invalidateQueries({ queryKey: ["c-pay"] }); },
   });
+  const revertPay = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_payables").update({ status: "em_aberto", payment_date: null }).eq("id", id); if (error) throw error; },
+    onSuccess: () => { toast.success("Despesa estornada"); qc.invalidateQueries({ queryKey: ["c-despesas"] }); qc.invalidateQueries({ queryKey: ["c-pay"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <div className="space-y-4">
