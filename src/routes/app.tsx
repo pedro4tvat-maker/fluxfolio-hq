@@ -224,8 +224,17 @@ function AppLayout() {
             <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground">
               <Wallet className="size-4" />
             </div>
-            <div className="flex-1">
-              <div className="font-display font-semibold leading-tight">SISTEMAFP PJ</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 leading-tight">
+                <span className="font-display font-semibold truncate">SISTEMAFP PJ</span>
+                <span className="h-3 w-px bg-sidebar-foreground/25" aria-hidden />
+                <img
+                  src={fepLogo.url}
+                  alt="Finanças em Propósito"
+                  title="por Finanças em Propósito"
+                  className="h-5 w-auto shrink-0 opacity-90"
+                />
+              </div>
               <div className="text-[11px] text-sidebar-foreground/60">{isConsultant ? "Painel do consultor" : "Gestão da empresa"}</div>
             </div>
             <button onClick={() => setOpen(false)} className="p-1.5 -mr-1 rounded hover:bg-sidebar-accent/50" aria-label="Fechar menu">
