@@ -850,12 +850,10 @@ function VendasPage() {
       const subtotal = qtd * preco;
       const custoTotal = qtd * custo;
       return { nome, qtd, preco, custo, subtotal, custoTotal, margem: subtotal - custoTotal };
-    });
+    }).filter(Boolean) as ParsedItem[];
     if (parsed.length === 0) {
       return [{ nome: desc || "Venda", qtd: 1, preco: valorTotal, custo: 0, subtotal: valorTotal, custoTotal: 0, margem: valorTotal }];
     }
-    // Mantém o preço unitário cadastrado do produto, sem rescalonar pelo total da venda
-    // (rescalonamento causava distorção quando havia desconto/arredondamento na venda).
     return parsed;
   }
 
