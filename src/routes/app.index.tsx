@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
@@ -8,11 +8,13 @@ import { formatDate, formatMoney, monthRange } from "@/lib/format";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight, ShoppingCart, Percent, Box, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Clock, Calendar, DollarSign, FileText, BadgeCheck } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight, ShoppingCart, Percent, Box, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Clock, Calendar, DollarSign, FileText, BadgeCheck, Bell, Check, X } from "lucide-react";
 
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
+
 
 // Apply branch filter to any supabase query builder when a specific branch is selected.
 const withBranch = <T extends { eq: (col: string, v: any) => T }>(q: T, branchId: string | null): T =>
@@ -302,7 +304,8 @@ function ConsultantPanel() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <LinkRequestsBell />
           <div className="flex bg-muted/50 p-1 rounded-lg border">
             <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/agenda">Agenda</Link></Button>
             <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/relatorios">Relatórios</Link></Button>
@@ -310,6 +313,7 @@ function ConsultantPanel() {
           </div>
           <Button asChild size="sm" className="h-10 px-4 shadow-sm"><Link to="/app/clientes"><PlusCircle className="size-4 mr-2" /> Nova empresa</Link></Button>
         </div>
+
       </div>
 
       {/* Seção 1: Resumo Executivo */}
@@ -1091,3 +1095,91 @@ function SmallStat({
 }
 
 
+
+/* =============== LINK REQUESTS BELL =============== */
+function LinkRequestsBell() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const { data: pending = [] } = useQuery({
+    queryKey: ["link-requests-bell"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("consultant_company_links")
+        .select("id, created_at, companies(id, nome, nome_fantasia, cnpj, responsavel)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 30000,
+  });
+
+  const respond = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
+      const patch: any = { status, responded_at: new Date().toISOString() };
+      if (status === "approved") patch.linked_at = new Date().toISOString();
+      const { error } = await supabase.from("consultant_company_links").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      toast.success(vars.status === "approved" ? "Vínculo aprovado!" : "Solicitação recusada.");
+      qc.invalidateQueries({ queryKey: ["link-requests-bell"] });
+      qc.invalidateQueries({ queryKey: ["link-requests"] });
+      qc.invalidateQueries({ queryKey: ["companies-v2"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const count = pending.length;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="relative h-10 w-10 p-0" title="Solicitações de vínculo">
+          <Bell className="size-4" />
+          {count > 0 && (
+            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shadow">
+              {count}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-96 p-0">
+        <div className="px-4 py-3 border-b">
+          <div className="font-semibold text-sm">Solicitações de vínculo</div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {count === 0 ? "Nenhuma pendente" : `${count} aguardando aprovação`}
+          </div>
+        </div>
+        <div className="max-h-96 overflow-y-auto">
+          {count === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              <BadgeCheck className="size-8 mx-auto mb-2 text-muted-foreground/40" />
+              Você está em dia!
+            </div>
+          ) : (
+            pending.map((r: any) => (
+              <div key={r.id} className="p-3 border-b last:border-0 hover:bg-muted/30">
+                <div className="font-medium text-sm">{r.companies?.nome_fantasia || r.companies?.nome || "Empresa"}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {r.companies?.responsavel ? `${r.companies.responsavel} · ` : ""}
+                  {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" variant="outline" className="flex-1 h-8" disabled={respond.isPending}
+                    onClick={() => respond.mutate({ id: r.id, status: "rejected" })}>
+                    <X className="size-3.5 mr-1" /> Recusar
+                  </Button>
+                  <Button size="sm" className="flex-1 h-8" disabled={respond.isPending}
+                    onClick={() => respond.mutate({ id: r.id, status: "approved" })}>
+                    <Check className="size-3.5 mr-1" /> Aprovar
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
