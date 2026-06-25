@@ -221,12 +221,16 @@ function ContasAReceber() {
                   </TableCell>
                   <TableCell className="text-right font-display font-semibold">{formatMoney(Number(p.valor))}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    {p.status !== "recebido" && (
+                    {p.status !== "recebido" ? (
                       <Button size="sm" variant="outline" onClick={() => markReceived.mutate(p)}>
                         <CheckCircle2 className="size-4" /> Receber
                       </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => confirm("Estornar este recebimento?") && revert.mutate(p)}>
+                        <Undo2 className="size-4" /> Estornar
+                      </Button>
                     )}
-                    <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
+                    <Button size="icon" variant="ghost" onClick={() => confirm("Excluir este lançamento?") && del.mutate(p.id)}>
                       <Trash2 className="size-4" />
                     </Button>
                   </TableCell>
