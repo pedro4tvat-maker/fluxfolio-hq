@@ -6,6 +6,7 @@ import {
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Upload, BadgeCheck, Copy, Users, FolderArchive,
   ChevronDown, ChevronRight, CalendarDays, Inbox, Route as RouteIcon, NotebookPen, BookOpen,
+  Wheat,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
