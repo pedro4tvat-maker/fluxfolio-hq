@@ -365,6 +365,7 @@ function DespesasTab({ consultantId }: { consultantId: string }) {
                   <TableCell className="text-right font-semibold text-rose-600">{formatMoney(p.amount)}</TableCell>
                   <TableCell><StatusBadge status={p.status} /></TableCell>
                   <TableCell className="text-right space-x-1">
+                    {p.status === "pago" && <Button size="icon" variant="ghost" title="Estornar" onClick={() => confirm("Estornar esta despesa?") && revertPay.mutate(p.id)}><Undo2 className="size-4" /></Button>}
                     <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setOpen(true); }}><Pencil className="size-4" /></Button>
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => confirm("Excluir esta despesa?") && remove.mutate(p.id)}><Trash2 className="size-4" /></Button>
                   </TableCell>
