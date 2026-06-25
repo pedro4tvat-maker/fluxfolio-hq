@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Building2, Search, PlusCircle, Download, CheckCircle2, Trash2 } from "lucide-react";
+import { Building2, Search, PlusCircle, Download, CheckCircle2, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 
@@ -94,6 +94,21 @@ function ContasAReceber() {
     },
     onSuccess: () => {
       toast.success("Marcado como recebido (entrada lançada no caixa)");
+      qc.invalidateQueries({ queryKey: ["receivables"] });
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const revert = useMutation({
+    mutationFn: async (p: Receivable) => {
+      const { error } = await supabase.from("receivables").update({
+        status: "em_aberto", data_recebimento: null,
+      }).eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Recebimento estornado");
       qc.invalidateQueries({ queryKey: ["receivables"] });
       qc.invalidateQueries({ queryKey: ["transactions"] });
     },
@@ -206,12 +221,16 @@ function ContasAReceber() {
                   </TableCell>
                   <TableCell className="text-right font-display font-semibold">{formatMoney(Number(p.valor))}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    {p.status !== "recebido" && (
+                    {p.status !== "recebido" ? (
                       <Button size="sm" variant="outline" onClick={() => markReceived.mutate(p)}>
                         <CheckCircle2 className="size-4" /> Receber
                       </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => confirm("Estornar este recebimento?") && revert.mutate(p)}>
+                        <Undo2 className="size-4" /> Estornar
+                      </Button>
                     )}
-                    <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
+                    <Button size="icon" variant="ghost" onClick={() => confirm("Excluir este lançamento?") && del.mutate(p.id)}>
                       <Trash2 className="size-4" />
                     </Button>
                   </TableCell>

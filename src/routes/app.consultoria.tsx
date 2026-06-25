@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Copy, Link2, Check, X, BadgeCheck, Building2, Plus, Pencil, Trash2,
+  Copy, Link2, Check, X, BadgeCheck, Building2, Plus, Pencil, Trash2, Undo2,
   TrendingUp, TrendingDown, Wallet, Users, FileText, Calendar, Download,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -201,6 +201,11 @@ function ReceitasTab({ consultantId }: { consultantId: string }) {
     mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_receivables").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Receita excluída"); qc.invalidateQueries({ queryKey: ["c-receitas"] }); qc.invalidateQueries({ queryKey: ["c-recv"] }); },
   });
+  const revertRecv = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_receivables").update({ status: "em_aberto", received_date: null }).eq("id", id); if (error) throw error; },
+    onSuccess: () => { toast.success("Receita estornada"); qc.invalidateQueries({ queryKey: ["c-receitas"] }); qc.invalidateQueries({ queryKey: ["c-recv"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <div className="space-y-4">
@@ -228,6 +233,7 @@ function ReceitasTab({ consultantId }: { consultantId: string }) {
                   <TableCell className="text-right font-semibold text-emerald-600">{formatMoney(r.amount)}</TableCell>
                   <TableCell><StatusBadge status={r.status} /></TableCell>
                   <TableCell className="text-right space-x-1">
+                    {r.status === "recebido" && <Button size="icon" variant="ghost" title="Estornar" onClick={() => confirm("Estornar esta receita?") && revertRecv.mutate(r.id)}><Undo2 className="size-4" /></Button>}
                     <Button size="icon" variant="ghost" onClick={() => { setEditing(r); setOpen(true); }}><Pencil className="size-4" /></Button>
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => confirm("Excluir esta receita?") && remove.mutate(r.id)}><Trash2 className="size-4" /></Button>
                   </TableCell>
@@ -328,6 +334,11 @@ function DespesasTab({ consultantId }: { consultantId: string }) {
     mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_payables").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Despesa excluída"); qc.invalidateQueries({ queryKey: ["c-despesas"] }); qc.invalidateQueries({ queryKey: ["c-pay"] }); },
   });
+  const revertPay = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_payables").update({ status: "em_aberto", payment_date: null }).eq("id", id); if (error) throw error; },
+    onSuccess: () => { toast.success("Despesa estornada"); qc.invalidateQueries({ queryKey: ["c-despesas"] }); qc.invalidateQueries({ queryKey: ["c-pay"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <div className="space-y-4">
@@ -354,6 +365,7 @@ function DespesasTab({ consultantId }: { consultantId: string }) {
                   <TableCell className="text-right font-semibold text-rose-600">{formatMoney(p.amount)}</TableCell>
                   <TableCell><StatusBadge status={p.status} /></TableCell>
                   <TableCell className="text-right space-x-1">
+                    {p.status === "pago" && <Button size="icon" variant="ghost" title="Estornar" onClick={() => confirm("Estornar esta despesa?") && revertPay.mutate(p.id)}><Undo2 className="size-4" /></Button>}
                     <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setOpen(true); }}><Pencil className="size-4" /></Button>
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => confirm("Excluir esta despesa?") && remove.mutate(p.id)}><Trash2 className="size-4" /></Button>
                   </TableCell>
