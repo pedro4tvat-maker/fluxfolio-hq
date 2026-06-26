@@ -79,11 +79,11 @@ function LandingPage() {
             <a href="#precos" className="hover:text-primary transition-colors">Planos</a>
           </nav>
 
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" className="hidden sm:inline-flex">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button asChild variant="ghost" className="px-2 sm:px-4 text-sm">
               <Link to="/login">Entrar</Link>
             </Button>
-            <Button asChild className="bg-primary text-primary-foreground">
+            <Button asChild className="bg-primary text-primary-foreground text-sm h-9 px-3 sm:h-10 sm:px-4">
               <Link to="/signup">Começar agora</Link>
             </Button>
           </div>
