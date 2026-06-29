@@ -294,14 +294,14 @@ function VendasPage() {
       const [tx, rec, movs] = await Promise.all([
         supabase
           .from("transactions")
-          .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id")
+          .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id, os_code")
           .eq("company_id", selected!)
           .eq("tipo", "entrada")
           .order("data", { ascending: false })
           .limit(50),
         supabase
           .from("receivables")
-          .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id")
+          .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id, os_code")
           .eq("company_id", selected!)
           .order("vencimento", { ascending: false })
           .limit(50),
