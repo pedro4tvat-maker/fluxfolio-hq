@@ -277,6 +277,7 @@ function VendasPage() {
         .select("id, nome, tipo, ativa, is_default")
         .eq("company_id", selected!)
         .eq("ativa", true)
+        .is("deleted_at", null)
         .order("is_default", { ascending: false })
         .order("nome");
       if (!data || data.length === 0) {
@@ -292,6 +293,7 @@ function VendasPage() {
           .select("id, nome, tipo, ativa, is_default")
           .eq("company_id", selected!)
           .eq("ativa", true)
+          .is("deleted_at", null)
           .order("is_default", { ascending: false })
           .order("nome");
         data = refetch.data ?? [];
@@ -313,6 +315,7 @@ function VendasPage() {
         .select("id, nome, stock_location_id, commission_pct, ativo")
         .eq("company_id", selected!)
         .eq("ativo", true)
+        .is("deleted_at", null)
         .order("nome");
       return (data ?? []) as Array<{ id: string; nome: string; stock_location_id: string | null; commission_pct: number; ativo: boolean }>;
     },

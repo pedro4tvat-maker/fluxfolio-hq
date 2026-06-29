@@ -53,6 +53,7 @@ function CorrecaoOSPage() {
         .from("stock_locations")
         .select("id, nome")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .order("nome");
       return (data ?? []) as Array<{ id: string; nome: string }>;
     },

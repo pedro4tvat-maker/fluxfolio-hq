@@ -93,6 +93,7 @@ function JornadaCompanyPage() {
     queryFn: async () => {
       const { data } = await sb.from("company_journey_checklist")
         .select("*").in("journey_phase_id", phaseIds)
+        .is("deleted_at", null)
         .order("position", { ascending: true });
       return data ?? [];
     },
@@ -307,7 +308,7 @@ function PhaseCard({ phase, checklist, deliverables, companyId, onChanged }: {
   };
 
   const delCheck = async (id: string) => {
-    await sb.from("company_journey_checklist").delete().eq("id", id); onChanged();
+    await sb.from("company_journey_checklist").update({ deleted_at: new Date().toISOString() }).eq("id", id); onChanged();
   };
   const delDeliv = async (id: string) => {
     await sb.from("company_journey_deliverables").delete().eq("id", id); onChanged();

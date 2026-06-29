@@ -137,7 +137,8 @@ export async function fetchReportData(
       supabase
         .from("payables")
         .select("id, descricao, fornecedor, valor, vencimento, data_pagamento, status, forma_pagamento, categoria_id, centro_custo_id")
-        .eq("company_id", companyId),
+        .eq("company_id", companyId)
+        .is("deleted_at", null),
       branchId,
     )),
     applyBranch(
