@@ -90,12 +90,12 @@ async function loadCompaniesV2(isConsultant: boolean, userId: string): Promise<C
       { data: pendings }, { data: plans },
     ] = await Promise.all([
       supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
-      supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "pago"),
+      supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).is("deleted_at", null).neq("status", "pago"),
       supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).is("deleted_at", null).neq("status", "recebido"),
       supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", c.id),
       supabase.from("transactions").select("data").eq("company_id", c.id).is("deleted_at", null).order("data", { ascending: false }).limit(1),
       supabase.from("client_pending_items").select("id, status, due_date").eq("company_id", c.id).neq("status", "concluido"),
-      supabase.from("action_plans").select("id, title, due_date, status, related_area").eq("company_id", c.id).neq("status", "concluido").order("due_date", { ascending: true, nullsFirst: false }),
+      supabase.from("action_plans").select("id, title, due_date, status, related_area").eq("company_id", c.id).is("deleted_at", null).neq("status", "concluido").order("due_date", { ascending: true, nullsFirst: false }),
     ]);
 
     const entradas = (tx ?? []).filter((t: any) => t.tipo === "entrada").reduce((s, t: any) => s + Number(t.valor), 0);
@@ -199,9 +199,9 @@ function ConsultantPanel() {
     enabled: !!consultantId,
     queryFn: async () => {
       const [{ data: rec }, { data: pay }, { data: contracts }] = await Promise.all([
-        supabase.from("consultancy_receivables").select("amount, due_date, received_date, status").eq("consultant_id", consultantId!),
-        supabase.from("consultancy_payables").select("amount, due_date, payment_date, status").eq("consultant_id", consultantId!),
-        supabase.from("consultancy_contracts").select("id, status").eq("consultant_id", consultantId!).eq("status", "ativo"),
+        supabase.from("consultancy_receivables").select("amount, due_date, received_date, status").eq("consultant_id", consultantId!).is("deleted_at", null),
+        supabase.from("consultancy_payables").select("amount, due_date, payment_date, status").eq("consultant_id", consultantId!).is("deleted_at", null),
+        supabase.from("consultancy_contracts").select("id, status").eq("consultant_id", consultantId!).is("deleted_at", null).eq("status", "ativo"),
       ]);
       const recMes = (rec ?? []).filter((r: any) => (r.received_date ?? "").slice(0, 10) >= monthStartISO).reduce((s, r: any) => s + Number(r.amount), 0);
       const payMes = (pay ?? []).filter((p: any) => (p.payment_date ?? "").slice(0, 10) >= monthStartISO).reduce((s, p: any) => s + Number(p.amount), 0);
@@ -611,7 +611,7 @@ function ClientDashboard() {
         withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
         withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado").gte("data", prevRange.start).lte("data", prevRange.end), branchId),
         withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado"), branchId),
-        withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }), branchId),
+        withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).is("deleted_at", null).neq("status", "pago").order("vencimento", { ascending: true }), branchId),
         withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status, cliente").eq("company_id", selected).is("deleted_at", null).neq("status", "recebido").order("vencimento", { ascending: true }), branchId),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
         withBranch(supabase.from("products").select("id, quantidade, estoque_minimo").eq("company_id", selected).is("deleted_at", null), branchId),

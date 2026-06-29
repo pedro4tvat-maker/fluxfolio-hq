@@ -68,7 +68,7 @@ function EmpresaResumo() {
       const [{ data: tx }, { data: allTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }] = await Promise.all([
         supabase.from("transactions").select("tipo, valor").eq("company_id", id).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
         supabase.from("transactions").select("tipo, valor").eq("company_id", id).is("deleted_at", null).eq("status", "realizado"),
-        supabase.from("payables").select("valor, vencimento, status").eq("company_id", id).neq("status", "pago"),
+        supabase.from("payables").select("valor, vencimento, status").eq("company_id", id).is("deleted_at", null).neq("status", "pago"),
         supabase.from("receivables").select("valor, vencimento, status").eq("company_id", id).is("deleted_at", null).neq("status", "recebido"),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", id),
         supabase.from("products").select("quantidade, estoque_minimo").eq("company_id", id).is("deleted_at", null),

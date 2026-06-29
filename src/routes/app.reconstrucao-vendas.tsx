@@ -208,7 +208,7 @@ function Page() {
     queryKey: ["stock-locations", selected],
     enabled: !!selected,
     queryFn: async () => {
-      const { data } = await supabase.from("stock_locations").select("id, nome").eq("company_id", selected!).eq("ativa", true);
+      const { data } = await supabase.from("stock_locations").select("id, nome").eq("company_id", selected!).eq("ativa", true).is("deleted_at", null);
       return data ?? [];
     },
   });

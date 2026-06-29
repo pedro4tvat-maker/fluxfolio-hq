@@ -229,8 +229,8 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
       return;
     }
     const [payRes, recRes] = await Promise.all([
-      supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).in("status", ["em_aberto", "vencido"]),
-      supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).in("status", ["em_aberto", "vencido"]),
+      supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).is("deleted_at", null).in("status", ["em_aberto", "vencido"]),
+      supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).is("deleted_at", null).in("status", ["em_aberto", "vencido"]),
       supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).is("deleted_at", null).in("status", ["em_aberto", "vencido"]),
     ]);
     const payables = payRes.data ?? [];
