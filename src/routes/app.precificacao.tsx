@@ -226,7 +226,7 @@ function PricingForm({
     queryFn: async () => {
       const { data } = await supabase.from("products")
         .select("id, nome, custo_unitario, preco_venda")
-        .eq("company_id", companyId).order("nome");
+        .eq("company_id", companyId).is("deleted_at", null).order("nome");
       return data ?? [];
     },
   });
