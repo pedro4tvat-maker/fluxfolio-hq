@@ -147,6 +147,7 @@ export type Database = {
           branch_id: string | null
           company_id: string
           created_at: string
+          deleted_at: string | null
           description: string | null
           document_type: string | null
           file_name: string
@@ -162,6 +163,7 @@ export type Database = {
           branch_id?: string | null
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           document_type?: string | null
           file_name: string
@@ -177,6 +179,7 @@ export type Database = {
           branch_id?: string | null
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           document_type?: string | null
           file_name?: string
@@ -352,6 +355,7 @@ export type Database = {
           categoria_id: string
           company_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           mes: number
           observacoes: string | null
@@ -363,6 +367,7 @@ export type Database = {
           categoria_id: string
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           mes: number
           observacoes?: string | null
@@ -374,6 +379,7 @@ export type Database = {
           categoria_id?: string
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           mes?: number
           observacoes?: string | null
@@ -401,6 +407,7 @@ export type Database = {
           cash_flow_line: string | null
           company_id: string
           created_at: string
+          deleted_at: string | null
           description: string | null
           dre_line: string | null
           financial_classification: string | null
@@ -432,6 +439,7 @@ export type Database = {
           cash_flow_line?: string | null
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           dre_line?: string | null
           financial_classification?: string | null
@@ -463,6 +471,7 @@ export type Database = {
           cash_flow_line?: string | null
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           dre_line?: string | null
           financial_classification?: string | null
@@ -955,6 +964,7 @@ export type Database = {
           completed_at: string | null
           consultant_id: string
           created_at: string
+          deleted_at: string | null
           description: string | null
           due_date: string | null
           end_time: string | null
@@ -984,6 +994,7 @@ export type Database = {
           completed_at?: string | null
           consultant_id: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           due_date?: string | null
           end_time?: string | null
@@ -1013,6 +1024,7 @@ export type Database = {
           completed_at?: string | null
           consultant_id?: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           due_date?: string | null
           end_time?: string | null
@@ -1667,6 +1679,7 @@ export type Database = {
           content: string | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           file_url: string | null
           id: string
@@ -1686,6 +1699,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           file_url?: string | null
           id?: string
@@ -1705,6 +1719,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           file_url?: string | null
           id?: string
@@ -1777,6 +1792,7 @@ export type Database = {
           center_type: string | null
           company_id: string
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           is_active: boolean | null
@@ -1790,6 +1806,7 @@ export type Database = {
           center_type?: string | null
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -1803,6 +1820,7 @@ export type Database = {
           center_type?: string | null
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -2325,6 +2343,7 @@ export type Database = {
           company_id: string
           cost_center_id: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           is_active: boolean
           keyword: string
@@ -2336,6 +2355,7 @@ export type Database = {
           company_id: string
           cost_center_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_active?: boolean
           keyword: string
@@ -2347,6 +2367,7 @@ export type Database = {
           company_id?: string
           cost_center_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_active?: boolean
           keyword?: string
@@ -2441,6 +2462,7 @@ export type Database = {
           consultant_id: string
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           final_content: string | null
           finalized_at: string | null
           generated_content: string | null
@@ -2469,6 +2491,7 @@ export type Database = {
           consultant_id: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           final_content?: string | null
           finalized_at?: string | null
           generated_content?: string | null
@@ -2497,6 +2520,7 @@ export type Database = {
           consultant_id?: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           final_content?: string | null
           finalized_at?: string | null
           generated_content?: string | null
@@ -2748,6 +2772,7 @@ export type Database = {
           custo_frete: number
           custo_mao_obra: number
           custo_materia_prima: number
+          deleted_at: string | null
           desconto_medio: number
           id: string
           impostos: number
@@ -2782,6 +2807,7 @@ export type Database = {
           custo_frete?: number
           custo_mao_obra?: number
           custo_materia_prima?: number
+          deleted_at?: string | null
           desconto_medio?: number
           id?: string
           impostos?: number
@@ -2816,6 +2842,7 @@ export type Database = {
           custo_frete?: number
           custo_mao_obra?: number
           custo_materia_prima?: number
+          deleted_at?: string | null
           desconto_medio?: number
           id?: string
           impostos?: number

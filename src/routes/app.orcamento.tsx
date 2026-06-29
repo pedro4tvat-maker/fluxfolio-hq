@@ -33,7 +33,7 @@ function OrcamentoPage() {
         .from("categories")
         .select("id, nome, tipo")
         .eq("company_id", selected!)
-        .order("nome");
+        .is("deleted_at", null).order("nome");
       return data ?? [];
     },
   });
@@ -50,7 +50,7 @@ function OrcamentoPage() {
           .select("id, categoria_id, valor_orcado")
           .eq("company_id", selected!)
           .eq("mes", mes)
-          .eq("ano", ano),
+          .eq("ano", ano).is("deleted_at", null),
         supabase
           .from("transactions")
           .select("categoria_id, tipo, valor")
@@ -99,14 +99,14 @@ function OrcamentoPage() {
   async function salvarEdicao(id: string) {
     const v = Number(editValue);
     if (!Number.isFinite(v) || v < 0) return;
-    const { error } = await supabase.from("budgets").update({ valor_orcado: v }).eq("id", id);
+    const { error } = await supabase.from("budgets").update({ valor_orcado: v }).eq("id", id).is("deleted_at", null);
     if (error) toast.error(error.message);
     else { toast.success("Orçamento atualizado"); setEditingId(null); refetch(); }
   }
 
   async function excluir(id: string) {
     if (!confirm("Excluir este orçamento?")) return;
-    const { error } = await supabase.from("budgets").delete().eq("id", id);
+    const { error } = await supabase.from("budgets").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success("Orçamento excluído"); refetch(); }
   }

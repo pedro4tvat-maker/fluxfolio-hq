@@ -45,7 +45,7 @@ function DocumentosPage() {
         .from("attachments")
         .select("*")
         .eq("company_id", selected!)
-        .order("created_at", { ascending: false });
+        .is("deleted_at", null).order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -73,7 +73,7 @@ function DocumentosPage() {
   async function remove(id: string, filePath: string, name: string) {
     if (!confirm(`Excluir ${name}?`)) return;
     await supabase.storage.from("attachments").remove([filePath]);
-    const { error } = await supabase.from("attachments").delete().eq("id", id);
+    const { error } = await supabase.from("attachments").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success("Removido"); qc.invalidateQueries({ queryKey: ["all-attachments", selected] }); }
   }

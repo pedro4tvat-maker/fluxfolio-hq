@@ -646,7 +646,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
         .from("categories")
         .select("*")
         .eq("company_id", companyId)
-        .order("nome");
+        .is("deleted_at", null).order("nome");
       if (error) throw error;
       return data;
     },
@@ -659,7 +659,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
         .from("cost_centers")
         .select("*")
         .eq("company_id", companyId)
-        .order("nome");
+        .is("deleted_at", null).order("nome");
       if (error) throw error;
       return data;
     },
@@ -668,7 +668,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   const toggle = useMutation({
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: boolean }) => {
       // @ts-ignore - dynamic field names for database types
-      const { error } = await supabase.from("categories").update({ [field]: value }).eq("id", id);
+      const { error } = await supabase.from("categories").update({ [field]: value }).eq("id", id).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -698,7 +698,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   });
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("categories").delete().eq("id", id);
+      const { error } = await supabase.from("categories").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -728,7 +728,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   });
   const deleteCC = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("cost_centers").delete().eq("id", id);
+      const { error } = await supabase.from("cost_centers").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

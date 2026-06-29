@@ -37,7 +37,7 @@ function ContasAReceber() {
 
   const { data: categorias = [] } = useQuery({
     queryKey: ["categories", selected], enabled: !!selected,
-    queryFn: async () => (await supabase.from("categories").select("id,nome,tipo").eq("company_id", selected!).order("nome")).data ?? [],
+    queryFn: async () => (await supabase.from("categories").select("id,nome,tipo").eq("company_id", selected!).is("deleted_at", null).order("nome")).data ?? [],
   });
   const { data: contas = [] } = useQuery({
     queryKey: ["accounts", selected], enabled: !!selected,
@@ -45,7 +45,7 @@ function ContasAReceber() {
   });
   const { data: centros = [] } = useQuery({
     queryKey: ["centers", selected], enabled: !!selected,
-    queryFn: async () => (await supabase.from("cost_centers").select("id,nome").eq("company_id", selected!).order("nome")).data ?? [],
+    queryFn: async () => (await supabase.from("cost_centers").select("id,nome").eq("company_id", selected!).is("deleted_at", null).order("nome")).data ?? [],
   });
 
   const { data = [], isLoading } = useQuery<Receivable[]>({

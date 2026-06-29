@@ -132,7 +132,7 @@ export async function fetchReportData(
         .lte("data", period.end),
       branchId,
     )),
-    supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense").eq("company_id", companyId),
+    supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense").eq("company_id", companyId).is("deleted_at", null),
     applyCC(applyBranch(
       supabase
         .from("payables")
@@ -166,10 +166,10 @@ export async function fetchReportData(
     ),
     supabase.from("financial_accounts").select("id, nome, saldo_inicial").eq("company_id", companyId),
     applyBranch(
-      supabase.from("budgets").select("mes, ano, valor_orcado, categoria_id").eq("company_id", companyId),
+      supabase.from("budgets").select("mes, ano, valor_orcado, categoria_id").eq("company_id", companyId).is("deleted_at", null),
       branchId,
     ),
-    supabase.from("cost_centers").select("id, nome, kpi_classification").eq("company_id", companyId),
+    supabase.from("cost_centers").select("id, nome, kpi_classification").eq("company_id", companyId).is("deleted_at", null),
   ]);
   return {
     transactions: ((tx as any).data ?? []).map((r: any) => ({ ...r, valor: Number(r.valor) })),

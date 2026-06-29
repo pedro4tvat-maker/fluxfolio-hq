@@ -157,7 +157,7 @@ function BibliotecaPage() {
     queryFn: async () => {
       const { data, error } = await sb.from("consultant_library_templates")
         .select("*").eq("consultant_id", consultant!.id)
-        .order("updated_at", { ascending: false });
+        .is("deleted_at", null).order("updated_at", { ascending: false });
       if (error) throw error;
       return (data || []) as Tpl[];
     },
@@ -209,7 +209,7 @@ function BibliotecaPage() {
             content: payload.content, tags: payload.tags || [],
             status: payload.status, visibility: payload.visibility,
             file_url: payload.file_url,
-          }).eq("id", payload.id);
+          }).eq("id", payload.id).is("deleted_at", null);
         if (error) throw error;
       } else {
         const { error } = await sb.from("consultant_library_templates").insert({
@@ -254,7 +254,7 @@ function BibliotecaPage() {
     mutationFn: async (tpl: Tpl) => {
       const next = tpl.status === "arquivado" ? "ativo" : "arquivado";
       const { error } = await sb.from("consultant_library_templates")
-        .update({ status: next }).eq("id", tpl.id);
+        .update({ status: next }).eq("id", tpl.id).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lib-templates"] }),
@@ -262,7 +262,7 @@ function BibliotecaPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await sb.from("consultant_library_templates").delete().eq("id", id);
+      const { error } = await sb.from("consultant_library_templates").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -540,7 +540,7 @@ function UseTemplateDialog({ template, companies, consultant, userId, onClose }:
       if (error) throw error;
       await sb.from("consultant_library_templates")
         .update({ usage_count: (template.usage_count || 0) + 1 })
-        .eq("id", template.id);
+        .eq("id", template.id).is("deleted_at", null);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lib-templates"] });

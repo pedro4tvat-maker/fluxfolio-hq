@@ -179,7 +179,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
         .from("categories")
         .select("id, nome, tipo")
         .eq("company_id", companyId!)
-        .order("nome");
+        .is("deleted_at", null).order("nome");
       if (error) throw error;
       return data ?? [];
     },
@@ -193,7 +193,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
         .from("import_rules")
         .select("id, keyword, category_id, tipo, is_active")
         .eq("company_id", companyId!)
-        .eq("is_active", true);
+        .eq("is_active", true).is("deleted_at", null);
       if (error) throw error;
       return (data ?? []) as Rule[];
     },
@@ -779,7 +779,7 @@ function RulesView({ onBack }: { onBack: () => void }) {
     queryKey: ["import-rules", companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("import_rules").select("*, categories(nome)").eq("company_id", companyId!).order("keyword");
+      const { data, error } = await supabase.from("import_rules").select("*, categories(nome)").eq("company_id", companyId!).is("deleted_at", null).order("keyword");
       if (error) throw error;
       return data ?? [];
     },
@@ -788,7 +788,7 @@ function RulesView({ onBack }: { onBack: () => void }) {
     queryKey: ["categories", companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id, nome, tipo").eq("company_id", companyId!).order("nome");
+      const { data, error } = await supabase.from("categories").select("id, nome, tipo").eq("company_id", companyId!).is("deleted_at", null).order("nome");
       if (error) throw error;
       return data ?? [];
     },
@@ -807,7 +807,7 @@ function RulesView({ onBack }: { onBack: () => void }) {
   });
 
   const del = useMutation({
-    mutationFn: async (id: string) => { await supabase.from("import_rules").delete().eq("id", id); },
+    mutationFn: async (id: string) => { await supabase.from("import_rules").update({ deleted_at: new Date().toISOString() }).eq("id", id); },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["import-rules"] }),
   });
 

@@ -93,7 +93,7 @@ function CRMPage() {
 
   async function excluir(c: Contact) {
     if (!confirm(`Excluir ${c.name}?`)) return;
-    const { error } = await supabase.from("crm_contacts").delete().eq("id", c.id);
+    const { error } = await supabase.from("crm_contacts").update({ deleted_at: new Date().toISOString() }).eq("id", c.id);
     if (error) toast.error(error.message);
     else { toast.success("Excluído"); qc.invalidateQueries({ queryKey: ["crm", selected] }); }
   }

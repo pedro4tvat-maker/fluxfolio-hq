@@ -29,7 +29,7 @@ function CentroCustosPage() {
         .from("cost_centers")
         .select("id, nome, kpi_classification")
         .eq("company_id", selected!)
-        .order("nome");
+        .is("deleted_at", null).order("nome");
       return data ?? [];
     },
   });
@@ -81,14 +81,14 @@ function CentroCustosPage() {
     const { error } = await supabase
       .from("cost_centers")
       .update({ nome: editValue.trim(), kpi_classification: editClass.trim() || null })
-      .eq("id", id);
+      .eq("id", id).is("deleted_at", null);
     if (error) toast.error(error.message);
     else { toast.success("Centro atualizado"); setEditingId(null); refetch(); }
   }
 
   async function excluir(id: string, nome: string) {
     if (!confirm(`Excluir o centro "${nome}"? Lançamentos vinculados ficarão sem centro.`)) return;
-    const { error } = await supabase.from("cost_centers").delete().eq("id", id);
+    const { error } = await supabase.from("cost_centers").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success("Centro excluído"); refetch(); }
   }

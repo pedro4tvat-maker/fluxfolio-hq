@@ -161,7 +161,7 @@ function AtasPage() {
     queryKey: ["meeting-minutes", user?.id, isConsultant, consultant?.id],
     enabled: !!user && (!isConsultant || !!consultant?.id),
     queryFn: async () => {
-      let q = sb.from("meeting_minutes").select("*").order("meeting_date", { ascending: false });
+      let q = sb.from("meeting_minutes").select("*").is("deleted_at", null).order("meeting_date", { ascending: false });
       if (isConsultant && consultant?.id) q = q.eq("consultant_id", consultant.id);
       const { data, error } = await q;
       if (error) throw error;
@@ -188,7 +188,7 @@ function AtasPage() {
 
   const delMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await sb.from("meeting_minutes").delete().eq("id", id);
+      const { error } = await sb.from("meeting_minutes").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -223,7 +223,7 @@ function AtasPage() {
     mutationFn: async (m: Minute) => {
       const newShared = !m.shared_with_client;
       const status = newShared ? "compartilhada" : (m.status === "compartilhada" ? "finalizada" : m.status);
-      const { error } = await sb.from("meeting_minutes").update({ shared_with_client: newShared, status }).eq("id", m.id);
+      const { error } = await sb.from("meeting_minutes").update({ shared_with_client: newShared, status }).eq("id", m.id).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -448,7 +448,7 @@ function MinuteFormDialog({
         created_by: userId,
       };
       if (editing?.id) {
-        const { error } = await sb.from("meeting_minutes").update(payload).eq("id", editing.id);
+        const { error } = await sb.from("meeting_minutes").update(payload).eq("id", editing.id).is("deleted_at", null);
         if (error) throw error;
         return editing.id;
       } else {

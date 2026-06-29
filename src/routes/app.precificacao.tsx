@@ -90,7 +90,7 @@ function PrecificacaoPage() {
         .from("pricing_records")
         .select("*")
         .eq("company_id", selected!)
-        .order("created_at", { ascending: false });
+        .is("deleted_at", null).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PricingRecord[];
     },
@@ -101,7 +101,7 @@ function PrecificacaoPage() {
 
   async function remove(r: PricingRecord) {
     if (!confirm(`Excluir precificação "${r.nome}"?`)) return;
-    const { error } = await supabase.from("pricing_records").delete().eq("id", r.id);
+    const { error } = await supabase.from("pricing_records").update({ deleted_at: new Date().toISOString() }).eq("id", r.id);
     if (error) toast.error(error.message);
     else { toast.success("Excluído"); qc.invalidateQueries({ queryKey: ["pricing", selected] }); }
   }
@@ -315,7 +315,7 @@ function PricingForm({
       created_by: editing ? undefined : user?.id ?? null,
     };
     const { error } = editing
-      ? await supabase.from("pricing_records").update(payload).eq("id", editing.id)
+      ? await supabase.from("pricing_records").update(payload).eq("id", editing.id).is("deleted_at", null)
       : await supabase.from("pricing_records").insert(payload);
 
     if (error) { setSaving(false); toast.error(error.message); return; }

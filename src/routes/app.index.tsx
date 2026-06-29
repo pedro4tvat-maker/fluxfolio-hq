@@ -188,7 +188,7 @@ function ConsultantPanel() {
         .select("id, title, activity_type, activity_date, start_time, due_date, priority, status, company_id")
         .eq("consultant_id", consultantId!)
         .neq("status", "cancelado")
-        .order("activity_date", { ascending: true });
+        .is("deleted_at", null).order("activity_date", { ascending: true });
       if (error) throw error;
       return data ?? [];
     },
