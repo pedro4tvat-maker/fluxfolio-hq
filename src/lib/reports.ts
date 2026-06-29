@@ -638,14 +638,15 @@ export function buildVendasMargem(data: ReportData, period: Period) {
       inPeriod(t.data, period),
   );
   const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
-  const totalVendido = vendasVista.reduce((s, v) => s + v.valor, 0) + vendasPrazo.reduce((s, v) => s + v.valor, 0);
-  const qtd = vendasVista.length + vendasPrazo.length;
-  const ticket = qtd > 0 ? totalVendido / qtd : 0;
   const vendaIdsVista = new Set(vendasVista.map((v) => v.id));
   const vendaIdsPrazo = new Set(vendasPrazo.map((v) => v.id));
   const itens = data.saleItems.filter(
     (it) => (it.sale_type === "vista" && vendaIdsVista.has(it.sale_id)) || (it.sale_type === "prazo" && vendaIdsPrazo.has(it.sale_id)),
   );
+  const vendasComItens = new Set(itens.map((it) => `${it.sale_type}:${it.sale_id}`));
+  const faturamentoItens = itens.reduce((s, it) => s + it.total_revenue, 0);
+  const qtd = vendasComItens.size;
+  const ticket = qtd > 0 ? faturamentoItens / qtd : 0;
   const produtos = itens.map((it) => ({
     Produto: it.product_name_snapshot,
     Quantidade: it.quantity,
@@ -657,12 +658,11 @@ export function buildVendasMargem(data: ReportData, period: Period) {
     "Margem %": it.total_revenue > 0 ? (it.margin_value / it.total_revenue) * 100 : 0,
     Status: it.needs_review || it.unit_price <= 0 ? "Revisar" : it.unit_cost <= 0 ? "Sem custo" : "OK",
   }));
-  const faturamentoItens = itens.reduce((s, it) => s + it.total_revenue, 0);
   const custoTotal = itens.reduce((s, it) => s + it.total_cost, 0);
   const margemBruta = faturamentoItens - custoTotal;
   return {
     summary: {
-      totalVendido: faturamentoItens || totalVendido,
+      totalVendido: faturamentoItens,
       qtd,
       ticket,
       custoTotal,
