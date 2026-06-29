@@ -65,6 +65,24 @@ export type Product = {
   estoque_minimo: number;
 };
 
+export type SaleItemReport = {
+  id: string;
+  company_id: string;
+  branch_id: string | null;
+  sale_id: string;
+  sale_type: "vista" | "prazo";
+  product_id: string | null;
+  product_name_snapshot: string;
+  quantity: number;
+  unit_price: number;
+  unit_cost: number;
+  total_revenue: number;
+  total_cost: number;
+  margin_value: number;
+  margin_percentage: number;
+  needs_review: boolean;
+};
+
 export type Account = {
   id: string;
   nome: string;
@@ -86,6 +104,7 @@ export type ReportData = {
   payables: Payable[];
   receivables: Receivable[];
   products: Product[];
+  saleItems: SaleItemReport[];
   accounts: Account[];
   budgets: Budget[];
   costCenters: CostCenter[];
@@ -102,7 +121,7 @@ export async function fetchReportData(
   costCenterId?: string | null,
 ): Promise<ReportData> {
   const applyCC = (q: any) => (costCenterId ? q.eq("centro_custo_id", costCenterId) : q);
-  const [tx, cats, pay, rec, prods, accs, budgets, ccs] = await Promise.all([
+  const [tx, cats, pay, rec, prods, saleItems, accs, budgets, ccs] = await Promise.all([
     applyCC(applyBranch(
       supabase
         .from("transactions")
@@ -134,6 +153,13 @@ export async function fetchReportData(
         .eq("company_id", companyId),
       branchId,
     ),
+    applyBranch(
+      (supabase as any)
+        .from("sale_items")
+        .select("id, company_id, branch_id, sale_id, sale_type, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, needs_review")
+        .eq("company_id", companyId),
+      branchId,
+    ),
     supabase.from("financial_accounts").select("id, nome, saldo_inicial").eq("company_id", companyId),
     applyBranch(
       supabase.from("budgets").select("mes, ano, valor_orcado, categoria_id").eq("company_id", companyId),
@@ -152,6 +178,17 @@ export async function fetchReportData(
       custo_unitario: Number(r.custo_unitario),
       preco_venda: Number(r.preco_venda),
       estoque_minimo: Number(r.estoque_minimo),
+    })),
+    saleItems: (((saleItems as any).data ?? []) as any[]).map((r: any) => ({
+      ...r,
+      quantity: Number(r.quantity),
+      unit_price: Number(r.unit_price),
+      unit_cost: Number(r.unit_cost),
+      total_revenue: Number(r.total_revenue),
+      total_cost: Number(r.total_cost),
+      margin_value: Number(r.margin_value),
+      margin_percentage: Number(r.margin_percentage),
+      needs_review: Boolean(r.needs_review),
     })),
     accounts: ((accs as any).data ?? []).map((r: any) => ({ ...r, saldo_inicial: Number(r.saldo_inicial) })),
     budgets: ((budgets as any).data ?? []).map((r: any) => ({ ...r, valor_orcado: Number(r.valor_orcado) })),
