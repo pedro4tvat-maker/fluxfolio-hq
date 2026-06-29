@@ -672,7 +672,7 @@ function TransferDialog({ companyId, locations }: { companyId: string; locations
     queryKey: ["products-transfer", companyId],
     enabled: open,
     queryFn: async () => {
-      const { data } = await supabase.from("products").select("id, nome").eq("company_id", companyId).order("nome");
+      const { data } = await supabase.from("products").select("id, nome").eq("company_id", companyId).is("deleted_at", null).order("nome");
       return (data ?? []) as Array<{ id: string; nome: string }>;
     },
   });
