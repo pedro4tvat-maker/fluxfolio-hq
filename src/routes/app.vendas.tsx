@@ -567,6 +567,7 @@ function VendasPage() {
       // 1) Cria o lançamento financeiro PRIMEIRO para obter o ID e vincular às movimentações
       let saleRefId: string | null = null;
       const saleRefType: "vista" | "prazo" = form.forma === "vista" ? "vista" : "prazo";
+      let generatedOsCode: string | null = null;
       if (form.forma === "vista") {
         const { data: ins, error } = await supabase.from("transactions").insert({
           company_id: selected,
@@ -603,6 +604,38 @@ function VendasPage() {
         saleRefId = ins?.id ?? null;
       }
 
+      if (!saleRefId) throw new Error("Não foi possível identificar a venda para gravar os itens.");
+
+      // 1.1) Salva snapshot estruturado dos itens da venda. OS e relatórios usam esta fonte, não a descrição financeira.
+      const saleItemRows = items.map((it) => {
+        const qtd = Number(it.quantidade) || 0;
+        const preco = Number(it.preco_unitario) || 0;
+        const custo = Number(it.custo_unitario) || 0;
+        const receita = qtd * preco;
+        const custoTotalItem = qtd * custo;
+        const margemItem = receita - custoTotalItem;
+        return {
+          company_id: selected,
+          branch_id: null,
+          sale_id: saleRefId,
+          sale_type: saleRefType,
+          product_id: it.product_id || null,
+          product_name_snapshot: it.nome.trim(),
+          quantity: qtd,
+          unit_price: preco,
+          unit_cost: custo,
+          total_revenue: receita,
+          total_cost: custoTotalItem,
+          margin_value: margemItem,
+          margin_percentage: receita > 0 ? (margemItem / receita) * 100 : 0,
+          stock_location_id: it.stock_location_id || null,
+          needs_review: it.product_id ? custo <= 0 : false,
+          review_reason: it.product_id && custo <= 0 ? "Custo zerado no momento da venda" : null,
+        };
+      });
+      const { error: saleItemsErr } = await (supabase as any).from("sale_items").insert(saleItemRows);
+      if (saleItemsErr) throw saleItemsErr;
+
       // 2) Baixa estoque por item, preservando local de origem + vínculo com a venda
       for (const it of items) {
         if (it.product_id) {
@@ -632,6 +665,7 @@ function VendasPage() {
         });
         const osCode = (osData as string | null) ?? null;
         if (osCode) {
+          generatedOsCode = osCode;
           if (saleRefType === "vista") {
             await supabase.from("transactions").update({ os_code: osCode, descricao: `OS ${osCode}` }).eq("id", saleRefId);
           } else {
@@ -664,7 +698,7 @@ function VendasPage() {
       }
 
       toast.success("Venda registrada");
-      generateOrderHTML({ openPrint: true });
+      generateOrderHTML({ openPrint: true, orderNumber: generatedOsCode ? `OS ${generatedOsCode}` : undefined });
       setOpen(false);
       resetForm();
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
