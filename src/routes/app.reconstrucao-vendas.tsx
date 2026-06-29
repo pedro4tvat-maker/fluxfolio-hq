@@ -404,6 +404,12 @@ function Page() {
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Conferidas / divergentes</div><div className="text-2xl font-semibold">{stats?.conferidas ?? 0} / <span className="text-amber-600">{stats?.divergentes ?? 0}</span></div></CardContent></Card>
       </div>
 
+      {ignoredCount > 0 && (
+        <div className="text-xs text-muted-foreground border rounded-md p-2 bg-muted/30">
+          <Info className="inline size-3 mr-1" /> {ignoredCount} registro(s) ignorado(s) por não serem vendas (despesas, tarifas, pagamentos do fluxo de caixa). Eles continuam preservados em Contas a Pagar / Fluxo de Caixa.
+        </div>
+      )}
+
       {/* Resumo de vendas à vista não identificadas */}
       <Card className="border-orange-200">
         <CardHeader className="pb-2">
