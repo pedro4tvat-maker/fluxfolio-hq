@@ -668,7 +668,8 @@ function VendasPage() {
     forma_pagamento?: string | null;
     cliente?: string | null;
   }, tipo: "vista" | "prazo") {
-    const orderNumber = `OS-${String(row.id).slice(0, 8).toUpperCase()}`;
+    const osCode = (row as { os_code?: string | null }).os_code;
+    const orderNumber = osCode ? `OS ${osCode}` : `OS-${String(row.id).slice(0, 8).toUpperCase()}`;
     const empresaDoc = company?.cnpj ?? company?.documento ?? "";
     const empresaEnd = [company?.endereco, company?.bairro, company?.cidade, company?.estado, company?.cep]
       .filter(Boolean)
