@@ -1372,7 +1372,38 @@ function VendasPage() {
         if (smErr) throw smErr;
       }
     } else {
-      // Fallback (vendas antigas sem related_sale_id): casa por produto + qtd
+      // Caminho 2: se a venda já possui snapshot estruturado, o estorno também
+      // usa os itens reais da venda, nunca a descrição financeira/OS.
+      let itemSnapshots = saleItemsFor(row.id, tipo);
+      if (itemSnapshots.length === 0) {
+        const { data: dbItems } = await (supabase as any)
+          .from("sale_items")
+          .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+          .eq("sale_id", row.id)
+          .eq("sale_type", tipo);
+        itemSnapshots = (dbItems ?? []) as SaleItemSnapshot[];
+      }
+      const physicalItems = itemSnapshots.filter((it) => it.product_id && Number(it.quantity) > 0);
+      if (physicalItems.length > 0) {
+        for (const it of physicalItems) {
+          const { error: smErr } = await supabase.from("stock_movements").insert({
+            company_id: selected,
+            product_id: it.product_id,
+            tipo: "entrada",
+            quantidade: Number(it.quantity),
+            custo_unitario: Number(it.unit_cost) > 0 ? Number(it.unit_cost) : null,
+            motivo: "Estorno de venda",
+            data: dataRef,
+            stock_location_id: it.stock_location_id || null,
+            related_sale_id: row.id,
+            related_sale_type: tipo,
+          });
+          if (smErr) throw smErr;
+        }
+        return;
+      }
+
+      // Fallback legado (vendas antigas sem sale_items e sem related_sale_id): casa por produto + qtd
       // pegando a saída de "Venda" mais recente que ainda não tenha sido estornada.
       const desc = row.descricao || "";
       const itens = parseSaleDescription(desc);
