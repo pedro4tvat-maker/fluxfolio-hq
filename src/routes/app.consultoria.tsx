@@ -194,11 +194,11 @@ function ReceitasTab({ consultantId }: { consultantId: string }) {
 
   const { data: items = [] } = useQuery({
     queryKey: ["c-receitas", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId).order("due_date", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId).is("deleted_at", null).order("due_date", { ascending: false })).data ?? [],
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_receivables").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_receivables").update({ deleted_at: new Date().toISOString() }).eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Receita excluída"); qc.invalidateQueries({ queryKey: ["c-receitas"] }); qc.invalidateQueries({ queryKey: ["c-recv"] }); },
   });
   const revertRecv = useMutation({
@@ -253,7 +253,7 @@ function ReceitaForm({ consultantId, record, onClose }: { consultantId: string; 
 
   const { data: contracts = [] } = useQuery({
     queryKey: ["c-contracts", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_contracts").select("id, client_name, company_id, plan_name").eq("consultant_id", consultantId)).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_contracts").select("id, client_name, company_id, plan_name").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [],
   });
 
   const save = useMutation({
@@ -327,11 +327,11 @@ function DespesasTab({ consultantId }: { consultantId: string }) {
 
   const { data: items = [] } = useQuery({
     queryKey: ["c-despesas", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_payables").select("*").eq("consultant_id", consultantId).order("due_date", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_payables").select("*").eq("consultant_id", consultantId).is("deleted_at", null).order("due_date", { ascending: false })).data ?? [],
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_payables").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_payables").update({ deleted_at: new Date().toISOString() }).eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Despesa excluída"); qc.invalidateQueries({ queryKey: ["c-despesas"] }); qc.invalidateQueries({ queryKey: ["c-pay"] }); },
   });
   const revertPay = useMutation({
@@ -444,11 +444,11 @@ function ContratosTab({ consultantId }: { consultantId: string }) {
 
   const { data: items = [] } = useQuery({
     queryKey: ["c-contratos", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_contracts").select("*").eq("consultant_id", consultantId).order("start_date", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_contracts").select("*").eq("consultant_id", consultantId).is("deleted_at", null).order("start_date", { ascending: false })).data ?? [],
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_contracts").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("consultancy_contracts").update({ deleted_at: new Date().toISOString() }).eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Contrato removido"); qc.invalidateQueries({ queryKey: ["c-contratos"] }); qc.invalidateQueries({ queryKey: ["c-contracts"] }); },
   });
 
@@ -580,11 +580,11 @@ function ClientesContratantesTab({ consultantId }: { consultantId: string }) {
   const today = new Date().toISOString().slice(0, 10);
   const { data: contracts = [] } = useQuery({
     queryKey: ["c-contratos", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_contracts").select("*, companies(id, nome, nome_fantasia, cnpj, responsavel)").eq("consultant_id", consultantId)).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_contracts").select("*, companies(id, nome, nome_fantasia, cnpj, responsavel)").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [],
   });
-  const { data: recv = [] } = useQuery({
-    queryKey: ["c-recv", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId)).data ?? [],
+  const { data: recvAll = [] } = useQuery({
+    queryKey: ["c-recv-all", consultantId],
+    queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [],
   });
 
   const situacao = (clientKey: string) => {
