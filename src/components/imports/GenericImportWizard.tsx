@@ -67,7 +67,7 @@ export function GenericImportWizard({
     queryKey: ["products", companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const { data } = await supabase.from("products").select("id, nome, custo_unitario").eq("company_id", companyId!);
+      const { data } = await supabase.from("products").select("id, nome, custo_unitario").eq("company_id", companyId!).is("deleted_at", null);
       return data ?? [];
     },
   });

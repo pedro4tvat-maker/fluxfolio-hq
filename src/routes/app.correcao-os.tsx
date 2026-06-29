@@ -64,11 +64,11 @@ function CorrecaoOSPage() {
     queryFn: async () => {
       const [vista, prazo, mov] = await Promise.all([
         supabase.from("transactions").select("id, os_code, descricao, data, valor, status, company_id")
-          .eq("company_id", selected!).not("os_code", "is", null),
+          .eq("company_id", selected!).is("deleted_at", null).not("os_code", "is", null),
         supabase.from("receivables").select("id, os_code, cliente, vencimento, valor, status, company_id")
-          .eq("company_id", selected!).not("os_code", "is", null),
+          .eq("company_id", selected!).is("deleted_at", null).not("os_code", "is", null),
         supabase.from("stock_movements").select("related_sale_id, related_sale_type, stock_location_id")
-          .eq("company_id", selected!).not("related_sale_id", "is", null),
+          .eq("company_id", selected!).is("deleted_at", null).not("related_sale_id", "is", null),
       ]);
       const locsBySale = new Map<string, Set<string>>();
       (mov.data ?? []).forEach((m: any) => {
@@ -126,8 +126,8 @@ function CorrecaoOSPage() {
   async function generateNextOs(prefix: string): Promise<string> {
     if (!selected) throw new Error("Empresa não selecionada");
     const [t, r] = await Promise.all([
-      supabase.from("transactions").select("os_code").eq("company_id", selected).ilike("os_code", `${prefix}%`),
-      supabase.from("receivables").select("os_code").eq("company_id", selected).ilike("os_code", `${prefix}%`),
+      supabase.from("transactions").select("os_code").eq("company_id", selected).is("deleted_at", null).ilike("os_code", `${prefix}%`),
+      supabase.from("receivables").select("os_code").eq("company_id", selected).is("deleted_at", null).ilike("os_code", `${prefix}%`),
     ]);
     const seqs = [...(t.data ?? []), ...(r.data ?? [])]
       .map((x: any) => parseInt(String(x.os_code).replace(/^[A-Za-z]+/, ""), 10))

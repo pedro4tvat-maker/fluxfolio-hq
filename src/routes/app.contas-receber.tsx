@@ -53,7 +53,7 @@ function ContasAReceber() {
     queryFn: async () => {
       const { data, error } = await supabase.from("receivables")
         .select("id,descricao,cliente,valor,vencimento,data_recebimento,status,categoria_id,conta_id,centro_custo_id,forma_recebimento")
-        .eq("company_id", selected!).order("vencimento");
+        .eq("company_id", selected!).is("deleted_at", null).order("vencimento");
       if (error) throw error;
       return (data ?? []) as Receivable[];
     },

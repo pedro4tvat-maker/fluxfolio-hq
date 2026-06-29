@@ -55,6 +55,7 @@ function OrcamentoPage() {
           .from("transactions")
           .select("categoria_id, tipo, valor")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .gte("data", start)
           .lte("data", end),
       ]);

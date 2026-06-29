@@ -387,6 +387,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
         .select("id, product_id, quantidade, tipo, motivo, custo_unitario, data, products(nome, preco_venda)")
         .eq("company_id", companyId)
         .eq("stock_location_id", locationId!)
+        .is("deleted_at", null)
         .gte("data", dateFrom)
         .lte("data", dateTo)
         .order("data", { ascending: true });
@@ -403,8 +404,8 @@ function SettlementTab({ companyId }: { companyId: string }) {
     enabled: !!resellerId,
     queryFn: async () => {
       const [tx, rec] = await Promise.all([
-        supabase.from("transactions").select("id, valor, commission_value, data, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).gte("data", dateFrom).lte("data", dateTo),
-        supabase.from("receivables").select("id, valor, commission_value, vencimento, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).gte("vencimento", dateFrom).lte("vencimento", dateTo),
+        supabase.from("transactions").select("id, valor, commission_value, data, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null).gte("data", dateFrom).lte("data", dateTo),
+        supabase.from("receivables").select("id, valor, commission_value, vencimento, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null).gte("vencimento", dateFrom).lte("vencimento", dateTo),
       ]);
       return [
         ...(tx.data ?? []).map((t) => ({ id: t.id, valor: Number(t.valor) || 0, comissao: Number(t.commission_value) || 0, data: t.data, descricao: t.descricao, kind: "À vista" })),
@@ -564,7 +565,8 @@ function StockViewDialog({ companyId, location }: { companyId: string; location:
         .from("stock_movements")
         .select("product_id, quantidade, tipo, products(nome, preco_venda, custo_unitario)")
         .eq("company_id", companyId)
-        .eq("stock_location_id", location.id);
+        .eq("stock_location_id", location.id)
+        .is("deleted_at", null);
       if (error) throw error;
       const map = new Map<string, { product_id: string; nome: string; saldo: number; preco_venda: number; custo: number }>();
       for (const m of (data ?? []) as Array<{ product_id: string; quantidade: number; tipo: string; products: { nome: string; preco_venda: number; custo_unitario: number } | null }>) {
@@ -671,7 +673,7 @@ function TransferDialog({ companyId, locations }: { companyId: string; locations
     queryKey: ["products-transfer", companyId],
     enabled: open,
     queryFn: async () => {
-      const { data } = await supabase.from("products").select("id, nome").eq("company_id", companyId).order("nome");
+      const { data } = await supabase.from("products").select("id, nome").eq("company_id", companyId).is("deleted_at", null).order("nome");
       return (data ?? []) as Array<{ id: string; nome: string }>;
     },
   });

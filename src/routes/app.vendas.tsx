@@ -232,6 +232,7 @@ function VendasPage() {
         .from("crm_contacts")
         .select("id, name, tipo, cpf_cnpj, email, phone")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .in("tipo", ["cliente", "lead"])
         .order("name");
       return (data ?? []) as CrmContact[];
@@ -246,6 +247,7 @@ function VendasPage() {
         .from("products")
         .select("id, nome, preco_venda, quantidade, custo_unitario, centro_custo_id")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .order("nome");
       return data ?? [];
     },
@@ -328,6 +330,7 @@ function VendasPage() {
           .from("transactions")
           .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id, os_code")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .eq("tipo", "entrada")
           .order("data", { ascending: false })
           .limit(2000),
@@ -335,12 +338,14 @@ function VendasPage() {
           .from("receivables")
           .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id, os_code")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .order("vencimento", { ascending: false })
           .limit(2000),
         supabase
           .from("stock_movements")
           .select("id, product_id, quantidade, custo_unitario, data, motivo, related_sale_id, related_sale_type")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .eq("tipo", "saida")
           .eq("motivo", "Venda")
           .order("data", { ascending: false })
@@ -349,6 +354,7 @@ function VendasPage() {
           .from("sale_items")
           .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(5000),
 
@@ -849,7 +855,8 @@ function VendasPage() {
         .from("sale_items")
         .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
         .eq("sale_id", row.id)
-        .eq("sale_type", tipo);
+        .eq("sale_type", tipo)
+        .is("deleted_at", null);
       parsedLinhas = snapshotsToParsed((dbItems ?? []) as SaleItemSnapshot[]).map((it) => ({
         nome: it.nome,
         qtd: it.qtd,
@@ -876,7 +883,8 @@ function VendasPage() {
         .select("product_id, quantidade, custo_unitario")
         .eq("related_sale_id", row.id)
         .eq("related_sale_type", tipo)
-        .eq("tipo", "saida");
+        .eq("tipo", "saida")
+        .is("deleted_at", null);
       if (movs && movs.length > 0) {
         const linhas = movs.map((m) => {
           const prod = products?.find((p) => p.id === m.product_id);
@@ -1340,6 +1348,7 @@ function VendasPage() {
       .eq("company_id", selected)
       .eq("related_sale_id", row.id)
       .eq("tipo", "entrada")
+      .is("deleted_at", null)
       .ilike("motivo", "Estorno%")
       .limit(1);
     if (jaEstornados && jaEstornados.length > 0) {
@@ -1352,7 +1361,8 @@ function VendasPage() {
       .select("id, product_id, quantidade, custo_unitario, stock_location_id, data")
       .eq("company_id", selected)
       .eq("related_sale_id", row.id)
-      .eq("tipo", "saida");
+      .eq("tipo", "saida")
+      .is("deleted_at", null);
 
     if (saidas && saidas.length > 0) {
       // Caminho preferencial: devolve cada item ao MESMO local de origem
@@ -1380,7 +1390,8 @@ function VendasPage() {
           .from("sale_items")
           .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
           .eq("sale_id", row.id)
-          .eq("sale_type", tipo);
+          .eq("sale_type", tipo)
+          .is("deleted_at", null);
         itemSnapshots = (dbItems ?? []) as SaleItemSnapshot[];
       }
       const physicalItems = itemSnapshots.filter((it) => it.product_id && Number(it.quantity) > 0);
@@ -1418,6 +1429,7 @@ function VendasPage() {
             .eq("tipo", "saida")
             .eq("motivo", "Venda")
             .eq("quantidade", it.qtd)
+            .is("deleted_at", null)
             .order("data", { ascending: false })
             .limit(20);
 

@@ -127,6 +127,7 @@ export async function fetchReportData(
         .from("transactions")
         .select("id, data, tipo, valor, descricao, status, categoria_id, centro_custo_id, conta_id, forma_pagamento")
         .eq("company_id", companyId)
+        .is("deleted_at", null)
         .gte("data", period.start)
         .lte("data", period.end),
       branchId,
@@ -143,21 +144,24 @@ export async function fetchReportData(
       supabase
         .from("receivables")
         .select("id, descricao, cliente, valor, vencimento, data_recebimento, status, forma_recebimento, categoria_id")
-        .eq("company_id", companyId),
+        .eq("company_id", companyId)
+        .is("deleted_at", null),
       branchId,
     ),
     applyBranch(
       supabase
         .from("products")
         .select("id, nome, categoria, quantidade, custo_unitario, preco_venda, estoque_minimo")
-        .eq("company_id", companyId),
+        .eq("company_id", companyId)
+        .is("deleted_at", null),
       branchId,
     ),
     applyBranch(
       (supabase as any)
         .from("sale_items")
         .select("id, company_id, branch_id, sale_id, sale_type, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, needs_review")
-        .eq("company_id", companyId),
+        .eq("company_id", companyId)
+        .is("deleted_at", null),
       branchId,
     ),
     supabase.from("financial_accounts").select("id, nome, saldo_inicial").eq("company_id", companyId),

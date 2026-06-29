@@ -89,11 +89,11 @@ async function loadCompaniesV2(isConsultant: boolean, userId: string): Promise<C
       { data: lastTx },
       { data: pendings }, { data: plans },
     ] = await Promise.all([
-      supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
+      supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
       supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "pago"),
-      supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "recebido"),
+      supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).is("deleted_at", null).neq("status", "recebido"),
       supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", c.id),
-      supabase.from("transactions").select("data").eq("company_id", c.id).order("data", { ascending: false }).limit(1),
+      supabase.from("transactions").select("data").eq("company_id", c.id).is("deleted_at", null).order("data", { ascending: false }).limit(1),
       supabase.from("client_pending_items").select("id, status, due_date").eq("company_id", c.id).neq("status", "concluido"),
       supabase.from("action_plans").select("id, title, due_date, status, related_area").eq("company_id", c.id).neq("status", "concluido").order("due_date", { ascending: true, nullsFirst: false }),
     ]);
@@ -103,8 +103,8 @@ async function loadCompaniesV2(isConsultant: boolean, userId: string): Promise<C
     const saldoInicial = (accs ?? []).reduce((s, a: any) => s + Number(a.saldo_inicial), 0);
     
     // Simplificando o cálculo do delta para evitar buscar todo o histórico
-    const { data: totalIn } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).eq("status", "realizado").eq("tipo", "entrada").maybeSingle();
-    const { data: totalOut } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).eq("status", "realizado").eq("tipo", "saida").maybeSingle();
+    const { data: totalIn } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).is("deleted_at", null).eq("status", "realizado").eq("tipo", "entrada").maybeSingle();
+    const { data: totalOut } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).is("deleted_at", null).eq("status", "realizado").eq("tipo", "saida").maybeSingle();
     
     const delta = (Number((totalIn as any)?.sum) || 0) - (Number((totalOut as any)?.sum) || 0);
     const saldo = saldoInicial + delta;
@@ -608,15 +608,15 @@ function ClientDashboard() {
         { data: vendasVista },
         { data: vendasPrazo },
       ] = await Promise.all([
-        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
-        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", prevRange.start).lte("data", prevRange.end), branchId),
-        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado"), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado").gte("data", prevRange.start).lte("data", prevRange.end), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado"), branchId),
         withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }), branchId),
-        withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status, cliente").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }), branchId),
+        withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status, cliente").eq("company_id", selected).is("deleted_at", null).neq("status", "recebido").order("vencimento", { ascending: true }), branchId),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
-        withBranch(supabase.from("products").select("id, quantidade, estoque_minimo").eq("company_id", selected), branchId),
-        withBranch(supabase.from("transactions").select("id, valor").eq("company_id", selected).eq("tipo", "entrada").ilike("descricao", "Venda%").gte("data", range.start).lte("data", range.end), branchId),
-        withBranch(supabase.from("receivables").select("id, valor").eq("company_id", selected).ilike("descricao", "Venda%").gte("created_at", range.start).lte("created_at", range.end + "T23:59:59"), branchId),
+        withBranch(supabase.from("products").select("id, quantidade, estoque_minimo").eq("company_id", selected).is("deleted_at", null), branchId),
+        withBranch(supabase.from("transactions").select("id, valor").eq("company_id", selected).is("deleted_at", null).eq("tipo", "entrada").ilike("descricao", "Venda%").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("receivables").select("id, valor").eq("company_id", selected).is("deleted_at", null).ilike("descricao", "Venda%").gte("created_at", range.start).lte("created_at", range.end + "T23:59:59"), branchId),
       ]);
 
       const sum = (arr: any[] | null, k = "valor") => (arr ?? []).reduce((s, x) => s + Number(x[k] ?? 0), 0);

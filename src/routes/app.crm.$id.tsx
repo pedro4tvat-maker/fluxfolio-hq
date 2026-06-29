@@ -21,7 +21,7 @@ function ContactProfile() {
   const { data: contact, isLoading } = useQuery({
     queryKey: ["crm-contact", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_contacts").select("*").eq("id", id).single();
+      const { data, error } = await supabase.from("crm_contacts").select("*").eq("id", id).is("deleted_at", null).single();
       if (error) throw error;
       return data;
     },
@@ -35,6 +35,7 @@ function ContactProfile() {
         .from("receivables")
         .select("id, descricao, valor, vencimento, data_recebimento, status")
         .eq("crm_contact_id", id)
+        .is("deleted_at", null)
         .order("vencimento", { ascending: false });
       return data ?? [];
     },

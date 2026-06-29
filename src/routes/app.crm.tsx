@@ -57,6 +57,7 @@ function CRMPage() {
         .from("crm_contacts")
         .select("*")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Contact[];

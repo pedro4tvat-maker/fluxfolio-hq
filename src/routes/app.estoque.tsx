@@ -91,6 +91,7 @@ function EstoquePage() {
         .from("products")
         .select("id, nome, categoria, fornecedor, quantidade, custo_unitario, preco_venda, estoque_minimo")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .order("nome");
       if (error) throw error;
       return (data ?? []) as Product[];
@@ -105,6 +106,7 @@ function EstoquePage() {
         .from("stock_movements")
         .select("id, product_id, tipo, quantidade, custo_unitario, motivo, data")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .order("data", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(80);
@@ -146,7 +148,8 @@ function EstoquePage() {
       const { data, error } = await supabase
         .from("stock_movements")
         .select("product_id, stock_location_id, tipo, quantidade")
-        .eq("company_id", selected!);
+        .eq("company_id", selected!)
+        .is("deleted_at", null);
       if (error) throw error;
       const map = new Map<string, number>();
       for (const m of data ?? []) {
