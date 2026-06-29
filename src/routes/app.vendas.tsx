@@ -1039,7 +1039,12 @@ function VendasPage() {
     return out.map((x) => x.trim()).filter(Boolean);
   }
 
-  function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[], saleId?: string, saleType?: "vista" | "prazo"): ParsedItem[] {
+  function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[], saleId?: string, saleType?: "vista" | "prazo", saleItemPool?: SaleItemSnapshot[]): ParsedItem[] {
+    if (saleId && saleType) {
+      const structured = saleItemPool ? saleItemsFor(saleId, saleType, saleItemPool) : saleItemsFor(saleId, saleType);
+      if (structured.length > 0) return snapshotsToParsed(structured);
+    }
+
     const desc = descricao || "";
     const itensTxt = extractItemsBlock(desc);
     const partes = splitTopLevel(itensTxt);
@@ -1129,18 +1134,18 @@ function VendasPage() {
       }
     }
 
-    return [{ nome: desc || "Venda", qtd: 1, preco: valorTotal, custo: 0, subtotal: valorTotal, custoTotal: 0, margem: valorTotal }];
+    return [];
   }
 
   function buildSaleMarginRows(row: {
     id: string; descricao: string | null; valor: number | string | null;
     data?: string | null; vencimento?: string | null;
     forma_pagamento?: string | null; cliente?: string | null;
-  }, tipo: "vista" | "prazo", sharedPool?: SaleMov[]) {
+  }, tipo: "vista" | "prazo", sharedPool?: SaleMov[], sharedSaleItems?: SaleItemSnapshot[]) {
     const valor = Number(row.valor) || 0;
     const dataRefRaw = tipo === "vista" ? row.data : row.vencimento;
     const pool: SaleMov[] = sharedPool ?? ((vendas?.movs ?? []).map((m) => ({ ...m })) as SaleMov[]);
-    const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool, row.id, tipo);
+    const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool, row.id, tipo, sharedSaleItems);
     const totalReceita = itens.reduce((a, b) => a + b.subtotal, 0);
     const totalCusto = itens.reduce((a, b) => a + b.custoTotal, 0);
     const margem = totalReceita - totalCusto;
