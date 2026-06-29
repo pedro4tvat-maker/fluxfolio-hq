@@ -671,7 +671,7 @@ function PagarTab({ consultantId }: { consultantId: string }) {
   const today = new Date().toISOString().slice(0, 10);
   const { data: pay = [] } = useQuery({
     queryKey: ["c-pay", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_payables").select("*").eq("consultant_id", consultantId)).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_payables").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [],
   });
 
   const total = pay.filter((p: any) => p.status !== "pago").reduce((s: number, p: any) => s + Number(p.amount), 0);
@@ -708,9 +708,9 @@ function PagarTab({ consultantId }: { consultantId: string }) {
 /* ====================== RELATÓRIOS ====================== */
 function RelatoriosTab({ consultantId }: { consultantId: string }) {
   const { start, end } = monthRange();
-  const { data: recv = [] } = useQuery({ queryKey: ["c-recv", consultantId], queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId)).data ?? [] });
-  const { data: pay = [] } = useQuery({ queryKey: ["c-pay", consultantId], queryFn: async () => (await supabase.from("consultancy_payables").select("*").eq("consultant_id", consultantId)).data ?? [] });
-  const { data: contracts = [] } = useQuery({ queryKey: ["c-contracts", consultantId], queryFn: async () => (await supabase.from("consultancy_contracts").select("*").eq("consultant_id", consultantId)).data ?? [] });
+  const { data: recv = [] } = useQuery({ queryKey: ["c-recv", consultantId], queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [] });
+  const { data: pay = [] } = useQuery({ queryKey: ["c-pay", consultantId], queryFn: async () => (await supabase.from("consultancy_payables").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [] });
+  const { data: contracts = [] } = useQuery({ queryKey: ["c-contracts", consultantId], queryFn: async () => (await supabase.from("consultancy_contracts").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [] });
 
   const receitaMes = recv.filter((r: any) => r.status === "recebido" && r.received_date && r.received_date >= start && r.received_date <= end).reduce((s: number, r: any) => s + Number(r.amount), 0);
   const despesaMes = pay.filter((p: any) => p.status === "pago" && p.payment_date && p.payment_date >= start && p.payment_date <= end).reduce((s: number, p: any) => s + Number(p.amount), 0);
