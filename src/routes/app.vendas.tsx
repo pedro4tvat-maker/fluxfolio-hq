@@ -73,6 +73,38 @@ type StockLocation = {
   is_default: boolean;
 };
 
+type SaleItemSnapshot = {
+  id?: string;
+  sale_id: string;
+  sale_type: "vista" | "prazo";
+  company_id: string;
+  branch_id?: string | null;
+  product_id: string | null;
+  product_name_snapshot: string;
+  quantity: number | string;
+  unit_price: number | string;
+  unit_cost: number | string | null;
+  total_revenue: number | string | null;
+  total_cost: number | string | null;
+  margin_value: number | string | null;
+  margin_percentage?: number | string | null;
+  stock_location_id: string | null;
+  needs_review?: boolean | null;
+  review_reason?: string | null;
+};
+
+type ParsedItem = {
+  nome: string;
+  qtd: number;
+  preco: number;
+  custo: number;
+  subtotal: number;
+  custoTotal: number;
+  margem: number;
+  needsReview?: boolean;
+  reviewReason?: string | null;
+};
+
 type CompanyData = {
   nome: string | null;
   nome_fantasia: string | null;
@@ -291,20 +323,20 @@ function VendasPage() {
     queryKey: ["vendas-list", selected],
     enabled: !!selected,
     queryFn: async () => {
-      const [tx, rec, movs] = await Promise.all([
+      const [tx, rec, movs, saleItems] = await Promise.all([
         supabase
           .from("transactions")
           .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id, os_code")
           .eq("company_id", selected!)
           .eq("tipo", "entrada")
           .order("data", { ascending: false })
-          .limit(50),
+          .limit(2000),
         supabase
           .from("receivables")
           .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id, os_code")
           .eq("company_id", selected!)
           .order("vencimento", { ascending: false })
-          .limit(50),
+          .limit(2000),
         supabase
           .from("stock_movements")
           .select("id, product_id, quantidade, custo_unitario, data, motivo, related_sale_id, related_sale_type")
@@ -313,9 +345,15 @@ function VendasPage() {
           .eq("motivo", "Venda")
           .order("data", { ascending: false })
           .limit(2000),
+        (supabase as any)
+          .from("sale_items")
+          .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+          .eq("company_id", selected!)
+          .order("created_at", { ascending: false })
+          .limit(5000),
 
       ]);
-      return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [] };
+      return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [], saleItems: (saleItems.data ?? []) as SaleItemSnapshot[] };
     },
   });
 
@@ -333,6 +371,62 @@ function VendasPage() {
   const margemPct = total > 0 ? (lucro / total) * 100 : 0;
 
   const filteredContacts = useMemo(() => contacts, [contacts]);
+
+  const saleItemSnapshots = useMemo(() => (vendas?.saleItems ?? []) as SaleItemSnapshot[], [vendas?.saleItems]);
+
+  function saleItemsFor(saleId: string, saleType: "vista" | "prazo", pool = saleItemSnapshots) {
+    return pool.filter((it) => it.sale_id === saleId && it.sale_type === saleType);
+  }
+
+  function snapshotsToParsed(snaps: SaleItemSnapshot[]): ParsedItem[] {
+    return snaps.map((it) => {
+      const qtd = Number(it.quantity) || 0;
+      const preco = Number(it.unit_price) || 0;
+      const custo = Number(it.unit_cost) || 0;
+      const subtotal = Number(it.total_revenue) > 0 ? Number(it.total_revenue) : qtd * preco;
+      const custoTotal = Number(it.total_cost) > 0 ? Number(it.total_cost) : qtd * custo;
+      return {
+        nome: it.product_name_snapshot || "Produto sem identificação",
+        qtd,
+        preco,
+        custo,
+        subtotal,
+        custoTotal,
+        margem: Number(it.margin_value) || subtotal - custoTotal,
+        needsReview: !!it.needs_review || qtd <= 0 || preco <= 0,
+        reviewReason: it.review_reason,
+      };
+    });
+  }
+
+  function parsedToSaleItemRows(parsed: ParsedItem[], row: { id: string }, tipo: "vista" | "prazo") {
+    return parsed
+      .filter((it) => it.qtd > 0)
+      .map((it) => {
+        const prod = products?.find((p) => p.nome.toLowerCase() === it.nome.toLowerCase());
+        const subtotal = it.qtd * it.preco;
+        const custoTotal = it.qtd * it.custo;
+        const margem = subtotal - custoTotal;
+        return {
+          company_id: selected!,
+          branch_id: null,
+          sale_id: row.id,
+          sale_type: tipo,
+          product_id: prod?.id ?? null,
+          product_name_snapshot: it.nome,
+          quantity: it.qtd,
+          unit_price: it.preco,
+          unit_cost: it.custo,
+          total_revenue: subtotal,
+          total_cost: custoTotal,
+          margin_value: margem,
+          margin_percentage: subtotal > 0 ? (margem / subtotal) * 100 : 0,
+          stock_location_id: null,
+          needs_review: it.preco <= 0 || it.needsReview || !prod,
+          review_reason: it.reviewReason ?? (it.preco <= 0 ? "Preço unitário ausente no reprocessamento" : !prod ? "Produto não localizado no cadastro atual" : null),
+        };
+      });
+  }
 
   // Quando o revendedor muda, sugerir o local de estoque dele para itens que ainda estão no default
   useEffect(() => {
@@ -408,7 +502,11 @@ function VendasPage() {
     e.preventDefault();
     if (!selected) return;
     if (items.length === 0) {
-      toast.error("Adicione pelo menos um item");
+      toast.error("Adicione pelo menos um produto ou serviço antes de salvar a venda.");
+      return;
+    }
+    if (form.forma === "prazo" && !form.vencimento) {
+      toast.error("Informe o vencimento da venda a prazo.");
       return;
     }
     for (const it of items) {
@@ -417,13 +515,16 @@ function VendasPage() {
         return;
       }
       if (!(Number(it.quantidade) > 0) || !(Number(it.preco_unitario) > 0)) {
-        toast.error(`Informe quantidade e preço para "${it.nome}"`);
+        toast.error(Number(it.preco_unitario) > 0 ? `Informe quantidade válida para "${it.nome}"` : "Este item está com preço de venda zerado. Corrija antes de gerar a OS.");
         return;
       }
       if (it.product_id && !it.stock_location_id) {
         toast.error(`Selecione o centro de estoque de origem para "${it.nome}"`);
         return;
       }
+    }
+    if (items.some((it) => it.product_id && !(Number(it.custo_unitario) > 0))) {
+      toast.warning("Este item está sem custo cadastrado. A margem poderá ficar incorreta.");
     }
     // Valida saldo por local de origem
     for (const it of items) {
@@ -466,6 +567,7 @@ function VendasPage() {
       // 1) Cria o lançamento financeiro PRIMEIRO para obter o ID e vincular às movimentações
       let saleRefId: string | null = null;
       const saleRefType: "vista" | "prazo" = form.forma === "vista" ? "vista" : "prazo";
+      let generatedOsCode: string | null = null;
       if (form.forma === "vista") {
         const { data: ins, error } = await supabase.from("transactions").insert({
           company_id: selected,
@@ -502,6 +604,38 @@ function VendasPage() {
         saleRefId = ins?.id ?? null;
       }
 
+      if (!saleRefId) throw new Error("Não foi possível identificar a venda para gravar os itens.");
+
+      // 1.1) Salva snapshot estruturado dos itens da venda. OS e relatórios usam esta fonte, não a descrição financeira.
+      const saleItemRows = items.map((it) => {
+        const qtd = Number(it.quantidade) || 0;
+        const preco = Number(it.preco_unitario) || 0;
+        const custo = Number(it.custo_unitario) || 0;
+        const receita = qtd * preco;
+        const custoTotalItem = qtd * custo;
+        const margemItem = receita - custoTotalItem;
+        return {
+          company_id: selected,
+          branch_id: null,
+          sale_id: saleRefId,
+          sale_type: saleRefType,
+          product_id: it.product_id || null,
+          product_name_snapshot: it.nome.trim(),
+          quantity: qtd,
+          unit_price: preco,
+          unit_cost: custo,
+          total_revenue: receita,
+          total_cost: custoTotalItem,
+          margin_value: margemItem,
+          margin_percentage: receita > 0 ? (margemItem / receita) * 100 : 0,
+          stock_location_id: it.stock_location_id || null,
+          needs_review: it.product_id ? custo <= 0 : false,
+          review_reason: it.product_id && custo <= 0 ? "Custo zerado no momento da venda" : null,
+        };
+      });
+      const { error: saleItemsErr } = await (supabase as any).from("sale_items").insert(saleItemRows);
+      if (saleItemsErr) throw saleItemsErr;
+
       // 2) Baixa estoque por item, preservando local de origem + vínculo com a venda
       for (const it of items) {
         if (it.product_id) {
@@ -531,6 +665,7 @@ function VendasPage() {
         });
         const osCode = (osData as string | null) ?? null;
         if (osCode) {
+          generatedOsCode = osCode;
           if (saleRefType === "vista") {
             await supabase.from("transactions").update({ os_code: osCode, descricao: `OS ${osCode}` }).eq("id", saleRefId);
           } else {
@@ -563,7 +698,7 @@ function VendasPage() {
       }
 
       toast.success("Venda registrada");
-      generateOrderHTML({ openPrint: true });
+      generateOrderHTML({ openPrint: true, orderNumber: generatedOsCode ? `OS ${generatedOsCode}` : undefined });
       setOpen(false);
       resetForm();
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
@@ -576,8 +711,8 @@ function VendasPage() {
     }
   }
 
-  function generateOrderHTML({ openPrint }: { openPrint: boolean }) {
-    const orderNumber = `OS-${Date.now().toString().slice(-8)}`;
+  function generateOrderHTML({ openPrint, orderNumber: providedOrderNumber }: { openPrint: boolean; orderNumber?: string }) {
+    const orderNumber = providedOrderNumber ?? `OS-${Date.now().toString().slice(-8)}`;
     const empresaDoc = company?.cnpj ?? company?.documento ?? "";
     const empresaEnd = [company?.endereco, company?.bairro, company?.cidade, company?.estado, company?.cep]
       .filter(Boolean)
@@ -700,15 +835,41 @@ function VendasPage() {
     const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
     const clienteNome = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
 
-    // 1) Tenta extrair itens da descrição (vendas antigas guardavam itens entre parênteses)
-    let parsedLinhas = parseSaleDescription(desc).map((it) => {
-      const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
-      const preco = it.preco > 0 ? it.preco : Number(prod?.preco_venda ?? 0);
-      const total = it.qtd * preco;
-      return { nome: it.nome, qtd: it.qtd, preco, total };
-    });
+    // 1) Fonte oficial: itens estruturados vinculados à venda.
+    let parsedLinhas = snapshotsToParsed(saleItemsFor(row.id, tipo)).map((it) => ({
+      nome: it.nome,
+      qtd: it.qtd,
+      preco: it.preco,
+      total: it.subtotal,
+      needsReview: it.needsReview,
+    }));
 
-    // 2) Fallback: busca itens via stock_movements vinculadas à venda (vendas novas com descrição "OS XXXX")
+    if (parsedLinhas.length === 0) {
+      const { data: dbItems } = await (supabase as any)
+        .from("sale_items")
+        .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+        .eq("sale_id", row.id)
+        .eq("sale_type", tipo);
+      parsedLinhas = snapshotsToParsed((dbItems ?? []) as SaleItemSnapshot[]).map((it) => ({
+        nome: it.nome,
+        qtd: it.qtd,
+        preco: it.preco,
+        total: it.subtotal,
+        needsReview: it.needsReview,
+      }));
+    }
+
+    // 2) Reprocessamento provisório para vendas antigas com descrição técnica.
+    if (parsedLinhas.length === 0) {
+      parsedLinhas = parseSaleDescription(desc).map((it) => {
+        const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+        const preco = it.preco > 0 ? it.preco : Number(prod?.preco_venda ?? 0);
+        const total = it.qtd * preco;
+        return { nome: it.nome, qtd: it.qtd, preco, total, needsReview: preco <= 0 };
+      });
+    }
+
+    // 3) Fallback seguro: busca itens via stock_movements vinculadas à venda.
     if (parsedLinhas.length === 0) {
       const { data: movs } = await supabase
         .from("stock_movements")
@@ -721,7 +882,7 @@ function VendasPage() {
           const prod = products?.find((p) => p.id === m.product_id);
           const qtd = Number(m.quantidade) || 0;
           const preco = Number(prod?.preco_venda ?? 0);
-          return { nome: prod?.nome || "Produto", qtd, preco, total: qtd * preco };
+          return { nome: prod?.nome || "Produto", qtd, preco, total: qtd * preco, needsReview: preco <= 0 };
         });
         // Ajuste proporcional para casar com o valor real da venda
         const somaCalc = linhas.reduce((a, b) => a + b.total, 0);
@@ -743,8 +904,14 @@ function VendasPage() {
       }
     }
 
+    if (parsedLinhas.length === 0 || parsedLinhas.some((p) => !(p.qtd > 0) || !(p.preco > 0) || p.needsReview)) {
+      toast.error("Esta venda não possui itens detalhados. Corrija ou reprocesse a venda antes de gerar a OS.");
+      return;
+    }
+
     const somaItens = parsedLinhas.reduce((a, b) => a + b.total, 0);
-    const totalOS = somaItens > 0 ? somaItens : valor;
+    const totalOS = somaItens;
+    const divergencia = valor > 0 && Math.abs(somaItens - valor) > 0.01;
     const linhas = parsedLinhas
       .map((p) => `<tr>
         <td>${escapeHtml(p.nome)}</td>
@@ -810,6 +977,8 @@ function VendasPage() {
     <tbody>${linhas}</tbody>
   </table>
 
+  ${divergencia ? `<div class="card" style="margin-top:12px; border-color:#AFBE6C"><b>Atenção interna:</b> soma dos itens (${formatMoney(somaItens)}) difere do valor financeiro (${formatMoney(valor)}).</div>` : ""}
+
 
   <div class="totals">
     <div class="grand">TOTAL: ${formatMoney(totalOS)}</div>
@@ -837,7 +1006,6 @@ function VendasPage() {
 
 
 
-  type ParsedItem = { nome: string; qtd: number; preco: number; custo: number; subtotal: number; custoTotal: number; margem: number };
   type SaleMov = { id: string; product_id: string | null; quantidade: number | string; custo_unitario: number | string | null; data: string | null; related_sale_id?: string | null; related_sale_type?: string | null };
   function extractItemsBlock(desc: string): string {
     // Encontra o último bloco "(...)" no fim da descrição, respeitando parênteses aninhados
@@ -871,7 +1039,12 @@ function VendasPage() {
     return out.map((x) => x.trim()).filter(Boolean);
   }
 
-  function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[], saleId?: string, saleType?: "vista" | "prazo"): ParsedItem[] {
+  function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[], saleId?: string, saleType?: "vista" | "prazo", saleItemPool?: SaleItemSnapshot[]): ParsedItem[] {
+    if (saleId && saleType) {
+      const structured = saleItemPool ? saleItemsFor(saleId, saleType, saleItemPool) : saleItemsFor(saleId, saleType);
+      if (structured.length > 0) return snapshotsToParsed(structured);
+    }
+
     const desc = descricao || "";
     const itensTxt = extractItemsBlock(desc);
     const partes = splitTopLevel(itensTxt);
@@ -961,18 +1134,18 @@ function VendasPage() {
       }
     }
 
-    return [{ nome: desc || "Venda", qtd: 1, preco: valorTotal, custo: 0, subtotal: valorTotal, custoTotal: 0, margem: valorTotal }];
+    return [];
   }
 
   function buildSaleMarginRows(row: {
     id: string; descricao: string | null; valor: number | string | null;
     data?: string | null; vencimento?: string | null;
     forma_pagamento?: string | null; cliente?: string | null;
-  }, tipo: "vista" | "prazo", sharedPool?: SaleMov[]) {
+  }, tipo: "vista" | "prazo", sharedPool?: SaleMov[], sharedSaleItems?: SaleItemSnapshot[]) {
     const valor = Number(row.valor) || 0;
     const dataRefRaw = tipo === "vista" ? row.data : row.vencimento;
     const pool: SaleMov[] = sharedPool ?? ((vendas?.movs ?? []).map((m) => ({ ...m })) as SaleMov[]);
-    const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool, row.id, tipo);
+    const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool, row.id, tipo, sharedSaleItems);
     const totalReceita = itens.reduce((a, b) => a + b.subtotal, 0);
     const totalCusto = itens.reduce((a, b) => a + b.custoTotal, 0);
     const margem = totalReceita - totalCusto;
@@ -1018,6 +1191,10 @@ function VendasPage() {
     forma_pagamento?: string | null; cliente?: string | null;
   }, tipo: "vista" | "prazo") {
     const { itens, totalReceita, totalCusto, margem, dataRef, cliente } = buildSaleMarginRows(row, tipo);
+    if (itens.length === 0 || itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0)) {
+      toast.error("Esta venda não possui itens detalhados. Corrija ou reprocesse a venda antes de gerar o relatório.");
+      return;
+    }
     const margemPct = totalReceita > 0 ? (margem / totalReceita) * 100 : 0;
     const empresa = company?.nome_fantasia || company?.nome || "";
     const reportNumber = `REL-MG-${String(row.id).slice(0, 8).toUpperCase()}`;
@@ -1057,7 +1234,7 @@ function VendasPage() {
         <thead><tr><th>Produto</th><th class="center">Qtd</th><th class="num">Preço un.</th><th class="num">Custo un.</th><th class="num">Receita</th><th class="num">Custo</th><th class="num">Margem</th></tr></thead>
         <tbody>${linhas}</tbody>
       </table>
-      <div class="footer">Custos baseados no cadastro atual do produto. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+      <div class="footer">Custos baseados no snapshot da venda. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
       <div class="noprint" style="margin-top:16px; text-align:center"><button onclick="window.print()" style="padding:8px 16px; cursor:pointer">Imprimir / Salvar PDF</button></div>
     </body></html>`;
     openHtmlWindow(html);
@@ -1073,21 +1250,24 @@ function VendasPage() {
       return s >= from && s <= to;
     };
     const sharedPool: SaleMov[] = (vendas.movs ?? []).map((m) => ({ ...m })) as SaleMov[];
+    const sharedSaleItems: SaleItemSnapshot[] = (vendas.saleItems ?? []).map((m) => ({ ...m })) as SaleItemSnapshot[];
     const vistaRows = vendas.tx
       .filter((r) => inRange(r.data))
-      .map((r) => buildSaleMarginRows(r, "vista", sharedPool));
+      .map((r) => buildSaleMarginRows(r, "vista", sharedPool, sharedSaleItems));
     const prazoRows = vendas.rec
       .filter((r) => inRange(r.vencimento))
-      .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool));
+      .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool, sharedSaleItems));
     const all = [...vistaRows, ...prazoRows];
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
-    const totalReceita = all.reduce((a, b) => a + b.totalReceita, 0);
-    const totalCusto = all.reduce((a, b) => a + b.totalCusto, 0);
+    const vendasIncompletas = all.filter((s) => s.itens.length === 0 || s.itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0)).length;
+    const validAll = all.filter((s) => s.itens.length > 0);
+    const totalReceita = validAll.reduce((a, b) => a + b.totalReceita, 0);
+    const totalCusto = validAll.reduce((a, b) => a + b.totalCusto, 0);
     const totalMargem = totalReceita - totalCusto;
     const margemPct = totalReceita > 0 ? (totalMargem / totalReceita) * 100 : 0;
     const empresa = company?.nome_fantasia || company?.nome || "";
 
-    const blocks = all.map((s, idx) => {
+    const blocks = validAll.map((s, idx) => {
       const pct = s.totalReceita > 0 ? (s.margem / s.totalReceita) * 100 : 0;
       const linhas = s.itens.map((it) => `
         <tr>
@@ -1133,10 +1313,11 @@ function VendasPage() {
         <div class="card"><div class="stat">Faturamento</div><div class="stat-val">${formatMoney(totalReceita)}</div></div>
         <div class="card"><div class="stat">Custos diretos</div><div class="stat-val">${formatMoney(totalCusto)}</div></div>
         <div class="card"><div class="stat">Margem do período</div><div class="stat-val ${totalMargem >= 0 ? "pos" : "neg"}">${formatMoney(totalMargem)} (${margemPct.toFixed(1)}%)</div></div>
+        <div class="card"><div class="stat">Vendas incompletas</div><div class="stat-val">${vendasIncompletas}</div></div>
       </div>
       <h2>Detalhamento por venda</h2>
       ${blocks}
-      <div class="footer">Custos baseados no cadastro atual de cada produto. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+      <div class="footer">Custos baseados no snapshot da venda. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
       <div class="noprint" style="margin-top:16px; text-align:center"><button onclick="window.print()" style="padding:8px 16px; cursor:pointer">Imprimir / Salvar PDF</button></div>
     </body></html>`;
     openHtmlWindow(html);
@@ -1191,51 +1372,81 @@ function VendasPage() {
         if (smErr) throw smErr;
       }
     } else {
-      // Fallback (vendas antigas sem related_sale_id): casa por produto + qtd
-      // pegando a saída de "Venda" mais recente que ainda não tenha sido estornada.
-      const desc = row.descricao || "";
-      const itens = parseSaleDescription(desc);
-      for (const it of itens) {
-        const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
-        if (!prod || !(it.qtd > 0)) continue;
+      // Caminho 2: se a venda já possui snapshot estruturado, o estorno também
+      // usa os itens reais da venda, nunca a descrição financeira/OS.
+      let itemSnapshots = saleItemsFor(row.id, tipo);
+      if (itemSnapshots.length === 0) {
+        const { data: dbItems } = await (supabase as any)
+          .from("sale_items")
+          .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+          .eq("sale_id", row.id)
+          .eq("sale_type", tipo);
+        itemSnapshots = (dbItems ?? []) as SaleItemSnapshot[];
+      }
+      const physicalItems = itemSnapshots.filter((it) => it.product_id && Number(it.quantity) > 0);
+      if (physicalItems.length > 0) {
+        for (const it of physicalItems) {
+          const { error: smErr } = await supabase.from("stock_movements").insert({
+            company_id: selected,
+            product_id: it.product_id!,
+            tipo: "entrada",
+            quantidade: Number(it.quantity),
+            custo_unitario: Number(it.unit_cost) > 0 ? Number(it.unit_cost) : null,
+            motivo: "Estorno de venda",
+            data: dataRef,
+            stock_location_id: it.stock_location_id || null,
+            related_sale_id: row.id,
+            related_sale_type: tipo,
+          });
+          if (smErr) throw smErr;
+        }
+      } else {
+        // Fallback legado (vendas antigas sem sale_items e sem related_sale_id): casa por produto + qtd
+        // pegando a saída de "Venda" mais recente que ainda não tenha sido estornada.
+        const desc = row.descricao || "";
+        const itens = parseSaleDescription(desc);
+        for (const it of itens) {
+          const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+          if (!prod || !(it.qtd > 0)) continue;
 
-        // Busca candidatas SEM amarrar à data (data da saída pode divergir do vencimento)
-        const { data: candidatas } = await supabase
-          .from("stock_movements")
-          .select("id, stock_location_id, custo_unitario, data, related_sale_id")
-          .eq("company_id", selected)
-          .eq("product_id", prod.id)
-          .eq("tipo", "saida")
-          .eq("motivo", "Venda")
-          .eq("quantidade", it.qtd)
-          .order("data", { ascending: false })
-          .limit(20);
-
-        // Prefere as que ainda não estão vinculadas a outra venda
-        const livre = (candidatas ?? []).find((c) => !c.related_sale_id) ?? candidatas?.[0];
-        const locId = livre?.stock_location_id ?? defaultLocationId ?? null;
-        const custo = livre?.custo_unitario ?? (it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0)) ?? null;
-
-        const { error: smErr } = await supabase.from("stock_movements").insert({
-          company_id: selected,
-          product_id: prod.id,
-          tipo: "entrada",
-          quantidade: it.qtd,
-          custo_unitario: custo || null,
-          motivo: "Estorno de venda",
-          data: dataRef,
-          stock_location_id: locId,
-          related_sale_id: row.id,
-          related_sale_type: tipo,
-        });
-        if (smErr) throw smErr;
-
-        // Marca a saída original como vinculada para não ser reusada em outro estorno
-        if (livre?.id && !livre.related_sale_id) {
-          await supabase
+          // Busca candidatas SEM amarrar à data (data da saída pode divergir do vencimento)
+          const { data: candidatas } = await supabase
             .from("stock_movements")
-            .update({ related_sale_id: row.id, related_sale_type: tipo })
-            .eq("id", livre.id);
+            .select("id, stock_location_id, custo_unitario, data, related_sale_id")
+            .eq("company_id", selected)
+            .eq("product_id", prod.id)
+            .eq("tipo", "saida")
+            .eq("motivo", "Venda")
+            .eq("quantidade", it.qtd)
+            .order("data", { ascending: false })
+            .limit(20);
+
+          // Prefere as que ainda não estão vinculadas a outra venda
+          const livre = (candidatas ?? []).find((c) => !c.related_sale_id) ?? candidatas?.[0];
+          const locId = livre?.stock_location_id ?? defaultLocationId ?? null;
+          const custo = livre?.custo_unitario ?? (it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0)) ?? null;
+
+          const { error: smErr } = await supabase.from("stock_movements").insert({
+            company_id: selected,
+            product_id: prod.id,
+            tipo: "entrada",
+            quantidade: it.qtd,
+            custo_unitario: custo || null,
+            motivo: "Estorno de venda",
+            data: dataRef,
+            stock_location_id: locId,
+            related_sale_id: row.id,
+            related_sale_type: tipo,
+          });
+          if (smErr) throw smErr;
+
+          // Marca a saída original como vinculada para não ser reusada em outro estorno
+          if (livre?.id && !livre.related_sale_id) {
+            await supabase
+              .from("stock_movements")
+              .update({ related_sale_id: row.id, related_sale_type: tipo })
+              .eq("id", livre.id);
+          }
         }
       }
     }
@@ -1296,7 +1507,10 @@ function VendasPage() {
     if (!ok) return;
     try {
       const desc = row.descricao || "";
-      const itensParsed = parseSaleDescription(desc);
+      const structured = snapshotsToParsed(saleItemsFor(row.id, tipo));
+      const itensParsed = structured.length > 0
+        ? structured.map((it) => ({ qtd: it.qtd, nome: it.nome, preco: it.preco, custo: it.custo }))
+        : parseSaleDescription(desc);
       const parsedItems: SaleItem[] = itensParsed.map((it) => {
         const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
         return {
@@ -1343,6 +1557,40 @@ function VendasPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg || "Erro ao editar venda");
+    }
+  }
+
+  async function reprocessOldSales() {
+    if (!selected || !vendas) return;
+    const ok = window.confirm("Corrigir vendas antigas sem itens estruturados?\n\nO sistema tentará recriar os itens a partir da descrição técnica ou das movimentações de estoque vinculadas. Vendas sem dados suficientes serão sinalizadas para revisão manual.");
+    if (!ok) return;
+    const existing = new Set((vendas.saleItems ?? []).map((it) => `${it.sale_type}:${it.sale_id}`));
+    const rows = [
+      ...vendas.tx.map((r) => ({ ...r, saleType: "vista" as const, dataRef: r.data })),
+      ...vendas.rec.map((r) => ({ ...r, saleType: "prazo" as const, dataRef: r.vencimento })),
+    ].filter((r) => !existing.has(`${r.saleType}:${r.id}`));
+
+    let corrigidas = 0;
+    let revisao = 0;
+    try {
+      for (const row of rows) {
+        const pool: SaleMov[] = (vendas.movs ?? []).map((m) => ({ ...m })) as SaleMov[];
+        const parsed = parseSaleItems(row.descricao, Number(row.valor) || 0, row.dataRef ?? null, pool, row.id, row.saleType, []);
+        const itemRows = parsedToSaleItemRows(parsed, row, row.saleType);
+        if (itemRows.length === 0) {
+          revisao += 1;
+          continue;
+        }
+        const { error } = await (supabase as any).from("sale_items").insert(itemRows);
+        if (error) throw error;
+        corrigidas += 1;
+        if (itemRows.some((it) => it.needs_review)) revisao += 1;
+      }
+      qc.invalidateQueries({ queryKey: ["vendas-list"] });
+      toast.success(`Correção concluída: ${corrigidas} venda(s) reprocessada(s). ${revisao} precisam de revisão manual.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(msg || "Erro ao reprocessar vendas antigas");
     }
   }
 
@@ -1682,6 +1930,9 @@ function VendasPage() {
             </div>
             <Button type="button" onClick={printPeriodMarginReport}>
               <Download className="size-4" /> Exportar Fluxo + Margem
+            </Button>
+            <Button type="button" variant="outline" onClick={reprocessOldSales}>
+              Corrigir vendas antigas
             </Button>
           </div>
         </div>

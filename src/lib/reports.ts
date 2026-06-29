@@ -65,6 +65,24 @@ export type Product = {
   estoque_minimo: number;
 };
 
+export type SaleItemReport = {
+  id: string;
+  company_id: string;
+  branch_id: string | null;
+  sale_id: string;
+  sale_type: "vista" | "prazo";
+  product_id: string | null;
+  product_name_snapshot: string;
+  quantity: number;
+  unit_price: number;
+  unit_cost: number;
+  total_revenue: number;
+  total_cost: number;
+  margin_value: number;
+  margin_percentage: number;
+  needs_review: boolean;
+};
+
 export type Account = {
   id: string;
   nome: string;
@@ -86,6 +104,7 @@ export type ReportData = {
   payables: Payable[];
   receivables: Receivable[];
   products: Product[];
+  saleItems: SaleItemReport[];
   accounts: Account[];
   budgets: Budget[];
   costCenters: CostCenter[];
@@ -102,7 +121,7 @@ export async function fetchReportData(
   costCenterId?: string | null,
 ): Promise<ReportData> {
   const applyCC = (q: any) => (costCenterId ? q.eq("centro_custo_id", costCenterId) : q);
-  const [tx, cats, pay, rec, prods, accs, budgets, ccs] = await Promise.all([
+  const [tx, cats, pay, rec, prods, saleItems, accs, budgets, ccs] = await Promise.all([
     applyCC(applyBranch(
       supabase
         .from("transactions")
@@ -134,6 +153,13 @@ export async function fetchReportData(
         .eq("company_id", companyId),
       branchId,
     ),
+    applyBranch(
+      (supabase as any)
+        .from("sale_items")
+        .select("id, company_id, branch_id, sale_id, sale_type, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, needs_review")
+        .eq("company_id", companyId),
+      branchId,
+    ),
     supabase.from("financial_accounts").select("id, nome, saldo_inicial").eq("company_id", companyId),
     applyBranch(
       supabase.from("budgets").select("mes, ano, valor_orcado, categoria_id").eq("company_id", companyId),
@@ -152,6 +178,17 @@ export async function fetchReportData(
       custo_unitario: Number(r.custo_unitario),
       preco_venda: Number(r.preco_venda),
       estoque_minimo: Number(r.estoque_minimo),
+    })),
+    saleItems: (((saleItems as any).data ?? []) as any[]).map((r: any) => ({
+      ...r,
+      quantity: Number(r.quantity),
+      unit_price: Number(r.unit_price),
+      unit_cost: Number(r.unit_cost),
+      total_revenue: Number(r.total_revenue),
+      total_cost: Number(r.total_cost),
+      margin_value: Number(r.margin_value),
+      margin_percentage: Number(r.margin_percentage),
+      needs_review: Boolean(r.needs_review),
     })),
     accounts: ((accs as any).data ?? []).map((r: any) => ({ ...r, saldo_inicial: Number(r.saldo_inicial) })),
     budgets: ((budgets as any).data ?? []).map((r: any) => ({ ...r, valor_orcado: Number(r.valor_orcado) })),
@@ -594,26 +631,48 @@ export function buildEstoqueFinanceiro(data: ReportData) {
 
 // ============ VENDAS E MARGEM ============
 export function buildVendasMargem(data: ReportData, period: Period) {
-  const catMap = new Map(data.categories.map((c) => [c.id, c]));
-  const vendas = data.transactions.filter(
+  const vendasVista = data.transactions.filter(
     (t) =>
       t.status === "realizado" &&
       t.tipo === "entrada" &&
-      inPeriod(t.data, period) &&
-      (catMap.get(t.categoria_id ?? "")?.nome ?? "").toLowerCase().includes("venda"),
+      inPeriod(t.data, period),
   );
-  const totalVendido = vendas.reduce((s, v) => s + v.valor, 0);
-  const qtd = vendas.length;
-  const ticket = qtd > 0 ? totalVendido / qtd : 0;
-  const produtos = data.products.map((p) => ({
-    Produto: p.nome,
-    Preço: p.preco_venda,
-    Custo: p.custo_unitario,
-    "Margem R$": p.preco_venda - p.custo_unitario,
-    "Margem %": p.preco_venda > 0 ? ((p.preco_venda - p.custo_unitario) / p.preco_venda) * 100 : 0,
+  const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
+  const vendaIdsVista = new Set(vendasVista.map((v) => v.id));
+  const vendaIdsPrazo = new Set(vendasPrazo.map((v) => v.id));
+  const itens = data.saleItems.filter(
+    (it) => (it.sale_type === "vista" && vendaIdsVista.has(it.sale_id)) || (it.sale_type === "prazo" && vendaIdsPrazo.has(it.sale_id)),
+  );
+  const vendasComItens = new Set(itens.map((it) => `${it.sale_type}:${it.sale_id}`));
+  const faturamentoItens = itens.reduce((s, it) => s + it.total_revenue, 0);
+  const qtd = vendasComItens.size;
+  const ticket = qtd > 0 ? faturamentoItens / qtd : 0;
+  const produtos = itens.map((it) => ({
+    Produto: it.product_name_snapshot,
+    Quantidade: it.quantity,
+    "Preço unitário": it.unit_price,
+    "Receita total": it.total_revenue,
+    "Custo unitário": it.unit_cost,
+    "Custo total": it.total_cost,
+    "Margem R$": it.margin_value,
+    "Margem %": it.total_revenue > 0 ? (it.margin_value / it.total_revenue) * 100 : 0,
+    Status: it.needs_review || it.unit_price <= 0 ? "Revisar" : it.unit_cost <= 0 ? "Sem custo" : "OK",
   }));
-  const maisRentaveis = [...produtos].sort((a, b) => b["Margem %"] - a["Margem %"]).slice(0, 10);
-  return { summary: { totalVendido, qtd, ticket }, produtos: maisRentaveis };
+  const custoTotal = itens.reduce((s, it) => s + it.total_cost, 0);
+  const margemBruta = faturamentoItens - custoTotal;
+  return {
+    summary: {
+      totalVendido: faturamentoItens,
+      qtd,
+      ticket,
+      custoTotal,
+      margemBruta,
+      margemPct: faturamentoItens > 0 ? (margemBruta / faturamentoItens) * 100 : 0,
+      custoZerado: itens.filter((it) => it.unit_cost <= 0).length,
+      itensIncompletos: itens.filter((it) => it.needs_review || it.quantity <= 0 || it.unit_price <= 0).length,
+    },
+    produtos,
+  };
 }
 
 // ============ INDICADORES ============

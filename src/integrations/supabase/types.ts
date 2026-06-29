@@ -2964,6 +2964,101 @@ export type Database = {
           },
         ]
       }
+      sale_items: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          margin_percentage: number
+          margin_value: number
+          needs_review: boolean
+          product_id: string | null
+          product_name_snapshot: string
+          quantity: number
+          review_reason: string | null
+          sale_id: string
+          sale_type: string
+          stock_location_id: string | null
+          total_cost: number
+          total_revenue: number
+          unit_cost: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          margin_percentage?: number
+          margin_value?: number
+          needs_review?: boolean
+          product_id?: string | null
+          product_name_snapshot: string
+          quantity: number
+          review_reason?: string | null
+          sale_id: string
+          sale_type: string
+          stock_location_id?: string | null
+          total_cost?: number
+          total_revenue?: number
+          unit_cost?: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          margin_percentage?: number
+          margin_value?: number
+          needs_review?: boolean
+          product_id?: string | null
+          product_name_snapshot?: string
+          quantity?: number
+          review_reason?: string | null
+          sale_id?: string
+          sale_type?: string
+          stock_location_id?: string | null
+          total_cost?: number
+          total_revenue?: number
+          unit_cost?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_stock_location_id_fkey"
+            columns: ["stock_location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_logs: {
         Row: {
           created_at: string
