@@ -187,9 +187,11 @@ function Page() {
         s.alerts = a;
       });
 
-      return raw;
+      return { sales: raw, ignored };
     },
   });
+  const sales = pendingData.sales;
+  const ignoredCount = pendingData.ignored;
 
   // Products for autocomplete
   const { data: products = [] } = useQuery({
