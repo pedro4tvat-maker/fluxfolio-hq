@@ -117,6 +117,7 @@ function Page() {
         .from("transactions")
         .select("id, os_code, descricao, valor, data, created_at, forma_pagamento, reconstruction_status, crm_contact_id, tipo")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .eq("needs_manual_item_reconstruction", true);
       if (vistaErr) console.error("[reconstrucao] transactions:", vistaErr);
       const vistaSales = (vista ?? []).filter((r: any) => {
