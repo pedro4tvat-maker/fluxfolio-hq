@@ -307,12 +307,13 @@ function VendasPage() {
           .limit(50),
         supabase
           .from("stock_movements")
-          .select("id, product_id, quantidade, custo_unitario, data, motivo")
+          .select("id, product_id, quantidade, custo_unitario, data, motivo, related_sale_id, related_sale_type")
           .eq("company_id", selected!)
           .eq("tipo", "saida")
           .eq("motivo", "Venda")
           .order("data", { ascending: false })
-          .limit(500),
+          .limit(2000),
+
       ]);
       return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [] };
     },
@@ -837,11 +838,12 @@ function VendasPage() {
 
 
   type ParsedItem = { nome: string; qtd: number; preco: number; custo: number; subtotal: number; custoTotal: number; margem: number };
-  type SaleMov = { id: string; product_id: string | null; quantidade: number | string; custo_unitario: number | string | null; data: string | null };
+  type SaleMov = { id: string; product_id: string | null; quantidade: number | string; custo_unitario: number | string | null; data: string | null; related_sale_id?: string | null; related_sale_type?: string | null };
   function extractItemsBlock(desc: string): string {
     // Encontra o último bloco "(...)" no fim da descrição, respeitando parênteses aninhados
     // (ex.: "Venda (2x Café Gourmet grão (500g) @55.00|c39.92)")
     const s = desc.trimEnd();
+
     if (!s.endsWith(")")) return "";
     let depth = 0;
     for (let i = s.length - 1; i >= 0; i--) {
@@ -869,14 +871,12 @@ function VendasPage() {
     return out.map((x) => x.trim()).filter(Boolean);
   }
 
-  function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[]): ParsedItem[] {
+  function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[], saleId?: string, saleType?: "vista" | "prazo"): ParsedItem[] {
     const desc = descricao || "";
     const itensTxt = extractItemsBlock(desc);
     const partes = splitTopLevel(itensTxt);
     const dateKey = (saleDate || "").slice(0, 10);
     const parsed: ParsedItem[] = partes.map((p) => {
-      // Formato novo: "2x Nome @21.00|c17.00" (preço e custo cadastrados NA venda)
-      // Formato legado: "2x Nome" ou "Nome @40.00|c31.15" (sem prefixo Nx)
       const m = p.match(/^(?:(\d+(?:[.,]\d+)?)x\s+)?(.+?)(?:\s*@(\d+(?:[.,]\d+)?))?(?:\s*\|c(\d+(?:[.,]\d+)?))?\)?\s*$/i);
       const qtd = m && m[1] ? Number(m[1].replace(",", ".")) : 1;
       let nome = m ? m[2].trim() : p;
@@ -887,7 +887,6 @@ function VendasPage() {
       if (isResumo) return null as unknown as ParsedItem;
       const prod = products?.find((x) => x.nome.toLowerCase() === nome.toLowerCase());
 
-      // CUSTO: 1) custo registrado na venda (descrição); 2) stock_movement da venda; 3) custo atual do produto
       let custo = Number.isFinite(custoSale) && custoSale > 0
         ? custoSale
         : Number(prod?.custo_unitario ?? 0);
@@ -910,7 +909,6 @@ function VendasPage() {
         }
       }
 
-      // PREÇO: 1) preço registrado na venda (descrição); 2) preço atual do produto
       const preco = Number.isFinite(precoSale) && precoSale > 0
         ? precoSale
         : Number(prod?.preco_venda ?? 0);
@@ -918,10 +916,52 @@ function VendasPage() {
       const custoTotal = qtd * custo;
       return { nome, qtd, preco, custo, subtotal, custoTotal, margem: subtotal - custoTotal };
     }).filter(Boolean) as ParsedItem[];
-    if (parsed.length === 0) {
-      return [{ nome: desc || "Venda", qtd: 1, preco: valorTotal, custo: 0, subtotal: valorTotal, custoTotal: 0, margem: valorTotal }];
+
+    if (parsed.length > 0) return parsed;
+
+    // Fallback: descrição sem itens (ex.: "OS E0010"). Reconstrói itens a partir
+    // das movimentações de estoque vinculadas à venda.
+    if (saleId) {
+      const movs = movsPool.filter((mv) => mv.related_sale_id === saleId && mv.related_sale_type === saleType);
+      if (movs.length > 0) {
+        const linhas = movs.map((mv) => {
+          const prod = products?.find((p) => p.id === mv.product_id);
+          const qtd = Number(mv.quantidade) || 0;
+          const custo = Number(mv.custo_unitario) || Number(prod?.custo_unitario ?? 0);
+          const preco = Number(prod?.preco_venda ?? 0);
+          return {
+            nome: prod?.nome || "Produto",
+            qtd,
+            preco,
+            custo,
+            subtotal: qtd * preco,
+            custoTotal: qtd * custo,
+            margem: qtd * (preco - custo),
+          } as ParsedItem;
+        });
+        // Ajuste proporcional para casar com o valor real da venda
+        const somaCalc = linhas.reduce((a, b) => a + b.subtotal, 0);
+        if (valorTotal > 0 && somaCalc > 0 && Math.abs(somaCalc - valorTotal) > 0.01) {
+          const fator = valorTotal / somaCalc;
+          linhas.forEach((l) => {
+            l.preco = l.preco * fator;
+            l.subtotal = l.qtd * l.preco;
+            l.margem = l.subtotal - l.custoTotal;
+          });
+        } else if (somaCalc === 0 && valorTotal > 0) {
+          const totalQtd = linhas.reduce((a, b) => a + b.qtd, 0) || 1;
+          const precoMedio = valorTotal / totalQtd;
+          linhas.forEach((l) => {
+            l.preco = precoMedio;
+            l.subtotal = l.qtd * precoMedio;
+            l.margem = l.subtotal - l.custoTotal;
+          });
+        }
+        return linhas;
+      }
     }
-    return parsed;
+
+    return [{ nome: desc || "Venda", qtd: 1, preco: valorTotal, custo: 0, subtotal: valorTotal, custoTotal: 0, margem: valorTotal }];
   }
 
   function buildSaleMarginRows(row: {
@@ -932,7 +972,7 @@ function VendasPage() {
     const valor = Number(row.valor) || 0;
     const dataRefRaw = tipo === "vista" ? row.data : row.vencimento;
     const pool: SaleMov[] = sharedPool ?? ((vendas?.movs ?? []).map((m) => ({ ...m })) as SaleMov[]);
-    const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool);
+    const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool, row.id, tipo);
     const totalReceita = itens.reduce((a, b) => a + b.subtotal, 0);
     const totalCusto = itens.reduce((a, b) => a + b.custoTotal, 0);
     const margem = totalReceita - totalCusto;
@@ -942,6 +982,7 @@ function VendasPage() {
     const cliente = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
     return { itens, totalReceita, totalCusto, margem, dataRef, cliente, tipo };
   }
+
 
   function openHtmlWindow(html: string) {
     const w = window.open("", "_blank");
