@@ -493,7 +493,7 @@ function TransactionDialog({
                 const v = ultimasVendas?.find((x) => x.id === id);
                 if (v) {
                   const os = v.id.slice(0, 8).toUpperCase();
-                  setDescricao(`OS #${os} — ${v.descricao}`);
+                  setDescricao(`OS #${os}`);
                 }
               }}
             >
