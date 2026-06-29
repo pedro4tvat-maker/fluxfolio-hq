@@ -401,10 +401,10 @@ function TransactionDialog({
     queryFn: async () => {
       const { data } = await supabase
         .from("transactions")
-        .select("id, data, descricao, valor")
+        .select("id, data, descricao, valor, os_code")
         .eq("company_id", companyId)
         .eq("tipo", "entrada")
-        .ilike("descricao", "Venda%")
+        .or("descricao.ilike.Venda%,descricao.ilike.OS %,os_code.not.is.null")
         .order("data", { ascending: false })
         .limit(50);
       return data ?? [];
