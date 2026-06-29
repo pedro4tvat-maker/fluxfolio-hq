@@ -835,15 +835,41 @@ function VendasPage() {
     const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
     const clienteNome = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
 
-    // 1) Tenta extrair itens da descrição (vendas antigas guardavam itens entre parênteses)
-    let parsedLinhas = parseSaleDescription(desc).map((it) => {
-      const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
-      const preco = it.preco > 0 ? it.preco : Number(prod?.preco_venda ?? 0);
-      const total = it.qtd * preco;
-      return { nome: it.nome, qtd: it.qtd, preco, total };
-    });
+    // 1) Fonte oficial: itens estruturados vinculados à venda.
+    let parsedLinhas = snapshotsToParsed(saleItemsFor(row.id, tipo)).map((it) => ({
+      nome: it.nome,
+      qtd: it.qtd,
+      preco: it.preco,
+      total: it.subtotal,
+      needsReview: it.needsReview,
+    }));
 
-    // 2) Fallback: busca itens via stock_movements vinculadas à venda (vendas novas com descrição "OS XXXX")
+    if (parsedLinhas.length === 0) {
+      const { data: dbItems } = await (supabase as any)
+        .from("sale_items")
+        .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+        .eq("sale_id", row.id)
+        .eq("sale_type", tipo);
+      parsedLinhas = snapshotsToParsed((dbItems ?? []) as SaleItemSnapshot[]).map((it) => ({
+        nome: it.nome,
+        qtd: it.qtd,
+        preco: it.preco,
+        total: it.subtotal,
+        needsReview: it.needsReview,
+      }));
+    }
+
+    // 2) Reprocessamento provisório para vendas antigas com descrição técnica.
+    if (parsedLinhas.length === 0) {
+      parsedLinhas = parseSaleDescription(desc).map((it) => {
+        const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+        const preco = it.preco > 0 ? it.preco : Number(prod?.preco_venda ?? 0);
+        const total = it.qtd * preco;
+        return { nome: it.nome, qtd: it.qtd, preco, total, needsReview: preco <= 0 };
+      });
+    }
+
+    // 3) Fallback seguro: busca itens via stock_movements vinculadas à venda.
     if (parsedLinhas.length === 0) {
       const { data: movs } = await supabase
         .from("stock_movements")
@@ -856,7 +882,7 @@ function VendasPage() {
           const prod = products?.find((p) => p.id === m.product_id);
           const qtd = Number(m.quantidade) || 0;
           const preco = Number(prod?.preco_venda ?? 0);
-          return { nome: prod?.nome || "Produto", qtd, preco, total: qtd * preco };
+          return { nome: prod?.nome || "Produto", qtd, preco, total: qtd * preco, needsReview: preco <= 0 };
         });
         // Ajuste proporcional para casar com o valor real da venda
         const somaCalc = linhas.reduce((a, b) => a + b.total, 0);
@@ -878,8 +904,14 @@ function VendasPage() {
       }
     }
 
+    if (parsedLinhas.length === 0 || parsedLinhas.some((p) => !(p.qtd > 0) || !(p.preco > 0) || p.needsReview)) {
+      toast.error("Esta venda não possui itens detalhados. Corrija ou reprocesse a venda antes de gerar a OS.");
+      return;
+    }
+
     const somaItens = parsedLinhas.reduce((a, b) => a + b.total, 0);
-    const totalOS = somaItens > 0 ? somaItens : valor;
+    const totalOS = somaItens;
+    const divergencia = valor > 0 && Math.abs(somaItens - valor) > 0.01;
     const linhas = parsedLinhas
       .map((p) => `<tr>
         <td>${escapeHtml(p.nome)}</td>
@@ -944,6 +976,8 @@ function VendasPage() {
     <thead><tr><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Preço Un.</th><th style="text-align:right">Total</th></tr></thead>
     <tbody>${linhas}</tbody>
   </table>
+
+  ${divergencia ? `<div class="card" style="margin-top:12px; border-color:#AFBE6C"><b>Atenção interna:</b> soma dos itens (${formatMoney(somaItens)}) difere do valor financeiro (${formatMoney(valor)}).</div>` : ""}
 
 
   <div class="totals">
