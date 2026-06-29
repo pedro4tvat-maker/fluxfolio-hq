@@ -103,8 +103,8 @@ async function loadCompaniesV2(isConsultant: boolean, userId: string): Promise<C
     const saldoInicial = (accs ?? []).reduce((s, a: any) => s + Number(a.saldo_inicial), 0);
     
     // Simplificando o cálculo do delta para evitar buscar todo o histórico
-    const { data: totalIn } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).eq("status", "realizado").eq("tipo", "entrada").maybeSingle();
-    const { data: totalOut } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).eq("status", "realizado").eq("tipo", "saida").maybeSingle();
+    const { data: totalIn } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).is("deleted_at", null).eq("status", "realizado").eq("tipo", "entrada").maybeSingle();
+    const { data: totalOut } = await supabase.from("transactions").select("valor.sum()").eq("company_id", c.id).is("deleted_at", null).eq("status", "realizado").eq("tipo", "saida").maybeSingle();
     
     const delta = (Number((totalIn as any)?.sum) || 0) - (Number((totalOut as any)?.sum) || 0);
     const saldo = saldoInicial + delta;
