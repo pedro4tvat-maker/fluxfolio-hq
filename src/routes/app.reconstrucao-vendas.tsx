@@ -144,6 +144,7 @@ function Page() {
         .from("receivables")
         .select("id, os_code, descricao, cliente, valor, vencimento, created_at, forma_recebimento, reconstruction_status, crm_contact_id")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .eq("needs_manual_item_reconstruction", true);
       if (prazoErr) console.error("[reconstrucao] receivables:", prazoErr);
       const prazoSales = (prazo ?? []).filter((r: any) => {
