@@ -521,6 +521,25 @@ function VendasPage() {
         }
       }
 
+      // 2.1) Gera código de OS sequencial pelo centro de estoque de origem
+      const primaryLocId = items.find((it) => it.stock_location_id)?.stock_location_id ?? null;
+      if (saleRefId && primaryLocId) {
+        const { data: osData } = await supabase.rpc("next_os_code", {
+          _company_id: selected,
+          _location_id: primaryLocId,
+        });
+        const osCode = (osData as string | null) ?? null;
+        if (osCode) {
+          if (saleRefType === "vista") {
+            await supabase.from("transactions").update({ os_code: osCode, descricao: `OS ${osCode}` }).eq("id", saleRefId);
+          } else {
+            await supabase.from("receivables").update({ os_code: osCode, descricao: `OS ${osCode}` }).eq("id", saleRefId);
+          }
+        }
+      }
+
+
+
 
 
       // Gera conta a pagar de comissão automaticamente
