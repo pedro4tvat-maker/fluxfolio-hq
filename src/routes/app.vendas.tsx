@@ -1390,7 +1390,8 @@ function VendasPage() {
           .from("sale_items")
           .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
           .eq("sale_id", row.id)
-          .eq("sale_type", tipo);
+          .eq("sale_type", tipo)
+          .is("deleted_at", null);
         itemSnapshots = (dbItems ?? []) as SaleItemSnapshot[];
       }
       const physicalItems = itemSnapshots.filter((it) => it.product_id && Number(it.quantity) > 0);
