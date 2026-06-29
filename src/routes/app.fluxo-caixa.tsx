@@ -96,6 +96,7 @@ function FluxoCaixa() {
       const { data, error } = await supabase
         .from("transactions").select("*")
         .eq("company_id", selected)
+        .is("deleted_at", null)
         .gte("data", range.start).lte("data", range.end)
         .order("data", { ascending: false });
       if (error) throw error;
