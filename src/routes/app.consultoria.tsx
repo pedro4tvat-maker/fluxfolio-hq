@@ -588,7 +588,7 @@ function ClientesContratantesTab({ consultantId }: { consultantId: string }) {
   });
 
   const situacao = (clientKey: string) => {
-    const rs = recv.filter((r: any) => (r.company_id || r.client_name) === clientKey && r.status !== "recebido");
+    const rs = recvAll.filter((r: any) => (r.company_id || r.client_name) === clientKey && r.status !== "recebido");
     if (rs.some((r: any) => r.due_date < today)) return { txt: "Inadimplente", tone: "bg-rose-500/15 text-rose-600" };
     if (rs.length) return { txt: "Pendente", tone: "bg-amber-500/15 text-amber-600" };
     return { txt: "Em dia", tone: "bg-emerald-500/15 text-emerald-600" };
@@ -631,7 +631,7 @@ function ReceberTab({ consultantId }: { consultantId: string }) {
   const today = new Date().toISOString().slice(0, 10);
   const { data: recv = [] } = useQuery({
     queryKey: ["c-recv", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId)).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [],
   });
 
   const total = recv.filter((r: any) => r.status !== "recebido").reduce((s: number, r: any) => s + Number(r.amount), 0);
