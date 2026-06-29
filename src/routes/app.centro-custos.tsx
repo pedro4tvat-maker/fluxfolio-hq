@@ -41,7 +41,8 @@ function CentroCustosPage() {
       const { data } = await supabase
         .from("transactions")
         .select("centro_custo_id, tipo, valor")
-        .eq("company_id", selected!);
+        .eq("company_id", selected!)
+        .is("deleted_at", null);
       return data ?? [];
     },
   });
