@@ -126,8 +126,8 @@ function CorrecaoOSPage() {
   async function generateNextOs(prefix: string): Promise<string> {
     if (!selected) throw new Error("Empresa não selecionada");
     const [t, r] = await Promise.all([
-      supabase.from("transactions").select("os_code").eq("company_id", selected).ilike("os_code", `${prefix}%`),
-      supabase.from("receivables").select("os_code").eq("company_id", selected).ilike("os_code", `${prefix}%`),
+      supabase.from("transactions").select("os_code").eq("company_id", selected).is("deleted_at", null).ilike("os_code", `${prefix}%`),
+      supabase.from("receivables").select("os_code").eq("company_id", selected).is("deleted_at", null).ilike("os_code", `${prefix}%`),
     ]);
     const seqs = [...(t.data ?? []), ...(r.data ?? [])]
       .map((x: any) => parseInt(String(x.os_code).replace(/^[A-Za-z]+/, ""), 10))
