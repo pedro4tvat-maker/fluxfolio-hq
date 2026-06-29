@@ -565,7 +565,8 @@ function StockViewDialog({ companyId, location }: { companyId: string; location:
         .from("stock_movements")
         .select("product_id, quantidade, tipo, products(nome, preco_venda, custo_unitario)")
         .eq("company_id", companyId)
-        .eq("stock_location_id", location.id);
+        .eq("stock_location_id", location.id)
+        .is("deleted_at", null);
       if (error) throw error;
       const map = new Map<string, { product_id: string; nome: string; saldo: number; preco_venda: number; custo: number }>();
       for (const m of (data ?? []) as Array<{ product_id: string; quantidade: number; tipo: string; products: { nome: string; preco_venda: number; custo_unitario: number } | null }>) {
