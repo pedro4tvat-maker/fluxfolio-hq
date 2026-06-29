@@ -1477,7 +1477,10 @@ function VendasPage() {
     if (!ok) return;
     try {
       const desc = row.descricao || "";
-      const itensParsed = parseSaleDescription(desc);
+      const structured = snapshotsToParsed(saleItemsFor(row.id, tipo));
+      const itensParsed = structured.length > 0
+        ? structured.map((it) => ({ qtd: it.qtd, nome: it.nome, preco: it.preco, custo: it.custo }))
+        : parseSaleDescription(desc);
       const parsedItems: SaleItem[] = itensParsed.map((it) => {
         const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
         return {
