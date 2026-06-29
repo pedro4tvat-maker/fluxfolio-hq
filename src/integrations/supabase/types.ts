@@ -2807,6 +2807,7 @@ export type Database = {
           id: string
           import_batch_id: string | null
           observacoes: string | null
+          os_code: string | null
           parcelas: number | null
           recorrencia: Database["public"]["Enums"]["recurrence"] | null
           reseller_id: string | null
@@ -2831,6 +2832,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           observacoes?: string | null
+          os_code?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
           reseller_id?: string | null
@@ -2855,6 +2857,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           observacoes?: string | null
+          os_code?: string | null
           parcelas?: number | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
           reseller_id?: string | null
@@ -3164,6 +3167,7 @@ export type Database = {
           id: string
           import_batch_id: string | null
           observacoes: string | null
+          os_code: string | null
           payable_id: string | null
           receivable_id: string | null
           reconciled_with_id: string | null
@@ -3190,6 +3194,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           observacoes?: string | null
+          os_code?: string | null
           payable_id?: string | null
           receivable_id?: string | null
           reconciled_with_id?: string | null
@@ -3216,6 +3221,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           observacoes?: string | null
+          os_code?: string | null
           payable_id?: string | null
           receivable_id?: string | null
           reconciled_with_id?: string | null
@@ -3350,6 +3356,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      next_os_code: {
+        Args: { _company_id: string; _location_id: string }
+        Returns: string
       }
       product_stock_by_location: {
         Args: { _location_id: string; _product_id: string }
