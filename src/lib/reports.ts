@@ -631,17 +631,21 @@ export function buildEstoqueFinanceiro(data: ReportData) {
 
 // ============ VENDAS E MARGEM ============
 export function buildVendasMargem(data: ReportData, period: Period) {
-  const vendas = data.transactions.filter(
+  const vendasVista = data.transactions.filter(
     (t) =>
       t.status === "realizado" &&
       t.tipo === "entrada" &&
       inPeriod(t.data, period),
   );
-  const totalVendido = vendas.reduce((s, v) => s + v.valor, 0);
-  const qtd = vendas.length;
+  const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
+  const totalVendido = vendasVista.reduce((s, v) => s + v.valor, 0) + vendasPrazo.reduce((s, v) => s + v.valor, 0);
+  const qtd = vendasVista.length + vendasPrazo.length;
   const ticket = qtd > 0 ? totalVendido / qtd : 0;
-  const vendaIds = new Set(vendas.map((v) => v.id));
-  const itens = data.saleItems.filter((it) => it.sale_type === "vista" && vendaIds.has(it.sale_id));
+  const vendaIdsVista = new Set(vendasVista.map((v) => v.id));
+  const vendaIdsPrazo = new Set(vendasPrazo.map((v) => v.id));
+  const itens = data.saleItems.filter(
+    (it) => (it.sale_type === "vista" && vendaIdsVista.has(it.sale_id)) || (it.sale_type === "prazo" && vendaIdsPrazo.has(it.sale_id)),
+  );
   const produtos = itens.map((it) => ({
     Produto: it.product_name_snapshot,
     Quantidade: it.quantity,
