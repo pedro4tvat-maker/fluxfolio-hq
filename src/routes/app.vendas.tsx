@@ -883,7 +883,8 @@ function VendasPage() {
         .select("product_id, quantidade, custo_unitario")
         .eq("related_sale_id", row.id)
         .eq("related_sale_type", tipo)
-        .eq("tipo", "saida");
+        .eq("tipo", "saida")
+        .is("deleted_at", null);
       if (movs && movs.length > 0) {
         const linhas = movs.map((m) => {
           const prod = products?.find((p) => p.id === m.product_id);
