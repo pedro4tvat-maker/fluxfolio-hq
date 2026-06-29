@@ -1,0 +1,1 @@
+DELETE FROM public.crm_contacts WHERE id = 'c3adbec3-38b8-4120-a8c2-f62bd7720e1e' AND name = 'TESTE SOFT DELETE — PODE REMOVER';
