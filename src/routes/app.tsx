@@ -6,7 +6,7 @@ import {
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
   Layers, ShoppingCart, Tag, Upload, BadgeCheck, Copy, Users, FolderArchive,
   ChevronDown, ChevronRight, CalendarDays, Inbox, Route as RouteIcon, NotebookPen, BookOpen,
-  Wheat,
+  Wheat, Wrench,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -56,6 +56,7 @@ const clientNav: NavEntry[] = [
       { to: "/app/vendas", label: "Fluxo de Vendas", icon: ShoppingCart },
       { to: "/app/estoque", label: "Fluxo de Estoque", icon: Package },
       { to: "/app/revendedores", label: "Revendedores", icon: ShoppingCart },
+      { to: "/app/reconstrucao-vendas", label: "Reconstrução de Vendas", icon: Wrench },
     ],
   },
   {
