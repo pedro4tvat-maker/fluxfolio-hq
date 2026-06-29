@@ -631,26 +631,44 @@ export function buildEstoqueFinanceiro(data: ReportData) {
 
 // ============ VENDAS E MARGEM ============
 export function buildVendasMargem(data: ReportData, period: Period) {
-  const catMap = new Map(data.categories.map((c) => [c.id, c]));
   const vendas = data.transactions.filter(
     (t) =>
       t.status === "realizado" &&
       t.tipo === "entrada" &&
-      inPeriod(t.data, period) &&
-      (catMap.get(t.categoria_id ?? "")?.nome ?? "").toLowerCase().includes("venda"),
+      inPeriod(t.data, period),
   );
   const totalVendido = vendas.reduce((s, v) => s + v.valor, 0);
   const qtd = vendas.length;
   const ticket = qtd > 0 ? totalVendido / qtd : 0;
-  const produtos = data.products.map((p) => ({
-    Produto: p.nome,
-    Preço: p.preco_venda,
-    Custo: p.custo_unitario,
-    "Margem R$": p.preco_venda - p.custo_unitario,
-    "Margem %": p.preco_venda > 0 ? ((p.preco_venda - p.custo_unitario) / p.preco_venda) * 100 : 0,
+  const vendaIds = new Set(vendas.map((v) => v.id));
+  const itens = data.saleItems.filter((it) => it.sale_type === "vista" && vendaIds.has(it.sale_id));
+  const produtos = itens.map((it) => ({
+    Produto: it.product_name_snapshot,
+    Quantidade: it.quantity,
+    "Preço unitário": it.unit_price,
+    "Receita total": it.total_revenue,
+    "Custo unitário": it.unit_cost,
+    "Custo total": it.total_cost,
+    "Margem R$": it.margin_value,
+    "Margem %": it.total_revenue > 0 ? (it.margin_value / it.total_revenue) * 100 : 0,
+    Status: it.needs_review || it.unit_price <= 0 ? "Revisar" : it.unit_cost <= 0 ? "Sem custo" : "OK",
   }));
-  const maisRentaveis = [...produtos].sort((a, b) => b["Margem %"] - a["Margem %"]).slice(0, 10);
-  return { summary: { totalVendido, qtd, ticket }, produtos: maisRentaveis };
+  const faturamentoItens = itens.reduce((s, it) => s + it.total_revenue, 0);
+  const custoTotal = itens.reduce((s, it) => s + it.total_cost, 0);
+  const margemBruta = faturamentoItens - custoTotal;
+  return {
+    summary: {
+      totalVendido: faturamentoItens || totalVendido,
+      qtd,
+      ticket,
+      custoTotal,
+      margemBruta,
+      margemPct: faturamentoItens > 0 ? (margemBruta / faturamentoItens) * 100 : 0,
+      custoZerado: itens.filter((it) => it.unit_cost <= 0).length,
+      itensIncompletos: itens.filter((it) => it.needs_review || it.quantity <= 0 || it.unit_price <= 0).length,
+    },
+    produtos,
+  };
 }
 
 // ============ INDICADORES ============
