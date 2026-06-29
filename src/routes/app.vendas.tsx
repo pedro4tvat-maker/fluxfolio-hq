@@ -1530,6 +1530,40 @@ function VendasPage() {
     }
   }
 
+  async function reprocessOldSales() {
+    if (!selected || !vendas) return;
+    const ok = window.confirm("Corrigir vendas antigas sem itens estruturados?\n\nO sistema tentará recriar os itens a partir da descrição técnica ou das movimentações de estoque vinculadas. Vendas sem dados suficientes serão sinalizadas para revisão manual.");
+    if (!ok) return;
+    const existing = new Set((vendas.saleItems ?? []).map((it) => `${it.sale_type}:${it.sale_id}`));
+    const rows = [
+      ...vendas.tx.map((r) => ({ ...r, saleType: "vista" as const, dataRef: r.data })),
+      ...vendas.rec.map((r) => ({ ...r, saleType: "prazo" as const, dataRef: r.vencimento })),
+    ].filter((r) => !existing.has(`${r.saleType}:${r.id}`));
+
+    let corrigidas = 0;
+    let revisao = 0;
+    try {
+      for (const row of rows) {
+        const pool: SaleMov[] = (vendas.movs ?? []).map((m) => ({ ...m })) as SaleMov[];
+        const parsed = parseSaleItems(row.descricao, Number(row.valor) || 0, row.dataRef ?? null, pool, row.id, row.saleType, []);
+        const itemRows = parsedToSaleItemRows(parsed, row, row.saleType);
+        if (itemRows.length === 0) {
+          revisao += 1;
+          continue;
+        }
+        const { error } = await (supabase as any).from("sale_items").insert(itemRows);
+        if (error) throw error;
+        corrigidas += 1;
+        if (itemRows.some((it) => it.needs_review)) revisao += 1;
+      }
+      qc.invalidateQueries({ queryKey: ["vendas-list"] });
+      toast.success(`Correção concluída: ${corrigidas} venda(s) reprocessada(s). ${revisao} precisam de revisão manual.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(msg || "Erro ao reprocessar vendas antigas");
+    }
+  }
+
 
 
 
