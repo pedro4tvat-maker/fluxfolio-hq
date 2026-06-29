@@ -148,7 +148,8 @@ function EstoquePage() {
       const { data, error } = await supabase
         .from("stock_movements")
         .select("product_id, stock_location_id, tipo, quantidade")
-        .eq("company_id", selected!);
+        .eq("company_id", selected!)
+        .is("deleted_at", null);
       if (error) throw error;
       const map = new Map<string, number>();
       for (const m of data ?? []) {
