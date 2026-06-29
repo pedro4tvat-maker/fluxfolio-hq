@@ -1429,6 +1429,7 @@ function VendasPage() {
             .eq("tipo", "saida")
             .eq("motivo", "Venda")
             .eq("quantidade", it.qtd)
+            .is("deleted_at", null)
             .order("data", { ascending: false })
             .limit(20);
 
