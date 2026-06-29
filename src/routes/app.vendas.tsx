@@ -294,14 +294,14 @@ function VendasPage() {
       const [tx, rec, movs] = await Promise.all([
         supabase
           .from("transactions")
-          .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id")
+          .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id, os_code")
           .eq("company_id", selected!)
           .eq("tipo", "entrada")
           .order("data", { ascending: false })
           .limit(50),
         supabase
           .from("receivables")
-          .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id")
+          .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id, os_code")
           .eq("company_id", selected!)
           .order("vencimento", { ascending: false })
           .limit(50),
@@ -521,6 +521,25 @@ function VendasPage() {
         }
       }
 
+      // 2.1) Gera código de OS sequencial pelo centro de estoque de origem
+      const primaryLocId = items.find((it) => it.stock_location_id)?.stock_location_id ?? null;
+      if (saleRefId && primaryLocId) {
+        const { data: osData } = await supabase.rpc("next_os_code", {
+          _company_id: selected,
+          _location_id: primaryLocId,
+        });
+        const osCode = (osData as string | null) ?? null;
+        if (osCode) {
+          if (saleRefType === "vista") {
+            await supabase.from("transactions").update({ os_code: osCode, descricao: `OS ${osCode}` }).eq("id", saleRefId);
+          } else {
+            await supabase.from("receivables").update({ os_code: osCode, descricao: `OS ${osCode}` }).eq("id", saleRefId);
+          }
+        }
+      }
+
+
+
 
 
       // Gera conta a pagar de comissão automaticamente
@@ -668,7 +687,8 @@ function VendasPage() {
     forma_pagamento?: string | null;
     cliente?: string | null;
   }, tipo: "vista" | "prazo") {
-    const orderNumber = `OS-${String(row.id).slice(0, 8).toUpperCase()}`;
+    const osCode = (row as { os_code?: string | null }).os_code;
+    const orderNumber = osCode ? `OS ${osCode}` : `OS-${String(row.id).slice(0, 8).toUpperCase()}`;
     const empresaDoc = company?.cnpj ?? company?.documento ?? "";
     const empresaEnd = [company?.endereco, company?.bairro, company?.cidade, company?.estado, company?.cep]
       .filter(Boolean)
@@ -1602,7 +1622,7 @@ function VendasPage() {
               {vendas?.tx.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{(row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
+                    <p className="font-medium truncate">{(row as { os_code?: string | null }).os_code ? `OS ${(row as { os_code?: string | null }).os_code}` : (row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(row.data)} • {row.forma_pagamento ?? "—"}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -1637,7 +1657,7 @@ function VendasPage() {
               {vendas?.rec.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{(row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
+                    <p className="font-medium truncate">{(row as { os_code?: string | null }).os_code ? `OS ${(row as { os_code?: string | null }).os_code}` : (row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
                     <p className="text-xs text-muted-foreground">{row.cliente ?? "—"} • venc. {formatDate(row.vencimento)} • {row.status}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

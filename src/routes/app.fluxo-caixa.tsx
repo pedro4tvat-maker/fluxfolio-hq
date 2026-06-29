@@ -401,10 +401,10 @@ function TransactionDialog({
     queryFn: async () => {
       const { data } = await supabase
         .from("transactions")
-        .select("id, data, descricao, valor")
+        .select("id, data, descricao, valor, os_code")
         .eq("company_id", companyId)
         .eq("tipo", "entrada")
-        .ilike("descricao", "Venda%")
+        .or("descricao.ilike.Venda%,descricao.ilike.OS %,os_code.not.is.null")
         .order("data", { ascending: false })
         .limit(50);
       return data ?? [];
@@ -492,8 +492,8 @@ function TransactionDialog({
               onValueChange={(id) => {
                 const v = ultimasVendas?.find((x) => x.id === id);
                 if (v) {
-                  const os = v.id.slice(0, 8).toUpperCase();
-                  setDescricao(`OS #${os}`);
+                  const os = (v as { os_code?: string | null }).os_code ?? v.id.slice(0, 8).toUpperCase();
+                  setDescricao(`OS ${os}`);
                 }
               }}
             >
@@ -501,11 +501,14 @@ function TransactionDialog({
                 <SelectValue placeholder={ultimasVendas?.length ? "Selecione uma venda" : "Nenhuma venda registrada"} />
               </SelectTrigger>
               <SelectContent>
-                {(ultimasVendas ?? []).map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {formatDate(v.data)} · OS #{v.id.slice(0, 8).toUpperCase()} · {formatMoney(Number(v.valor))}
-                  </SelectItem>
-                ))}
+                {(ultimasVendas ?? []).map((v) => {
+                  const os = (v as { os_code?: string | null }).os_code ?? v.id.slice(0, 8).toUpperCase();
+                  return (
+                    <SelectItem key={v.id} value={v.id}>
+                      {formatDate(v.data)} · OS {os} · {formatMoney(Number(v.valor))}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           )}
