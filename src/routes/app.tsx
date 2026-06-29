@@ -57,6 +57,7 @@ const clientNav: NavEntry[] = [
       { to: "/app/estoque", label: "Fluxo de Estoque", icon: Package },
       { to: "/app/revendedores", label: "Revendedores", icon: ShoppingCart },
       { to: "/app/reconstrucao-vendas", label: "Reconstrução de Vendas", icon: Wrench },
+      { to: "/app/correcao-os", label: "Correção de Centro de Estoque das OSs", icon: Wrench },
     ],
   },
   {
