@@ -88,8 +88,8 @@ function Page() {
         supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!),
         supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!),
         supabase.from("sale_items").select("sale_id", { count: "exact", head: true }).eq("company_id", selected!),
-        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual"),
-        supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual"),
+        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual").eq("tipo", "entrada").or("os_code.not.is.null,crm_contact_id.not.is.null"),
+        supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual").or("os_code.not.is.null,crm_contact_id.not.is.null,cliente.not.is.null"),
         supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("reconstruction_status", "reconstruida_conferida"),
         supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("reconstruction_status", "reconstruida_com_divergencia"),
       ]);
@@ -106,24 +106,31 @@ function Page() {
   });
 
   // Pending sales list
-  const { data: sales = [], refetch } = useQuery({
+  const { data: pendingData = { sales: [] as PendingSale[], ignored: 0 }, refetch } = useQuery({
     queryKey: ["recovery-pending", selected],
     enabled: !!selected,
     queryFn: async () => {
       const raw: PendingSale[] = [];
+      let ignored = 0;
+      // Vendas à vista: somente entradas com vínculo de venda (os_code ou crm_contact_id)
       const { data: vista, error: vistaErr } = await supabase
         .from("transactions")
-        .select("id, os_code, descricao, valor, data, created_at, forma_pagamento, reconstruction_status, crm_contact_id")
+        .select("id, os_code, descricao, valor, data, created_at, forma_pagamento, reconstruction_status, crm_contact_id, tipo")
         .eq("company_id", selected!)
         .eq("needs_manual_item_reconstruction", true);
       if (vistaErr) console.error("[reconstrucao] transactions:", vistaErr);
-      const contactIds = Array.from(new Set((vista ?? []).map((r: any) => r.crm_contact_id).filter(Boolean)));
+      const vistaSales = (vista ?? []).filter((r: any) => {
+        const isSale = r.tipo === "entrada" && (r.os_code || r.crm_contact_id);
+        if (!isSale) ignored++;
+        return isSale;
+      });
+      const contactIds = Array.from(new Set(vistaSales.map((r: any) => r.crm_contact_id).filter(Boolean)));
       const contactMap = new Map<string, string>();
       if (contactIds.length) {
         const { data: contacts } = await supabase.from("crm_contacts").select("id, name").in("id", contactIds);
         (contacts ?? []).forEach((c: any) => contactMap.set(c.id, c.name));
       }
-      (vista ?? []).forEach((r: any) => raw.push({
+      vistaSales.forEach((r: any) => raw.push({
         id: r.id, type: "vista", os_code: r.os_code,
         customer: r.crm_contact_id ? contactMap.get(r.crm_contact_id) ?? null : null,
         date: r.data, created_at: r.created_at, forma_pagamento: r.forma_pagamento,
@@ -131,13 +138,19 @@ function Page() {
         reconstruction_status: r.reconstruction_status,
         ordem: 0, alerts: [],
       }));
+      // Vendas a prazo: somente registros com vínculo de cliente/OS
       const { data: prazo, error: prazoErr } = await supabase
         .from("receivables")
-        .select("id, os_code, descricao, cliente, valor, vencimento, created_at, forma_recebimento, reconstruction_status")
+        .select("id, os_code, descricao, cliente, valor, vencimento, created_at, forma_recebimento, reconstruction_status, crm_contact_id")
         .eq("company_id", selected!)
         .eq("needs_manual_item_reconstruction", true);
       if (prazoErr) console.error("[reconstrucao] receivables:", prazoErr);
-      (prazo ?? []).forEach((r: any) => raw.push({
+      const prazoSales = (prazo ?? []).filter((r: any) => {
+        const isSale = !!(r.os_code || r.crm_contact_id || r.cliente);
+        if (!isSale) ignored++;
+        return isSale;
+      });
+      prazoSales.forEach((r: any) => raw.push({
         id: r.id, type: "prazo", os_code: r.os_code, customer: r.cliente,
         date: r.vencimento, created_at: r.created_at, forma_pagamento: r.forma_recebimento,
         amount: Number(r.valor ?? 0), description: r.descricao,
@@ -174,9 +187,11 @@ function Page() {
         s.alerts = a;
       });
 
-      return raw;
+      return { sales: raw, ignored };
     },
   });
+  const sales = pendingData.sales;
+  const ignoredCount = pendingData.ignored;
 
   // Products for autocomplete
   const { data: products = [] } = useQuery({
@@ -388,6 +403,12 @@ function Page() {
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Pendentes de reconstrução</div><div className="text-2xl font-semibold text-orange-600">{(stats?.pendentesVista ?? 0) + (stats?.pendentesPrazo ?? 0)}</div><div className="text-xs text-muted-foreground mt-1">{stats?.pendentesVista ?? 0} à vista · {stats?.pendentesPrazo ?? 0} a prazo</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Conferidas / divergentes</div><div className="text-2xl font-semibold">{stats?.conferidas ?? 0} / <span className="text-amber-600">{stats?.divergentes ?? 0}</span></div></CardContent></Card>
       </div>
+
+      {ignoredCount > 0 && (
+        <div className="text-xs text-muted-foreground border rounded-md p-2 bg-muted/30">
+          <Info className="inline size-3 mr-1" /> {ignoredCount} registro(s) ignorado(s) por não serem vendas (despesas, tarifas, pagamentos do fluxo de caixa). Eles continuam preservados em Contas a Pagar / Fluxo de Caixa.
+        </div>
+      )}
 
       {/* Resumo de vendas à vista não identificadas */}
       <Card className="border-orange-200">
