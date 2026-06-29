@@ -608,15 +608,15 @@ function ClientDashboard() {
         { data: vendasVista },
         { data: vendasPrazo },
       ] = await Promise.all([
-        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
-        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado").gte("data", prevRange.start).lte("data", prevRange.end), branchId),
-        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).eq("status", "realizado"), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado").gte("data", prevRange.start).lte("data", prevRange.end), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado"), branchId),
         withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).neq("status", "pago").order("vencimento", { ascending: true }), branchId),
-        withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status, cliente").eq("company_id", selected).neq("status", "recebido").order("vencimento", { ascending: true }), branchId),
+        withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status, cliente").eq("company_id", selected).is("deleted_at", null).neq("status", "recebido").order("vencimento", { ascending: true }), branchId),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
-        withBranch(supabase.from("products").select("id, quantidade, estoque_minimo").eq("company_id", selected), branchId),
-        withBranch(supabase.from("transactions").select("id, valor").eq("company_id", selected).eq("tipo", "entrada").ilike("descricao", "Venda%").gte("data", range.start).lte("data", range.end), branchId),
-        withBranch(supabase.from("receivables").select("id, valor").eq("company_id", selected).ilike("descricao", "Venda%").gte("created_at", range.start).lte("created_at", range.end + "T23:59:59"), branchId),
+        withBranch(supabase.from("products").select("id, quantidade, estoque_minimo").eq("company_id", selected).is("deleted_at", null), branchId),
+        withBranch(supabase.from("transactions").select("id, valor").eq("company_id", selected).is("deleted_at", null).eq("tipo", "entrada").ilike("descricao", "Venda%").gte("data", range.start).lte("data", range.end), branchId),
+        withBranch(supabase.from("receivables").select("id, valor").eq("company_id", selected).is("deleted_at", null).ilike("descricao", "Venda%").gte("created_at", range.start).lte("created_at", range.end + "T23:59:59"), branchId),
       ]);
 
       const sum = (arr: any[] | null, k = "valor") => (arr ?? []).reduce((s, x) => s + Number(x[k] ?? 0), 0);
