@@ -35,6 +35,7 @@ function ContactProfile() {
         .from("receivables")
         .select("id, descricao, valor, vencimento, data_recebimento, status")
         .eq("crm_contact_id", id)
+        .is("deleted_at", null)
         .order("vencimento", { ascending: false });
       return data ?? [];
     },
