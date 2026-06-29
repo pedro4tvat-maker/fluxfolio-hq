@@ -230,7 +230,8 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
     }
     const [payRes, recRes] = await Promise.all([
       supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).in("status", ["em_aberto", "vencido"]),
-      supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).in("status", ["em_aberto", "vencido"]),
+      supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).in("status", ["em_aberto", "vencido"]),
+      supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).is("deleted_at", null).in("status", ["em_aberto", "vencido"]),
     ]);
     const payables = payRes.data ?? [];
     const receivables = recRes.data ?? [];
@@ -240,6 +241,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
       .from("transactions")
       .select("data, valor, descricao, conta_id")
       .eq("company_id", companyId!)
+      .is("deleted_at", null)
       .gte("data", since.toISOString().slice(0, 10));
     const existing = existRes.data ?? [];
 
