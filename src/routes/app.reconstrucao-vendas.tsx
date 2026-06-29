@@ -106,24 +106,31 @@ function Page() {
   });
 
   // Pending sales list
-  const { data: sales = [], refetch } = useQuery({
+  const { data: pendingData = { sales: [] as PendingSale[], ignored: 0 }, refetch } = useQuery({
     queryKey: ["recovery-pending", selected],
     enabled: !!selected,
     queryFn: async () => {
       const raw: PendingSale[] = [];
+      let ignored = 0;
+      // Vendas à vista: somente entradas com vínculo de venda (os_code ou crm_contact_id)
       const { data: vista, error: vistaErr } = await supabase
         .from("transactions")
-        .select("id, os_code, descricao, valor, data, created_at, forma_pagamento, reconstruction_status, crm_contact_id")
+        .select("id, os_code, descricao, valor, data, created_at, forma_pagamento, reconstruction_status, crm_contact_id, tipo")
         .eq("company_id", selected!)
         .eq("needs_manual_item_reconstruction", true);
       if (vistaErr) console.error("[reconstrucao] transactions:", vistaErr);
-      const contactIds = Array.from(new Set((vista ?? []).map((r: any) => r.crm_contact_id).filter(Boolean)));
+      const vistaSales = (vista ?? []).filter((r: any) => {
+        const isSale = r.tipo === "entrada" && (r.os_code || r.crm_contact_id);
+        if (!isSale) ignored++;
+        return isSale;
+      });
+      const contactIds = Array.from(new Set(vistaSales.map((r: any) => r.crm_contact_id).filter(Boolean)));
       const contactMap = new Map<string, string>();
       if (contactIds.length) {
         const { data: contacts } = await supabase.from("crm_contacts").select("id, name").in("id", contactIds);
         (contacts ?? []).forEach((c: any) => contactMap.set(c.id, c.name));
       }
-      (vista ?? []).forEach((r: any) => raw.push({
+      vistaSales.forEach((r: any) => raw.push({
         id: r.id, type: "vista", os_code: r.os_code,
         customer: r.crm_contact_id ? contactMap.get(r.crm_contact_id) ?? null : null,
         date: r.data, created_at: r.created_at, forma_pagamento: r.forma_pagamento,
@@ -131,13 +138,19 @@ function Page() {
         reconstruction_status: r.reconstruction_status,
         ordem: 0, alerts: [],
       }));
+      // Vendas a prazo: somente registros com vínculo de cliente/OS
       const { data: prazo, error: prazoErr } = await supabase
         .from("receivables")
-        .select("id, os_code, descricao, cliente, valor, vencimento, created_at, forma_recebimento, reconstruction_status")
+        .select("id, os_code, descricao, cliente, valor, vencimento, created_at, forma_recebimento, reconstruction_status, crm_contact_id")
         .eq("company_id", selected!)
         .eq("needs_manual_item_reconstruction", true);
       if (prazoErr) console.error("[reconstrucao] receivables:", prazoErr);
-      (prazo ?? []).forEach((r: any) => raw.push({
+      const prazoSales = (prazo ?? []).filter((r: any) => {
+        const isSale = !!(r.os_code || r.crm_contact_id || r.cliente);
+        if (!isSale) ignored++;
+        return isSale;
+      });
+      prazoSales.forEach((r: any) => raw.push({
         id: r.id, type: "prazo", os_code: r.os_code, customer: r.cliente,
         date: r.vencimento, created_at: r.created_at, forma_pagamento: r.forma_recebimento,
         amount: Number(r.valor ?? 0), description: r.descricao,
