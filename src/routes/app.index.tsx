@@ -89,11 +89,11 @@ async function loadCompaniesV2(isConsultant: boolean, userId: string): Promise<C
       { data: lastTx },
       { data: pendings }, { data: plans },
     ] = await Promise.all([
-      supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
+      supabase.from("transactions").select("tipo, valor").eq("company_id", c.id).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
       supabase.from("payables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "pago"),
-      supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).neq("status", "recebido"),
+      supabase.from("receivables").select("valor, vencimento, status").eq("company_id", c.id).is("deleted_at", null).neq("status", "recebido"),
       supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", c.id),
-      supabase.from("transactions").select("data").eq("company_id", c.id).order("data", { ascending: false }).limit(1),
+      supabase.from("transactions").select("data").eq("company_id", c.id).is("deleted_at", null).order("data", { ascending: false }).limit(1),
       supabase.from("client_pending_items").select("id, status, due_date").eq("company_id", c.id).neq("status", "concluido"),
       supabase.from("action_plans").select("id, title, due_date, status, related_area").eq("company_id", c.id).neq("status", "concluido").order("due_date", { ascending: true, nullsFirst: false }),
     ]);
