@@ -404,8 +404,8 @@ function SettlementTab({ companyId }: { companyId: string }) {
     enabled: !!resellerId,
     queryFn: async () => {
       const [tx, rec] = await Promise.all([
-        supabase.from("transactions").select("id, valor, commission_value, data, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).gte("data", dateFrom).lte("data", dateTo),
-        supabase.from("receivables").select("id, valor, commission_value, vencimento, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).gte("vencimento", dateFrom).lte("vencimento", dateTo),
+        supabase.from("transactions").select("id, valor, commission_value, data, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null).gte("data", dateFrom).lte("data", dateTo),
+        supabase.from("receivables").select("id, valor, commission_value, vencimento, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null).gte("vencimento", dateFrom).lte("vencimento", dateTo),
       ]);
       return [
         ...(tx.data ?? []).map((t) => ({ id: t.id, valor: Number(t.valor) || 0, comissao: Number(t.commission_value) || 0, data: t.data, descricao: t.descricao, kind: "À vista" })),
