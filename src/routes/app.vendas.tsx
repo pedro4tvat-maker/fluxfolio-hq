@@ -1250,12 +1250,13 @@ function VendasPage() {
       return s >= from && s <= to;
     };
     const sharedPool: SaleMov[] = (vendas.movs ?? []).map((m) => ({ ...m })) as SaleMov[];
+    const sharedSaleItems: SaleItemSnapshot[] = (vendas.saleItems ?? []).map((m) => ({ ...m })) as SaleItemSnapshot[];
     const vistaRows = vendas.tx
       .filter((r) => inRange(r.data))
-      .map((r) => buildSaleMarginRows(r, "vista", sharedPool));
+      .map((r) => buildSaleMarginRows(r, "vista", sharedPool, sharedSaleItems));
     const prazoRows = vendas.rec
       .filter((r) => inRange(r.vencimento))
-      .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool));
+      .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool, sharedSaleItems));
     const all = [...vistaRows, ...prazoRows];
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
     const vendasIncompletas = all.filter((s) => s.itens.length === 0 || s.itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0)).length;
