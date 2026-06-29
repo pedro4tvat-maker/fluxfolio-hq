@@ -30,6 +30,7 @@ import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
 import { Route as AppDocumentosRouteImport } from './routes/app.documentos'
 import { Route as AppDiagnosticoRouteImport } from './routes/app.diagnostico'
 import { Route as AppCrmRouteImport } from './routes/app.crm'
+import { Route as AppCorrecaoOsRouteImport } from './routes/app.correcao-os'
 import { Route as AppContasReceberRouteImport } from './routes/app.contas-receber'
 import { Route as AppContasPagarRouteImport } from './routes/app.contas-pagar'
 import { Route as AppConsultoriaRouteImport } from './routes/app.consultoria'
@@ -151,6 +152,11 @@ const AppCrmRoute = AppCrmRouteImport.update({
   path: '/crm',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCorrecaoOsRoute = AppCorrecaoOsRouteImport.update({
+  id: '/correcao-os',
+  path: '/correcao-os',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContasReceberRoute = AppContasReceberRouteImport.update({
   id: '/contas-receber',
   path: '/contas-receber',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/correcao-os': typeof AppCorrecaoOsRoute
   '/app/crm': typeof AppCrmRouteWithChildren
   '/app/diagnostico': typeof AppDiagnosticoRoute
   '/app/documentos': typeof AppDocumentosRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/correcao-os': typeof AppCorrecaoOsRoute
   '/app/crm': typeof AppCrmRouteWithChildren
   '/app/diagnostico': typeof AppDiagnosticoRoute
   '/app/documentos': typeof AppDocumentosRoute
@@ -318,6 +326,7 @@ export interface FileRoutesById {
   '/app/consultoria': typeof AppConsultoriaRoute
   '/app/contas-pagar': typeof AppContasPagarRoute
   '/app/contas-receber': typeof AppContasReceberRoute
+  '/app/correcao-os': typeof AppCorrecaoOsRoute
   '/app/crm': typeof AppCrmRouteWithChildren
   '/app/diagnostico': typeof AppDiagnosticoRoute
   '/app/documentos': typeof AppDocumentosRoute
@@ -358,6 +367,7 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/correcao-os'
     | '/app/crm'
     | '/app/diagnostico'
     | '/app/documentos'
@@ -395,6 +405,7 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/correcao-os'
     | '/app/crm'
     | '/app/diagnostico'
     | '/app/documentos'
@@ -433,6 +444,7 @@ export interface FileRouteTypes {
     | '/app/consultoria'
     | '/app/contas-pagar'
     | '/app/contas-receber'
+    | '/app/correcao-os'
     | '/app/crm'
     | '/app/diagnostico'
     | '/app/documentos'
@@ -614,6 +626,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCrmRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/correcao-os': {
+      id: '/app/correcao-os'
+      path: '/correcao-os'
+      fullPath: '/app/correcao-os'
+      preLoaderRoute: typeof AppCorrecaoOsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/contas-receber': {
       id: '/app/contas-receber'
       path: '/contas-receber'
@@ -771,6 +790,7 @@ interface AppRouteChildren {
   AppConsultoriaRoute: typeof AppConsultoriaRoute
   AppContasPagarRoute: typeof AppContasPagarRoute
   AppContasReceberRoute: typeof AppContasReceberRoute
+  AppCorrecaoOsRoute: typeof AppCorrecaoOsRoute
   AppCrmRoute: typeof AppCrmRouteWithChildren
   AppDiagnosticoRoute: typeof AppDiagnosticoRoute
   AppDocumentosRoute: typeof AppDocumentosRoute
@@ -801,6 +821,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConsultoriaRoute: AppConsultoriaRoute,
   AppContasPagarRoute: AppContasPagarRoute,
   AppContasReceberRoute: AppContasReceberRoute,
+  AppCorrecaoOsRoute: AppCorrecaoOsRoute,
   AppCrmRoute: AppCrmRouteWithChildren,
   AppDiagnosticoRoute: AppDiagnosticoRoute,
   AppDocumentosRoute: AppDocumentosRoute,
