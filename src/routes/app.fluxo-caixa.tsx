@@ -404,6 +404,7 @@ function TransactionDialog({
         .from("transactions")
         .select("id, data, descricao, valor, os_code")
         .eq("company_id", companyId)
+        .is("deleted_at", null)
         .eq("tipo", "entrada")
         .or("descricao.ilike.Venda%,descricao.ilike.OS %,os_code.not.is.null")
         .order("data", { ascending: false })
