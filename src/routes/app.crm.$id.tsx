@@ -21,7 +21,7 @@ function ContactProfile() {
   const { data: contact, isLoading } = useQuery({
     queryKey: ["crm-contact", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("crm_contacts").select("*").eq("id", id).single();
+      const { data, error } = await supabase.from("crm_contacts").select("*").eq("id", id).is("deleted_at", null).single();
       if (error) throw error;
       return data;
     },
