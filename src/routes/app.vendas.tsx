@@ -307,12 +307,13 @@ function VendasPage() {
           .limit(50),
         supabase
           .from("stock_movements")
-          .select("id, product_id, quantidade, custo_unitario, data, motivo")
+          .select("id, product_id, quantidade, custo_unitario, data, motivo, related_sale_id, related_sale_type")
           .eq("company_id", selected!)
           .eq("tipo", "saida")
           .eq("motivo", "Venda")
           .order("data", { ascending: false })
-          .limit(500),
+          .limit(2000),
+
       ]);
       return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [] };
     },
