@@ -73,6 +73,38 @@ type StockLocation = {
   is_default: boolean;
 };
 
+type SaleItemSnapshot = {
+  id?: string;
+  sale_id: string;
+  sale_type: "vista" | "prazo";
+  company_id: string;
+  branch_id?: string | null;
+  product_id: string | null;
+  product_name_snapshot: string;
+  quantity: number | string;
+  unit_price: number | string;
+  unit_cost: number | string | null;
+  total_revenue: number | string | null;
+  total_cost: number | string | null;
+  margin_value: number | string | null;
+  margin_percentage?: number | string | null;
+  stock_location_id: string | null;
+  needs_review?: boolean | null;
+  review_reason?: string | null;
+};
+
+type ParsedItem = {
+  nome: string;
+  qtd: number;
+  preco: number;
+  custo: number;
+  subtotal: number;
+  custoTotal: number;
+  margem: number;
+  needsReview?: boolean;
+  reviewReason?: string | null;
+};
+
 type CompanyData = {
   nome: string | null;
   nome_fantasia: string | null;
@@ -291,20 +323,20 @@ function VendasPage() {
     queryKey: ["vendas-list", selected],
     enabled: !!selected,
     queryFn: async () => {
-      const [tx, rec, movs] = await Promise.all([
+      const [tx, rec, movs, saleItems] = await Promise.all([
         supabase
           .from("transactions")
           .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id, os_code")
           .eq("company_id", selected!)
           .eq("tipo", "entrada")
           .order("data", { ascending: false })
-          .limit(50),
+          .limit(2000),
         supabase
           .from("receivables")
           .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id, os_code")
           .eq("company_id", selected!)
           .order("vencimento", { ascending: false })
-          .limit(50),
+          .limit(2000),
         supabase
           .from("stock_movements")
           .select("id, product_id, quantidade, custo_unitario, data, motivo, related_sale_id, related_sale_type")
@@ -313,9 +345,15 @@ function VendasPage() {
           .eq("motivo", "Venda")
           .order("data", { ascending: false })
           .limit(2000),
+        (supabase as any)
+          .from("sale_items")
+          .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+          .eq("company_id", selected!)
+          .order("created_at", { ascending: false })
+          .limit(5000),
 
       ]);
-      return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [] };
+      return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [], saleItems: (saleItems.data ?? []) as SaleItemSnapshot[] };
     },
   });
 
@@ -333,6 +371,62 @@ function VendasPage() {
   const margemPct = total > 0 ? (lucro / total) * 100 : 0;
 
   const filteredContacts = useMemo(() => contacts, [contacts]);
+
+  const saleItemSnapshots = useMemo(() => (vendas?.saleItems ?? []) as SaleItemSnapshot[], [vendas?.saleItems]);
+
+  function saleItemsFor(saleId: string, saleType: "vista" | "prazo", pool = saleItemSnapshots) {
+    return pool.filter((it) => it.sale_id === saleId && it.sale_type === saleType);
+  }
+
+  function snapshotsToParsed(snaps: SaleItemSnapshot[]): ParsedItem[] {
+    return snaps.map((it) => {
+      const qtd = Number(it.quantity) || 0;
+      const preco = Number(it.unit_price) || 0;
+      const custo = Number(it.unit_cost) || 0;
+      const subtotal = Number(it.total_revenue) > 0 ? Number(it.total_revenue) : qtd * preco;
+      const custoTotal = Number(it.total_cost) > 0 ? Number(it.total_cost) : qtd * custo;
+      return {
+        nome: it.product_name_snapshot || "Produto sem identificação",
+        qtd,
+        preco,
+        custo,
+        subtotal,
+        custoTotal,
+        margem: Number(it.margin_value) || subtotal - custoTotal,
+        needsReview: !!it.needs_review || qtd <= 0 || preco <= 0,
+        reviewReason: it.review_reason,
+      };
+    });
+  }
+
+  function parsedToSaleItemRows(parsed: ParsedItem[], row: { id: string }, tipo: "vista" | "prazo") {
+    return parsed
+      .filter((it) => it.qtd > 0)
+      .map((it) => {
+        const prod = products?.find((p) => p.nome.toLowerCase() === it.nome.toLowerCase());
+        const subtotal = it.qtd * it.preco;
+        const custoTotal = it.qtd * it.custo;
+        const margem = subtotal - custoTotal;
+        return {
+          company_id: selected!,
+          branch_id: null,
+          sale_id: row.id,
+          sale_type: tipo,
+          product_id: prod?.id ?? null,
+          product_name_snapshot: it.nome,
+          quantity: it.qtd,
+          unit_price: it.preco,
+          unit_cost: it.custo,
+          total_revenue: subtotal,
+          total_cost: custoTotal,
+          margin_value: margem,
+          margin_percentage: subtotal > 0 ? (margem / subtotal) * 100 : 0,
+          stock_location_id: null,
+          needs_review: it.preco <= 0 || it.needsReview || !prod,
+          review_reason: it.reviewReason ?? (it.preco <= 0 ? "Preço unitário ausente no reprocessamento" : !prod ? "Produto não localizado no cadastro atual" : null),
+        };
+      });
+  }
 
   // Quando o revendedor muda, sugerir o local de estoque dele para itens que ainda estão no default
   useEffect(() => {
@@ -408,7 +502,11 @@ function VendasPage() {
     e.preventDefault();
     if (!selected) return;
     if (items.length === 0) {
-      toast.error("Adicione pelo menos um item");
+      toast.error("Adicione pelo menos um produto ou serviço antes de salvar a venda.");
+      return;
+    }
+    if (form.forma === "prazo" && !form.vencimento) {
+      toast.error("Informe o vencimento da venda a prazo.");
       return;
     }
     for (const it of items) {
@@ -417,13 +515,16 @@ function VendasPage() {
         return;
       }
       if (!(Number(it.quantidade) > 0) || !(Number(it.preco_unitario) > 0)) {
-        toast.error(`Informe quantidade e preço para "${it.nome}"`);
+        toast.error(Number(it.preco_unitario) > 0 ? `Informe quantidade válida para "${it.nome}"` : "Este item está com preço de venda zerado. Corrija antes de gerar a OS.");
         return;
       }
       if (it.product_id && !it.stock_location_id) {
         toast.error(`Selecione o centro de estoque de origem para "${it.nome}"`);
         return;
       }
+    }
+    if (items.some((it) => it.product_id && !(Number(it.custo_unitario) > 0))) {
+      toast.warning("Este item está sem custo cadastrado. A margem poderá ficar incorreta.");
     }
     // Valida saldo por local de origem
     for (const it of items) {
@@ -837,7 +938,6 @@ function VendasPage() {
 
 
 
-  type ParsedItem = { nome: string; qtd: number; preco: number; custo: number; subtotal: number; custoTotal: number; margem: number };
   type SaleMov = { id: string; product_id: string | null; quantidade: number | string; custo_unitario: number | string | null; data: string | null; related_sale_id?: string | null; related_sale_type?: string | null };
   function extractItemsBlock(desc: string): string {
     // Encontra o último bloco "(...)" no fim da descrição, respeitando parênteses aninhados
