@@ -232,6 +232,7 @@ function VendasPage() {
         .from("crm_contacts")
         .select("id, name, tipo, cpf_cnpj, email, phone")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .in("tipo", ["cliente", "lead"])
         .order("name");
       return (data ?? []) as CrmContact[];
@@ -246,6 +247,7 @@ function VendasPage() {
         .from("products")
         .select("id, nome, preco_venda, quantidade, custo_unitario, centro_custo_id")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .order("nome");
       return data ?? [];
     },
