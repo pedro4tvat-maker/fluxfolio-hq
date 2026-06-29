@@ -106,6 +106,7 @@ function EstoquePage() {
         .from("stock_movements")
         .select("id, product_id, tipo, quantidade, custo_unitario, motivo, data")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .order("data", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(80);
