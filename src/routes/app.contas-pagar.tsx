@@ -53,7 +53,7 @@ function ContasAPagar() {
     queryFn: async () => {
       const { data, error } = await supabase.from("payables")
         .select("id,descricao,fornecedor,valor,vencimento,data_pagamento,status,categoria_id,conta_id,centro_custo_id,forma_pagamento")
-        .eq("company_id", selected!).order("vencimento");
+        .eq("company_id", selected!).is("deleted_at", null).order("vencimento");
       if (error) throw error;
       return (data ?? []) as Payable[];
     },
@@ -118,7 +118,7 @@ function ContasAPagar() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("payables").delete().eq("id", id);
+      const { error } = await supabase.from("payables").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Excluído"); qc.invalidateQueries({ queryKey: ["payables"] }); qc.invalidateQueries({ queryKey: ["transactions"] }); },

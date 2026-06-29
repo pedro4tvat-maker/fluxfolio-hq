@@ -114,15 +114,15 @@ function DashboardTab({ consultantId }: { consultantId: string }) {
 
   const { data: recv = [] } = useQuery({
     queryKey: ["c-recv", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId)).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_receivables").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [],
   });
   const { data: pay = [] } = useQuery({
     queryKey: ["c-pay", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_payables").select("*").eq("consultant_id", consultantId)).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_payables").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [],
   });
   const { data: contracts = [] } = useQuery({
     queryKey: ["c-contracts", consultantId],
-    queryFn: async () => (await supabase.from("consultancy_contracts").select("*").eq("consultant_id", consultantId)).data ?? [],
+    queryFn: async () => (await supabase.from("consultancy_contracts").select("*").eq("consultant_id", consultantId).is("deleted_at", null)).data ?? [],
   });
 
   const inMonth = (d: string | null) => d && d >= start && d <= end;
