@@ -2806,9 +2806,12 @@ export type Database = {
           forma_recebimento: string | null
           id: string
           import_batch_id: string | null
+          needs_manual_item_reconstruction: boolean
           observacoes: string | null
           os_code: string | null
           parcelas: number | null
+          reconstruction_reason: string | null
+          reconstruction_status: string | null
           recorrencia: Database["public"]["Enums"]["recurrence"] | null
           reseller_id: string | null
           status: Database["public"]["Enums"]["receivable_status"]
@@ -2831,9 +2834,12 @@ export type Database = {
           forma_recebimento?: string | null
           id?: string
           import_batch_id?: string | null
+          needs_manual_item_reconstruction?: boolean
           observacoes?: string | null
           os_code?: string | null
           parcelas?: number | null
+          reconstruction_reason?: string | null
+          reconstruction_status?: string | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
           reseller_id?: string | null
           status?: Database["public"]["Enums"]["receivable_status"]
@@ -2856,9 +2862,12 @@ export type Database = {
           forma_recebimento?: string | null
           id?: string
           import_batch_id?: string | null
+          needs_manual_item_reconstruction?: boolean
           observacoes?: string | null
           os_code?: string | null
           parcelas?: number | null
+          reconstruction_reason?: string | null
+          reconstruction_status?: string | null
           recorrencia?: Database["public"]["Enums"]["recurrence"] | null
           reseller_id?: string | null
           status?: Database["public"]["Enums"]["receivable_status"]
@@ -2976,6 +2985,10 @@ export type Database = {
           product_id: string | null
           product_name_snapshot: string
           quantity: number
+          recovered_from_stock_movement: boolean
+          recovery_log_id: string | null
+          recovery_status: string | null
+          related_stock_movement_id: string | null
           review_reason: string | null
           sale_id: string
           sale_type: string
@@ -2997,6 +3010,10 @@ export type Database = {
           product_id?: string | null
           product_name_snapshot: string
           quantity: number
+          recovered_from_stock_movement?: boolean
+          recovery_log_id?: string | null
+          recovery_status?: string | null
+          related_stock_movement_id?: string | null
           review_reason?: string | null
           sale_id: string
           sale_type: string
@@ -3018,6 +3035,10 @@ export type Database = {
           product_id?: string | null
           product_name_snapshot?: string
           quantity?: number
+          recovered_from_stock_movement?: boolean
+          recovery_log_id?: string | null
+          recovery_status?: string | null
+          related_stock_movement_id?: string | null
           review_reason?: string | null
           sale_id?: string
           sale_type?: string
@@ -3051,10 +3072,82 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sale_items_recovery_log_id_fkey"
+            columns: ["recovery_log_id"]
+            isOneToOne: false
+            referencedRelation: "sales_recovery_log"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sale_items_stock_location_id_fkey"
             columns: ["stock_location_id"]
             isOneToOne: false
             referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_recovery_log: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          difference_amount: number | null
+          id: string
+          items_created_count: number
+          notes: string | null
+          os_number: string | null
+          recovery_method: string
+          reverted_at: string | null
+          reverted_by: string | null
+          sale_id: string
+          sale_type: string
+          status: string
+          total_items_amount: number | null
+          total_sale_amount: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          difference_amount?: number | null
+          id?: string
+          items_created_count?: number
+          notes?: string | null
+          os_number?: string | null
+          recovery_method: string
+          reverted_at?: string | null
+          reverted_by?: string | null
+          sale_id: string
+          sale_type: string
+          status: string
+          total_items_amount?: number | null
+          total_sale_amount?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          difference_amount?: number | null
+          id?: string
+          items_created_count?: number
+          notes?: string | null
+          os_number?: string | null
+          recovery_method?: string
+          reverted_at?: string | null
+          reverted_by?: string | null
+          sale_id?: string
+          sale_type?: string
+          status?: string
+          total_items_amount?: number | null
+          total_sale_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_recovery_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -3261,6 +3354,7 @@ export type Database = {
           forma_pagamento: string | null
           id: string
           import_batch_id: string | null
+          needs_manual_item_reconstruction: boolean
           observacoes: string | null
           os_code: string | null
           payable_id: string | null
@@ -3268,6 +3362,8 @@ export type Database = {
           reconciled_with_id: string | null
           reconciled_with_type: string | null
           reconciliation_status: string | null
+          reconstruction_reason: string | null
+          reconstruction_status: string | null
           reseller_id: string | null
           status: Database["public"]["Enums"]["transaction_status"]
           tipo: Database["public"]["Enums"]["transaction_type"]
@@ -3288,6 +3384,7 @@ export type Database = {
           forma_pagamento?: string | null
           id?: string
           import_batch_id?: string | null
+          needs_manual_item_reconstruction?: boolean
           observacoes?: string | null
           os_code?: string | null
           payable_id?: string | null
@@ -3295,6 +3392,8 @@ export type Database = {
           reconciled_with_id?: string | null
           reconciled_with_type?: string | null
           reconciliation_status?: string | null
+          reconstruction_reason?: string | null
+          reconstruction_status?: string | null
           reseller_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           tipo: Database["public"]["Enums"]["transaction_type"]
@@ -3315,6 +3414,7 @@ export type Database = {
           forma_pagamento?: string | null
           id?: string
           import_batch_id?: string | null
+          needs_manual_item_reconstruction?: boolean
           observacoes?: string | null
           os_code?: string | null
           payable_id?: string | null
@@ -3322,6 +3422,8 @@ export type Database = {
           reconciled_with_id?: string | null
           reconciled_with_type?: string | null
           reconciliation_status?: string | null
+          reconstruction_reason?: string | null
+          reconstruction_status?: string | null
           reseller_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"]
           tipo?: Database["public"]["Enums"]["transaction_type"]
@@ -3460,6 +3562,11 @@ export type Database = {
         Args: { _location_id: string; _product_id: string }
         Returns: number
       }
+      recover_sale_from_stock_movements: {
+        Args: { _dry_run?: boolean; _sale_id: string; _sale_type: string }
+        Returns: Json
+      }
+      revert_sales_recovery: { Args: { _log_id: string }; Returns: Json }
       search_consultants: {
         Args: { _q: string }
         Returns: {
