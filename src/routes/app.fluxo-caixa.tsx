@@ -63,7 +63,7 @@ function FluxoCaixa() {
     queryKey: ["categories", selected],
     queryFn: async () => {
       if (!selected) return [];
-      const { data } = await supabase.from("categories").select("id, nome, tipo").eq("company_id", selected).order("nome");
+      const { data } = await supabase.from("categories").select("id, nome, tipo").eq("company_id", selected).is("deleted_at", null).order("nome");
       return data ?? [];
     },
     enabled: !!selected,
@@ -83,7 +83,7 @@ function FluxoCaixa() {
     queryKey: ["cost_centers", selected],
     queryFn: async () => {
       if (!selected) return [];
-      const { data } = await supabase.from("cost_centers").select("id, nome").eq("company_id", selected).order("nome");
+      const { data } = await supabase.from("cost_centers").select("id, nome").eq("company_id", selected).is("deleted_at", null).order("nome");
       return data ?? [];
     },
     enabled: !!selected,

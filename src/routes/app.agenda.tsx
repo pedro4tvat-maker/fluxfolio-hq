@@ -183,7 +183,7 @@ function useActivities(consultantId: string | undefined) {
         .from("consultancy_activities")
         .select("*")
         .eq("consultant_id", consultantId)
-        .order("activity_date", { ascending: true });
+        .is("deleted_at", null).order("activity_date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Activity[];
     },
@@ -213,10 +213,10 @@ function Inner() {
       Object.keys(body).forEach((k) => body[k] === "" && (body[k] = null));
       if (body.id) {
         const { id, ...rest } = body;
-        const { error } = await sb.from("consultancy_activities").update(rest).eq("id", id);
+        const { error } = await sb.from("consultancy_activities").update(rest).eq("id", id).is("deleted_at", null);
         if (error) throw error;
       } else {
-        const { error } = await sb.from("consultancy_activities").insert(body);
+        const { error } = await sb.from("consultancy_activities").insert(body).is("deleted_at", null);
         if (error) throw error;
       }
     },
@@ -241,7 +241,7 @@ function Inner() {
       const patch: any = { status };
       if (status === "concluida") patch.completed_at = new Date().toISOString();
       if (status === "cancelada") patch.canceled_at = new Date().toISOString();
-      const { error } = await sb.from("consultancy_activities").update(patch).eq("id", id);
+      const { error } = await sb.from("consultancy_activities").update(patch).eq("id", id).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-activities"] }),
@@ -253,7 +253,7 @@ function Inner() {
   const onDelete = (id: string) => { if (confirm("Excluir esta atividade?")) delMut.mutate(id); };
   const onReagendar = (a: Activity) => {
     const novo = prompt("Nova data (AAAA-MM-DD):", a.activity_date);
-    if (novo) sb.from("consultancy_activities").update({ activity_date: novo, status: "pendente" }).eq("id", a.id).then(() => {
+    if (novo) sb.from("consultancy_activities").update({ activity_date: novo, status: "pendente" }).eq("id", a.id).is("deleted_at", null).then(() => {
       qc.invalidateQueries({ queryKey: ["agenda-activities"] });
       toast.success("Atividade reagendada");
     });

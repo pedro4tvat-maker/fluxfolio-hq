@@ -125,7 +125,7 @@ function JornadaCompanyPage() {
       const { data } = await sb.from("consultancy_activities")
         .select("id, title, activity_date, status")
         .eq("consultant_id", consultant!.id).eq("company_id", companyId)
-        .neq("status", "concluida").order("activity_date", { ascending: true }).limit(5);
+        .neq("status", "concluida").is("deleted_at", null).order("activity_date", { ascending: true }).limit(5);
       return data ?? [];
     },
   });

@@ -161,7 +161,7 @@ function AtasPage() {
     queryKey: ["meeting-minutes", user?.id, isConsultant, consultant?.id],
     enabled: !!user && (!isConsultant || !!consultant?.id),
     queryFn: async () => {
-      let q = sb.from("meeting_minutes").select("*").order("meeting_date", { ascending: false });
+      let q = sb.from("meeting_minutes").select("*").is("deleted_at", null).order("meeting_date", { ascending: false });
       if (isConsultant && consultant?.id) q = q.eq("consultant_id", consultant.id);
       const { data, error } = await q;
       if (error) throw error;
@@ -209,7 +209,7 @@ function AtasPage() {
         shared_with_client: false,
         ai_generated: false,
         created_by: user?.id,
-      });
+      }).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -223,7 +223,7 @@ function AtasPage() {
     mutationFn: async (m: Minute) => {
       const newShared = !m.shared_with_client;
       const status = newShared ? "compartilhada" : (m.status === "compartilhada" ? "finalizada" : m.status);
-      const { error } = await sb.from("meeting_minutes").update({ shared_with_client: newShared, status }).eq("id", m.id);
+      const { error } = await sb.from("meeting_minutes").update({ shared_with_client: newShared, status }).eq("id", m.id).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -448,11 +448,11 @@ function MinuteFormDialog({
         created_by: userId,
       };
       if (editing?.id) {
-        const { error } = await sb.from("meeting_minutes").update(payload).eq("id", editing.id);
+        const { error } = await sb.from("meeting_minutes").update(payload).eq("id", editing.id).is("deleted_at", null);
         if (error) throw error;
         return editing.id;
       } else {
-        const { data, error } = await sb.from("meeting_minutes").insert(payload).select("id").single();
+        const { data, error } = await sb.from("meeting_minutes").insert(payload).select("id").is("deleted_at", null).single();
         if (error) throw error;
         return data.id;
       }
@@ -702,7 +702,7 @@ function TaskGeneratorDialog({ minute, consultantId, onClose }: {
             responsible_name: t.responsible_name || null,
             related_module: "ata_reuniao",
             related_record_id: minute.id,
-          });
+          }).is("deleted_at", null);
         } else if (t.target === "plano_acao") {
           await sb.from("action_plans").insert({
             consultant_id: consultantId,

@@ -29,7 +29,7 @@ function CentroCustosPage() {
         .from("cost_centers")
         .select("id, nome, kpi_classification")
         .eq("company_id", selected!)
-        .order("nome");
+        .is("deleted_at", null).order("nome");
       return data ?? [];
     },
   });
@@ -70,7 +70,7 @@ function CentroCustosPage() {
       company_id: selected,
       nome: nome.trim(),
       kpi_classification: novaClass.trim() || null,
-    });
+    }).is("deleted_at", null);
     setSaving(false);
     if (error) toast.error(error.message);
     else { toast.success("Centro de custo criado"); setNome(""); setNovaClass(""); refetch(); }
@@ -81,7 +81,7 @@ function CentroCustosPage() {
     const { error } = await supabase
       .from("cost_centers")
       .update({ nome: editValue.trim(), kpi_classification: editClass.trim() || null })
-      .eq("id", id);
+      .eq("id", id).is("deleted_at", null);
     if (error) toast.error(error.message);
     else { toast.success("Centro atualizado"); setEditingId(null); refetch(); }
   }

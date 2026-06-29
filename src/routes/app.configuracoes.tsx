@@ -646,7 +646,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
         .from("categories")
         .select("*")
         .eq("company_id", companyId)
-        .order("nome");
+        .is("deleted_at", null).order("nome");
       if (error) throw error;
       return data;
     },
@@ -659,7 +659,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
         .from("cost_centers")
         .select("*")
         .eq("company_id", companyId)
-        .order("nome");
+        .is("deleted_at", null).order("nome");
       if (error) throw error;
       return data;
     },
@@ -668,7 +668,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   const toggle = useMutation({
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: boolean }) => {
       // @ts-ignore - dynamic field names for database types
-      const { error } = await supabase.from("categories").update({ [field]: value }).eq("id", id);
+      const { error } = await supabase.from("categories").update({ [field]: value }).eq("id", id).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -685,7 +685,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   const createCategory = useMutation({
     mutationFn: async () => {
       if (!catNome.trim()) throw new Error("Informe o nome da categoria");
-      const { error } = await supabase.from("categories").insert({ company_id: companyId, nome: catNome.trim(), tipo: catTipo });
+      const { error } = await supabase.from("categories").insert({ company_id: companyId, nome: catNome.trim(), tipo: catTipo }).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -715,7 +715,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   const createCC = useMutation({
     mutationFn: async () => {
       if (!ccNome.trim()) throw new Error("Informe o nome do centro de custo");
-      const { error } = await supabase.from("cost_centers").insert({ company_id: companyId, nome: ccNome.trim(), kpi_classification: ccKpi || null });
+      const { error } = await supabase.from("cost_centers").insert({ company_id: companyId, nome: ccNome.trim(), kpi_classification: ccKpi || null }).is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {

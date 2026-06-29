@@ -90,7 +90,7 @@ function PrecificacaoPage() {
         .from("pricing_records")
         .select("*")
         .eq("company_id", selected!)
-        .order("created_at", { ascending: false });
+        .is("deleted_at", null).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PricingRecord[];
     },
@@ -315,8 +315,8 @@ function PricingForm({
       created_by: editing ? undefined : user?.id ?? null,
     };
     const { error } = editing
-      ? await supabase.from("pricing_records").update(payload).eq("id", editing.id)
-      : await supabase.from("pricing_records").insert(payload);
+      ? await supabase.from("pricing_records").update(payload).eq("id", editing.id).is("deleted_at", null)
+      : await supabase.from("pricing_records").insert(payload).is("deleted_at", null);
 
     if (error) { setSaving(false); toast.error(error.message); return; }
 

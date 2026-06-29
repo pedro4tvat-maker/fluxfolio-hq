@@ -263,7 +263,7 @@ function PlanoAcaoPage() {
           related_module: "plano_acao",
           related_record_id: actionRow.id,
           responsible_name: actionRow.responsible_name,
-        });
+        }).is("deleted_at", null);
       }
       return actionRow;
     },

@@ -67,7 +67,7 @@ export function AttachmentsPanel({
         .select("*")
         .eq("company_id", companyId)
         .eq("related_module", module)
-        .order("created_at", { ascending: false });
+        .is("deleted_at", null).order("created_at", { ascending: false });
       if (recordId) q = q.eq("related_record_id", recordId);
       const { data, error } = await q;
       if (error) throw error;
@@ -101,7 +101,7 @@ export function AttachmentsPanel({
         document_type: docType,
         description: desc.trim() || null,
         uploaded_by: user?.id ?? null,
-      });
+      }).is("deleted_at", null);
       if (insErr) throw insErr;
       toast.success("Arquivo anexado");
       setDesc("");

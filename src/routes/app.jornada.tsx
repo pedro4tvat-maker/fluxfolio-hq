@@ -130,7 +130,7 @@ function JornadaPage() {
       const { data } = await sb.from("consultancy_activities")
         .select("id, company_id, title, activity_date, status, activity_type")
         .eq("consultant_id", consultant.id)
-        .order("activity_date", { ascending: true });
+        .is("deleted_at", null).order("activity_date", { ascending: true });
       return data ?? [];
     },
   });

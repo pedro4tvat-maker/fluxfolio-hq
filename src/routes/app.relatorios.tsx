@@ -107,7 +107,7 @@ function Relatorios() {
     queryKey: ["cost_centers", currentCompanyId],
     enabled: !!currentCompanyId,
     queryFn: async () => {
-      const { data } = await supabase.from("cost_centers").select("id, nome").eq("company_id", currentCompanyId!).order("nome");
+      const { data } = await supabase.from("cost_centers").select("id, nome").eq("company_id", currentCompanyId!).is("deleted_at", null).order("nome");
       return data ?? [];
     },
   });
