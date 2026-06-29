@@ -1,0 +1,1 @@
+UPDATE public.crm_contacts SET deleted_at = NULL WHERE id = 'c3adbec3-38b8-4120-a8c2-f62bd7720e1e';
