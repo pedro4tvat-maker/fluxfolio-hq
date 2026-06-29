@@ -85,13 +85,13 @@ function Page() {
     enabled: !!selected,
     queryFn: async () => {
       const [t1, t2, t3, t4, t5, t6, t7] = await Promise.all([
-        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!),
-        supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!),
-        supabase.from("sale_items").select("sale_id", { count: "exact", head: true }).eq("company_id", selected!),
-        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual").eq("tipo", "entrada").or("os_code.not.is.null,crm_contact_id.not.is.null"),
-        supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual").or("os_code.not.is.null,crm_contact_id.not.is.null,cliente.not.is.null"),
-        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("reconstruction_status", "reconstruida_conferida"),
-        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).eq("reconstruction_status", "reconstruida_com_divergencia"),
+        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null),
+        supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null),
+        supabase.from("sale_items").select("sale_id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null),
+        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual").eq("tipo", "entrada").or("os_code.not.is.null,crm_contact_id.not.is.null"),
+        supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual").or("os_code.not.is.null,crm_contact_id.not.is.null,cliente.not.is.null"),
+        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null).eq("reconstruction_status", "reconstruida_conferida"),
+        supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null).eq("reconstruction_status", "reconstruida_com_divergencia"),
       ]);
       return {
         totalVista: t1.count ?? 0,
