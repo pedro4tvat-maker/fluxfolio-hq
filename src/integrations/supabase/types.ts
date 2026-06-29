@@ -190,6 +190,51 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          alert_reason: string | null
+          changed_fields: Json | null
+          company_id: string | null
+          created_at: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          operation: string
+          record_id: string | null
+          source: string | null
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          alert_reason?: string | null
+          changed_fields?: Json | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation: string
+          record_id?: string | null
+          source?: string | null
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          alert_reason?: string | null
+          changed_fields?: Json | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string
+          record_id?: string | null
+          source?: string | null
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           ativa: boolean
@@ -1736,6 +1781,7 @@ export type Database = {
           cpf_cnpj: string | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           email: string | null
           id: string
           lead_source: string | null
@@ -1757,6 +1803,7 @@ export type Database = {
           cpf_cnpj?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           email?: string | null
           id?: string
           lead_source?: string | null
@@ -1778,6 +1825,7 @@ export type Database = {
           cpf_cnpj?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           email?: string | null
           id?: string
           lead_source?: string | null
@@ -2765,6 +2813,7 @@ export type Database = {
           company_id: string
           created_at: string
           custo_unitario: number
+          deleted_at: string | null
           estoque_minimo: number
           fornecedor: string | null
           id: string
@@ -2781,6 +2830,7 @@ export type Database = {
           company_id: string
           created_at?: string
           custo_unitario?: number
+          deleted_at?: string | null
           estoque_minimo?: number
           fornecedor?: string | null
           id?: string
@@ -2797,6 +2847,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           custo_unitario?: number
+          deleted_at?: string | null
           estoque_minimo?: number
           fornecedor?: string | null
           id?: string
@@ -2856,6 +2907,7 @@ export type Database = {
           created_at: string
           crm_contact_id: string | null
           data_recebimento: string | null
+          deleted_at: string | null
           descricao: string
           forma_recebimento: string | null
           id: string
@@ -2884,6 +2936,7 @@ export type Database = {
           created_at?: string
           crm_contact_id?: string | null
           data_recebimento?: string | null
+          deleted_at?: string | null
           descricao: string
           forma_recebimento?: string | null
           id?: string
@@ -2912,6 +2965,7 @@ export type Database = {
           created_at?: string
           crm_contact_id?: string | null
           data_recebimento?: string | null
+          deleted_at?: string | null
           descricao?: string
           forma_recebimento?: string | null
           id?: string
@@ -3032,6 +3086,7 @@ export type Database = {
           branch_id: string | null
           company_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           margin_percentage: number
           margin_value: number
@@ -3057,6 +3112,7 @@ export type Database = {
           branch_id?: string | null
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           margin_percentage?: number
           margin_value?: number
@@ -3082,6 +3138,7 @@ export type Database = {
           branch_id?: string | null
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           margin_percentage?: number
           margin_value?: number
@@ -3300,6 +3357,7 @@ export type Database = {
           created_at: string
           custo_unitario: number | null
           data: string
+          deleted_at: string | null
           id: string
           import_batch_id: string | null
           motivo: string | null
@@ -3317,6 +3375,7 @@ export type Database = {
           created_at?: string
           custo_unitario?: number | null
           data?: string
+          deleted_at?: string | null
           id?: string
           import_batch_id?: string | null
           motivo?: string | null
@@ -3334,6 +3393,7 @@ export type Database = {
           created_at?: string
           custo_unitario?: number | null
           data?: string
+          deleted_at?: string | null
           id?: string
           import_batch_id?: string | null
           motivo?: string | null
@@ -3404,6 +3464,7 @@ export type Database = {
           created_at: string
           crm_contact_id: string | null
           data: string
+          deleted_at: string | null
           descricao: string
           forma_pagamento: string | null
           id: string
@@ -3434,6 +3495,7 @@ export type Database = {
           created_at?: string
           crm_contact_id?: string | null
           data?: string
+          deleted_at?: string | null
           descricao: string
           forma_pagamento?: string | null
           id?: string
@@ -3464,6 +3526,7 @@ export type Database = {
           created_at?: string
           crm_contact_id?: string | null
           data?: string
+          deleted_at?: string | null
           descricao?: string
           forma_pagamento?: string | null
           id?: string
