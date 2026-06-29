@@ -667,9 +667,9 @@ function VendasPage() {
         if (osCode) {
           generatedOsCode = osCode;
           if (saleRefType === "vista") {
-            await supabase.from("transactions").update({ os_code: osCode, descricao: `OS ${osCode}` }).eq("id", saleRefId);
+            await supabase.from("transactions").update({ os_code: osCode }).eq("id", saleRefId);
           } else {
-            await supabase.from("receivables").update({ os_code: osCode, descricao: `OS ${osCode}` }).eq("id", saleRefId);
+            await supabase.from("receivables").update({ os_code: osCode }).eq("id", saleRefId);
           }
         }
       }
