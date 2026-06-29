@@ -1258,13 +1258,15 @@ function VendasPage() {
       .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool));
     const all = [...vistaRows, ...prazoRows];
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
-    const totalReceita = all.reduce((a, b) => a + b.totalReceita, 0);
-    const totalCusto = all.reduce((a, b) => a + b.totalCusto, 0);
+    const vendasIncompletas = all.filter((s) => s.itens.length === 0 || s.itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0)).length;
+    const validAll = all.filter((s) => s.itens.length > 0);
+    const totalReceita = validAll.reduce((a, b) => a + b.totalReceita, 0);
+    const totalCusto = validAll.reduce((a, b) => a + b.totalCusto, 0);
     const totalMargem = totalReceita - totalCusto;
     const margemPct = totalReceita > 0 ? (totalMargem / totalReceita) * 100 : 0;
     const empresa = company?.nome_fantasia || company?.nome || "";
 
-    const blocks = all.map((s, idx) => {
+    const blocks = validAll.map((s, idx) => {
       const pct = s.totalReceita > 0 ? (s.margem / s.totalReceita) * 100 : 0;
       const linhas = s.itens.map((it) => `
         <tr>
@@ -1310,10 +1312,11 @@ function VendasPage() {
         <div class="card"><div class="stat">Faturamento</div><div class="stat-val">${formatMoney(totalReceita)}</div></div>
         <div class="card"><div class="stat">Custos diretos</div><div class="stat-val">${formatMoney(totalCusto)}</div></div>
         <div class="card"><div class="stat">Margem do período</div><div class="stat-val ${totalMargem >= 0 ? "pos" : "neg"}">${formatMoney(totalMargem)} (${margemPct.toFixed(1)}%)</div></div>
+        <div class="card"><div class="stat">Vendas incompletas</div><div class="stat-val">${vendasIncompletas}</div></div>
       </div>
       <h2>Detalhamento por venda</h2>
       ${blocks}
-      <div class="footer">Custos baseados no cadastro atual de cada produto. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+      <div class="footer">Custos baseados no snapshot da venda. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
       <div class="noprint" style="margin-top:16px; text-align:center"><button onclick="window.print()" style="padding:8px 16px; cursor:pointer">Imprimir / Salvar PDF</button></div>
     </body></html>`;
     openHtmlWindow(html);
