@@ -1191,6 +1191,10 @@ function VendasPage() {
     forma_pagamento?: string | null; cliente?: string | null;
   }, tipo: "vista" | "prazo") {
     const { itens, totalReceita, totalCusto, margem, dataRef, cliente } = buildSaleMarginRows(row, tipo);
+    if (itens.length === 0 || itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0)) {
+      toast.error("Esta venda não possui itens detalhados. Corrija ou reprocesse a venda antes de gerar o relatório.");
+      return;
+    }
     const margemPct = totalReceita > 0 ? (margem / totalReceita) * 100 : 0;
     const empresa = company?.nome_fantasia || company?.nome || "";
     const reportNumber = `REL-MG-${String(row.id).slice(0, 8).toUpperCase()}`;
@@ -1230,7 +1234,7 @@ function VendasPage() {
         <thead><tr><th>Produto</th><th class="center">Qtd</th><th class="num">Preço un.</th><th class="num">Custo un.</th><th class="num">Receita</th><th class="num">Custo</th><th class="num">Margem</th></tr></thead>
         <tbody>${linhas}</tbody>
       </table>
-      <div class="footer">Custos baseados no cadastro atual do produto. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+      <div class="footer">Custos baseados no snapshot da venda. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
       <div class="noprint" style="margin-top:16px; text-align:center"><button onclick="window.print()" style="padding:8px 16px; cursor:pointer">Imprimir / Salvar PDF</button></div>
     </body></html>`;
     openHtmlWindow(html);
