@@ -387,6 +387,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
         .select("id, product_id, quantidade, tipo, motivo, custo_unitario, data, products(nome, preco_venda)")
         .eq("company_id", companyId)
         .eq("stock_location_id", locationId!)
+        .is("deleted_at", null)
         .gte("data", dateFrom)
         .lte("data", dateTo)
         .order("data", { ascending: true });
