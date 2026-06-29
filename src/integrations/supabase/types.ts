@@ -2469,6 +2469,60 @@ export type Database = {
           },
         ]
       }
+      os_renumbering_log: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          new_os_code: string
+          old_os_code: string | null
+          prefix_used: string | null
+          reason: string | null
+          recovery_method: string
+          reverted_at: string | null
+          reverted_by: string | null
+          source_id: string
+          source_type: string
+          stock_location_id: string | null
+          stock_location_name: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_os_code: string
+          old_os_code?: string | null
+          prefix_used?: string | null
+          reason?: string | null
+          recovery_method?: string
+          reverted_at?: string | null
+          reverted_by?: string | null
+          source_id: string
+          source_type: string
+          stock_location_id?: string | null
+          stock_location_name?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_os_code?: string
+          old_os_code?: string | null
+          prefix_used?: string | null
+          reason?: string | null
+          recovery_method?: string
+          reverted_at?: string | null
+          reverted_by?: string | null
+          source_id?: string
+          source_type?: string
+          stock_location_id?: string | null
+          stock_location_name?: string | null
+        }
+        Relationships: []
+      }
       payables: {
         Row: {
           branch_id: string | null
@@ -3535,6 +3589,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_os_renumbering: {
+        Args: {
+          _new_os_code: string
+          _reason?: string
+          _sale_id: string
+          _sale_type: string
+          _stock_location_id: string
+        }
+        Returns: Json
+      }
       attachment_company_from_path: { Args: { _name: string }; Returns: string }
       find_consultant_by_code: {
         Args: { _code: string }
@@ -3566,6 +3630,7 @@ export type Database = {
         Args: { _dry_run?: boolean; _sale_id: string; _sale_type: string }
         Returns: Json
       }
+      revert_os_renumbering: { Args: { _log_id: string }; Returns: Json }
       revert_sales_recovery: { Args: { _log_id: string }; Returns: Json }
       search_consultants: {
         Args: { _q: string }
