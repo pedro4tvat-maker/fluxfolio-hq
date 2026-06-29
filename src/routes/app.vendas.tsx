@@ -330,6 +330,7 @@ function VendasPage() {
           .from("transactions")
           .select("id, descricao, valor, data, status, forma_pagamento, crm_contact_id, os_code")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .eq("tipo", "entrada")
           .order("data", { ascending: false })
           .limit(2000),
@@ -337,12 +338,14 @@ function VendasPage() {
           .from("receivables")
           .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id, os_code")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .order("vencimento", { ascending: false })
           .limit(2000),
         supabase
           .from("stock_movements")
           .select("id, product_id, quantidade, custo_unitario, data, motivo, related_sale_id, related_sale_type")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .eq("tipo", "saida")
           .eq("motivo", "Venda")
           .order("data", { ascending: false })
@@ -351,6 +354,7 @@ function VendasPage() {
           .from("sale_items")
           .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
           .eq("company_id", selected!)
+          .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(5000),
 
