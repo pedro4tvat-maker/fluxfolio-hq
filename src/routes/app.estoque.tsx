@@ -91,6 +91,7 @@ function EstoquePage() {
         .from("products")
         .select("id, nome, categoria, fornecedor, quantidade, custo_unitario, preco_venda, estoque_minimo")
         .eq("company_id", selected!)
+        .is("deleted_at", null)
         .order("nome");
       if (error) throw error;
       return (data ?? []) as Product[];
