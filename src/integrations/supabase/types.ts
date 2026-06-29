@@ -235,6 +235,62 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_logs: {
+        Row: {
+          backup_date: string
+          bucket_name: string | null
+          company_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          file_path: string | null
+          id: string
+          status: string
+          tables_exported: Json | null
+          total_files: number | null
+          total_rows: number | null
+        }
+        Insert: {
+          backup_date?: string
+          bucket_name?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          file_path?: string | null
+          id?: string
+          status?: string
+          tables_exported?: Json | null
+          total_files?: number | null
+          total_rows?: number | null
+        }
+        Update: {
+          backup_date?: string
+          bucket_name?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          file_path?: string | null
+          id?: string
+          status?: string
+          tables_exported?: Json | null
+          total_files?: number | null
+          total_rows?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           ativa: boolean

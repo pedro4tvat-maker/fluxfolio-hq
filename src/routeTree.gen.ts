@@ -38,6 +38,7 @@ import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppCentroCustosRouteImport } from './routes/app.centro-custos'
 import { Route as AppBibliotecaRouteImport } from './routes/app.biblioteca'
+import { Route as AppBackupsRouteImport } from './routes/app.backups'
 import { Route as AppAtasRouteImport } from './routes/app.atas'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
 import { Route as AppJornadaCompanyIdRouteImport } from './routes/app.jornada.$companyId'
@@ -192,6 +193,11 @@ const AppBibliotecaRoute = AppBibliotecaRouteImport.update({
   path: '/biblioteca',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBackupsRoute = AppBackupsRouteImport.update({
+  id: '/backups',
+  path: '/backups',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAtasRoute = AppAtasRouteImport.update({
   id: '/atas',
   path: '/atas',
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
+  '/app/backups': typeof AppBackupsRoute
   '/app/biblioteca': typeof AppBibliotecaRouteWithChildren
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
+  '/app/backups': typeof AppBackupsRoute
   '/app/biblioteca': typeof AppBibliotecaRouteWithChildren
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
+  '/app/backups': typeof AppBackupsRoute
   '/app/biblioteca': typeof AppBibliotecaRouteWithChildren
   '/app/centro-custos': typeof AppCentroCustosRoute
   '/app/clientes': typeof AppClientesRoute
@@ -360,6 +369,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/app/agenda'
     | '/app/atas'
+    | '/app/backups'
     | '/app/biblioteca'
     | '/app/centro-custos'
     | '/app/clientes'
@@ -398,6 +408,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/app/agenda'
     | '/app/atas'
+    | '/app/backups'
     | '/app/biblioteca'
     | '/app/centro-custos'
     | '/app/clientes'
@@ -437,6 +448,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/app/agenda'
     | '/app/atas'
+    | '/app/backups'
     | '/app/biblioteca'
     | '/app/centro-custos'
     | '/app/clientes'
@@ -682,6 +694,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBibliotecaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/backups': {
+      id: '/app/backups'
+      path: '/backups'
+      fullPath: '/app/backups'
+      preLoaderRoute: typeof AppBackupsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/atas': {
       id: '/app/atas'
       path: '/atas'
@@ -783,6 +802,7 @@ const AppJornadaRouteWithChildren = AppJornadaRoute._addFileChildren(
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
   AppAtasRoute: typeof AppAtasRoute
+  AppBackupsRoute: typeof AppBackupsRoute
   AppBibliotecaRoute: typeof AppBibliotecaRouteWithChildren
   AppCentroCustosRoute: typeof AppCentroCustosRoute
   AppClientesRoute: typeof AppClientesRoute
@@ -814,6 +834,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
   AppAtasRoute: AppAtasRoute,
+  AppBackupsRoute: AppBackupsRoute,
   AppBibliotecaRoute: AppBibliotecaRouteWithChildren,
   AppCentroCustosRoute: AppCentroCustosRoute,
   AppClientesRoute: AppClientesRoute,
