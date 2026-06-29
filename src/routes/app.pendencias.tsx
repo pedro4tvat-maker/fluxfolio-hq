@@ -206,7 +206,7 @@ function PendenciasPage() {
         description: it.description,
         related_module: "pendencia",
         related_record_id: it.id,
-      }).is("deleted_at", null);
+      });
       if (error) throw error;
     },
     onSuccess: () => toast.success("Atividade criada na Agenda"),

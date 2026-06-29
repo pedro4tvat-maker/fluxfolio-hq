@@ -799,7 +799,7 @@ function RulesView({ onBack }: { onBack: () => void }) {
       if (!keyword.trim() || !categoryId || !companyId) throw new Error("Preencha palavra-chave e categoria.");
       const { error } = await supabase.from("import_rules").insert({
         company_id: companyId, keyword: keyword.trim(), category_id: categoryId, is_active: true,
-      }).is("deleted_at", null);
+      });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Regra criada."); setKeyword(""); setCategoryId(""); qc.invalidateQueries({ queryKey: ["import-rules"] }); },

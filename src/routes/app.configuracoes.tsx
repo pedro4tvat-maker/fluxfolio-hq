@@ -685,7 +685,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   const createCategory = useMutation({
     mutationFn: async () => {
       if (!catNome.trim()) throw new Error("Informe o nome da categoria");
-      const { error } = await supabase.from("categories").insert({ company_id: companyId, nome: catNome.trim(), tipo: catTipo }).is("deleted_at", null);
+      const { error } = await supabase.from("categories").insert({ company_id: companyId, nome: catNome.trim(), tipo: catTipo });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -715,7 +715,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   const createCC = useMutation({
     mutationFn: async () => {
       if (!ccNome.trim()) throw new Error("Informe o nome do centro de custo");
-      const { error } = await supabase.from("cost_centers").insert({ company_id: companyId, nome: ccNome.trim(), kpi_classification: ccKpi || null }).is("deleted_at", null);
+      const { error } = await supabase.from("cost_centers").insert({ company_id: companyId, nome: ccNome.trim(), kpi_classification: ccKpi || null });
       if (error) throw error;
     },
     onSuccess: () => {

@@ -316,7 +316,7 @@ function PricingForm({
     };
     const { error } = editing
       ? await supabase.from("pricing_records").update(payload).eq("id", editing.id).is("deleted_at", null)
-      : await supabase.from("pricing_records").insert(payload).is("deleted_at", null);
+      : await supabase.from("pricing_records").insert(payload);
 
     if (error) { setSaving(false); toast.error(error.message); return; }
 

@@ -180,7 +180,7 @@ function BibliotecaPage() {
         ...t, consultant_id: consultant.id, created_by: user?.id,
         is_default: true, status: "ativo", visibility: "privado",
       }));
-      const { error } = await sb.from("consultant_library_templates").insert(rows).is("deleted_at", null);
+      const { error } = await sb.from("consultant_library_templates").insert(rows);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -221,7 +221,7 @@ function BibliotecaPage() {
           tags: payload.tags || [], status: payload.status || "ativo",
           visibility: payload.visibility || "privado",
           file_url: payload.file_url,
-        }).is("deleted_at", null);
+        });
         if (error) throw error;
       }
     },
@@ -241,7 +241,7 @@ function BibliotecaPage() {
         template_type: tpl.template_type, description: tpl.description,
         content: tpl.content, tags: tpl.tags, status: "rascunho",
         visibility: tpl.visibility,
-      }).is("deleted_at", null);
+      });
       if (error) throw error;
     },
     onSuccess: () => {

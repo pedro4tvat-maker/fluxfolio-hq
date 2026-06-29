@@ -209,7 +209,7 @@ function AtasPage() {
         shared_with_client: false,
         ai_generated: false,
         created_by: user?.id,
-      }).is("deleted_at", null);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -452,7 +452,7 @@ function MinuteFormDialog({
         if (error) throw error;
         return editing.id;
       } else {
-        const { data, error } = await sb.from("meeting_minutes").insert(payload).select("id").is("deleted_at", null).single();
+        const { data, error } = await sb.from("meeting_minutes").insert(payload).select("id").single();
         if (error) throw error;
         return data.id;
       }
@@ -702,7 +702,7 @@ function TaskGeneratorDialog({ minute, consultantId, onClose }: {
             responsible_name: t.responsible_name || null,
             related_module: "ata_reuniao",
             related_record_id: minute.id,
-          }).is("deleted_at", null);
+          });
         } else if (t.target === "plano_acao") {
           await sb.from("action_plans").insert({
             consultant_id: consultantId,

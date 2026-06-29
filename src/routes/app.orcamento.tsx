@@ -85,7 +85,7 @@ function OrcamentoPage() {
       mes, ano,
       categoria_id: form.categoria_id,
       valor_orcado: Number(form.valor_orcado),
-    }).is("deleted_at", null);
+    });
     setSaving(false);
     if (error) toast.error(error.message);
     else {

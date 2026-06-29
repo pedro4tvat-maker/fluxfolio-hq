@@ -101,7 +101,7 @@ export function AttachmentsPanel({
         document_type: docType,
         description: desc.trim() || null,
         uploaded_by: user?.id ?? null,
-      }).is("deleted_at", null);
+      });
       if (insErr) throw insErr;
       toast.success("Arquivo anexado");
       setDesc("");

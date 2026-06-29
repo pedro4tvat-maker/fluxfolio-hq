@@ -216,7 +216,7 @@ function Inner() {
         const { error } = await sb.from("consultancy_activities").update(rest).eq("id", id).is("deleted_at", null);
         if (error) throw error;
       } else {
-        const { error } = await sb.from("consultancy_activities").insert(body).is("deleted_at", null);
+        const { error } = await sb.from("consultancy_activities").insert(body);
         if (error) throw error;
       }
     },

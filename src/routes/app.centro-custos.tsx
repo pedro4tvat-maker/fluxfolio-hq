@@ -70,7 +70,7 @@ function CentroCustosPage() {
       company_id: selected,
       nome: nome.trim(),
       kpi_classification: novaClass.trim() || null,
-    }).is("deleted_at", null);
+    });
     setSaving(false);
     if (error) toast.error(error.message);
     else { toast.success("Centro de custo criado"); setNome(""); setNovaClass(""); refetch(); }
