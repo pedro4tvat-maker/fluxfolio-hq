@@ -392,6 +392,25 @@ function TransactionDialog({
   const [status, setStatus] = useState<"realizado" | "previsto">(tx?.status === "cancelado" ? "realizado" : (tx?.status as any) ?? "realizado");
   const [observacoes, setObservacoes] = useState(tx?.observacoes ?? "");
   const [saving, setSaving] = useState(false);
+  const [descMode, setDescMode] = useState<"livre" | "os">("livre");
+
+  // Últimas vendas da empresa (para vincular OS na descrição)
+  const { data: ultimasVendas } = useQuery({
+    queryKey: ["fluxo-vendas-recentes", companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("transactions")
+        .select("id, data, descricao, valor")
+        .eq("company_id", companyId)
+        .eq("tipo", "entrada")
+        .ilike("descricao", "Venda%")
+        .order("data", { ascending: false })
+        .limit(50);
+      return data ?? [];
+    },
+  });
+
 
   const catFiltered = categorias.filter((c) => c.tipo === tipo);
 
@@ -458,8 +477,43 @@ function TransactionDialog({
 
         <div>
           <Label>Descrição</Label>
-          <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex.: Venda do dia" />
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            <Button type="button" size="sm" variant={descMode === "livre" ? "default" : "outline"} onClick={() => setDescMode("livre")}>
+              Texto livre
+            </Button>
+            <Button type="button" size="sm" variant={descMode === "os" ? "default" : "outline"} onClick={() => setDescMode("os")}>
+              Vincular OS de venda
+            </Button>
+          </div>
+          {descMode === "livre" ? (
+            <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex.: Venda do dia" />
+          ) : (
+            <Select
+              onValueChange={(id) => {
+                const v = ultimasVendas?.find((x) => x.id === id);
+                if (v) {
+                  const os = v.id.slice(0, 8).toUpperCase();
+                  setDescricao(`OS #${os} — ${v.descricao}`);
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={ultimasVendas?.length ? "Selecione uma venda" : "Nenhuma venda registrada"} />
+              </SelectTrigger>
+              <SelectContent>
+                {(ultimasVendas ?? []).map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {formatDate(v.data)} · OS #{v.id.slice(0, 8).toUpperCase()} · {formatMoney(Number(v.valor))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {descMode === "os" && descricao && (
+            <p className="mt-1 text-xs text-muted-foreground truncate">→ {descricao}</p>
+          )}
         </div>
+
 
         <div className="grid grid-cols-2 gap-3">
           <div>
