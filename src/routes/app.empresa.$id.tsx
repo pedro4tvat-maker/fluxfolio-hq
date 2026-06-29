@@ -66,12 +66,12 @@ function EmpresaResumo() {
       const range = monthRange();
       const today = new Date().toISOString().slice(0, 10);
       const [{ data: tx }, { data: allTx }, { data: pay }, { data: rec }, { data: accs }, { data: prods }] = await Promise.all([
-        supabase.from("transactions").select("tipo, valor").eq("company_id", id).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
-        supabase.from("transactions").select("tipo, valor").eq("company_id", id).eq("status", "realizado"),
+        supabase.from("transactions").select("tipo, valor").eq("company_id", id).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end),
+        supabase.from("transactions").select("tipo, valor").eq("company_id", id).is("deleted_at", null).eq("status", "realizado"),
         supabase.from("payables").select("valor, vencimento, status").eq("company_id", id).neq("status", "pago"),
-        supabase.from("receivables").select("valor, vencimento, status").eq("company_id", id).neq("status", "recebido"),
+        supabase.from("receivables").select("valor, vencimento, status").eq("company_id", id).is("deleted_at", null).neq("status", "recebido"),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", id),
-        supabase.from("products").select("quantidade, estoque_minimo").eq("company_id", id),
+        supabase.from("products").select("quantidade, estoque_minimo").eq("company_id", id).is("deleted_at", null),
       ]);
       const entradas = (tx ?? []).filter((t) => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
       const saidas = (tx ?? []).filter((t) => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
