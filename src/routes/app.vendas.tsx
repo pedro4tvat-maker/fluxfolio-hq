@@ -678,7 +678,7 @@ function VendasPage() {
     return html;
   }
 
-  function printPastSaleOS(row: {
+  async function printPastSaleOS(row: {
     id: string;
     descricao: string | null;
     valor: number | string | null;
@@ -696,17 +696,52 @@ function VendasPage() {
     const dataRef = tipo === "vista" ? row.data : row.vencimento;
     const valor = Number(row.valor) || 0;
     const desc = row.descricao || "Venda";
-    // descricao salva no formato: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B (250g) @33.00|c28.67)"
     const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
     const clienteNome = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
-    const parsedItens = parseSaleDescription(desc);
-    // Enriquece com custo/preço atual do produto se descrição não trouxe (vendas antigas)
-    const parsedLinhas = parsedItens.map((it) => {
+
+    // 1) Tenta extrair itens da descrição (vendas antigas guardavam itens entre parênteses)
+    let parsedLinhas = parseSaleDescription(desc).map((it) => {
       const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
       const preco = it.preco > 0 ? it.preco : Number(prod?.preco_venda ?? 0);
       const total = it.qtd * preco;
       return { nome: it.nome, qtd: it.qtd, preco, total };
     });
+
+    // 2) Fallback: busca itens via stock_movements vinculadas à venda (vendas novas com descrição "OS XXXX")
+    if (parsedLinhas.length === 0) {
+      const { data: movs } = await supabase
+        .from("stock_movements")
+        .select("product_id, quantidade, custo_unitario")
+        .eq("related_sale_id", row.id)
+        .eq("related_sale_type", tipo)
+        .eq("tipo", "saida");
+      if (movs && movs.length > 0) {
+        const linhas = movs.map((m) => {
+          const prod = products?.find((p) => p.id === m.product_id);
+          const qtd = Number(m.quantidade) || 0;
+          const preco = Number(prod?.preco_venda ?? 0);
+          return { nome: prod?.nome || "Produto", qtd, preco, total: qtd * preco };
+        });
+        // Ajuste proporcional para casar com o valor real da venda
+        const somaCalc = linhas.reduce((a, b) => a + b.total, 0);
+        if (somaCalc > 0 && valor > 0 && Math.abs(somaCalc - valor) > 0.01) {
+          const fator = valor / somaCalc;
+          linhas.forEach((l) => {
+            l.preco = l.preco * fator;
+            l.total = l.qtd * l.preco;
+          });
+        } else if (somaCalc === 0 && valor > 0) {
+          const totalQtd = linhas.reduce((a, b) => a + b.qtd, 0) || 1;
+          const precoMedio = valor / totalQtd;
+          linhas.forEach((l) => {
+            l.preco = precoMedio;
+            l.total = l.qtd * precoMedio;
+          });
+        }
+        parsedLinhas = linhas;
+      }
+    }
+
     const somaItens = parsedLinhas.reduce((a, b) => a + b.total, 0);
     const totalOS = somaItens > 0 ? somaItens : valor;
     const linhas = parsedLinhas
@@ -717,6 +752,7 @@ function VendasPage() {
         <td style="text-align:right">${formatMoney(p.total)}</td>
       </tr>`)
       .join("");
+
 
 
     const html = `<!doctype html>
