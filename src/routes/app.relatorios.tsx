@@ -504,10 +504,13 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
           <Header title="Vendas e Margem" onExport={onExport} rows={r.produtos} name="vendas_margem" />
           <KpiGrid items={[
             { label: "Total vendido", value: r.summary.totalVendido, money: true },
+            { label: "Custo total", value: r.summary.custoTotal, money: true },
+            { label: "Margem bruta", value: r.summary.margemBruta, money: true },
             { label: "Qtd. vendas", value: r.summary.qtd },
-            { label: "Ticket médio", value: r.summary.ticket, money: true },
+            { label: "Sem custo", value: r.summary.custoZerado },
+            { label: "Itens incompletos", value: r.summary.itensIncompletos },
           ]} />
-          <Section title="Produtos mais rentáveis"><Table rows={r.produtos} /></Section>
+          <Section title="Itens vendidos e margem"><Table rows={r.produtos} /></Section>
         </>
       );
     }
