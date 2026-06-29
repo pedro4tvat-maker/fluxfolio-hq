@@ -1901,6 +1901,9 @@ function VendasPage() {
             <Button type="button" onClick={printPeriodMarginReport}>
               <Download className="size-4" /> Exportar Fluxo + Margem
             </Button>
+            <Button type="button" variant="outline" onClick={reprocessOldSales}>
+              Corrigir vendas antigas
+            </Button>
           </div>
         </div>
       </section>
