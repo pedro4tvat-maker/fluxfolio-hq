@@ -1094,26 +1094,30 @@ function VendasPage() {
         if (smErr) throw smErr;
       }
     } else {
-      // Fallback (vendas antigas sem related_sale_id): tenta casar por produto + data + qtd
+      // Fallback (vendas antigas sem related_sale_id): casa por produto + qtd
+      // pegando a saída de "Venda" mais recente que ainda não tenha sido estornada.
       const desc = row.descricao || "";
       const itens = parseSaleDescription(desc);
       for (const it of itens) {
         const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
         if (!prod || !(it.qtd > 0)) continue;
 
-        // tenta achar o stock_location_id real do movimento da venda
+        // Busca candidatas SEM amarrar à data (data da saída pode divergir do vencimento)
         const { data: candidatas } = await supabase
           .from("stock_movements")
-          .select("stock_location_id, custo_unitario")
+          .select("id, stock_location_id, custo_unitario, data, related_sale_id")
           .eq("company_id", selected)
           .eq("product_id", prod.id)
           .eq("tipo", "saida")
           .eq("motivo", "Venda")
           .eq("quantidade", it.qtd)
-          .eq("data", dataRef)
-          .limit(1);
-        const locId = candidatas?.[0]?.stock_location_id ?? defaultLocationId ?? null;
-        const custo = candidatas?.[0]?.custo_unitario ?? (it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0)) ?? null;
+          .order("data", { ascending: false })
+          .limit(20);
+
+        // Prefere as que ainda não estão vinculadas a outra venda
+        const livre = (candidatas ?? []).find((c) => !c.related_sale_id) ?? candidatas?.[0];
+        const locId = livre?.stock_location_id ?? defaultLocationId ?? null;
+        const custo = livre?.custo_unitario ?? (it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0)) ?? null;
 
         const { error: smErr } = await supabase.from("stock_movements").insert({
           company_id: selected,
@@ -1128,8 +1132,17 @@ function VendasPage() {
           related_sale_type: tipo,
         });
         if (smErr) throw smErr;
+
+        // Marca a saída original como vinculada para não ser reusada em outro estorno
+        if (livre?.id && !livre.related_sale_id) {
+          await supabase
+            .from("stock_movements")
+            .update({ related_sale_id: row.id, related_sale_type: tipo })
+            .eq("id", livre.id);
+        }
       }
     }
+
 
     // 3) Comissões (payables) não possuem vínculo direto com a venda hoje — usuário ajusta manualmente em Contas a pagar se necessário.
 
