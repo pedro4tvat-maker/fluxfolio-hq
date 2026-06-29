@@ -1388,7 +1388,7 @@ function VendasPage() {
         for (const it of physicalItems) {
           const { error: smErr } = await supabase.from("stock_movements").insert({
             company_id: selected,
-            product_id: it.product_id,
+            product_id: it.product_id!,
             tipo: "entrada",
             quantidade: Number(it.quantity),
             custo_unitario: Number(it.unit_cost) > 0 ? Number(it.unit_cost) : null,
@@ -1400,54 +1400,53 @@ function VendasPage() {
           });
           if (smErr) throw smErr;
         }
-        return;
-      }
+      } else {
+        // Fallback legado (vendas antigas sem sale_items e sem related_sale_id): casa por produto + qtd
+        // pegando a saída de "Venda" mais recente que ainda não tenha sido estornada.
+        const desc = row.descricao || "";
+        const itens = parseSaleDescription(desc);
+        for (const it of itens) {
+          const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
+          if (!prod || !(it.qtd > 0)) continue;
 
-      // Fallback legado (vendas antigas sem sale_items e sem related_sale_id): casa por produto + qtd
-      // pegando a saída de "Venda" mais recente que ainda não tenha sido estornada.
-      const desc = row.descricao || "";
-      const itens = parseSaleDescription(desc);
-      for (const it of itens) {
-        const prod = products?.find((x) => x.nome.toLowerCase() === it.nome.toLowerCase());
-        if (!prod || !(it.qtd > 0)) continue;
-
-        // Busca candidatas SEM amarrar à data (data da saída pode divergir do vencimento)
-        const { data: candidatas } = await supabase
-          .from("stock_movements")
-          .select("id, stock_location_id, custo_unitario, data, related_sale_id")
-          .eq("company_id", selected)
-          .eq("product_id", prod.id)
-          .eq("tipo", "saida")
-          .eq("motivo", "Venda")
-          .eq("quantidade", it.qtd)
-          .order("data", { ascending: false })
-          .limit(20);
-
-        // Prefere as que ainda não estão vinculadas a outra venda
-        const livre = (candidatas ?? []).find((c) => !c.related_sale_id) ?? candidatas?.[0];
-        const locId = livre?.stock_location_id ?? defaultLocationId ?? null;
-        const custo = livre?.custo_unitario ?? (it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0)) ?? null;
-
-        const { error: smErr } = await supabase.from("stock_movements").insert({
-          company_id: selected,
-          product_id: prod.id,
-          tipo: "entrada",
-          quantidade: it.qtd,
-          custo_unitario: custo || null,
-          motivo: "Estorno de venda",
-          data: dataRef,
-          stock_location_id: locId,
-          related_sale_id: row.id,
-          related_sale_type: tipo,
-        });
-        if (smErr) throw smErr;
-
-        // Marca a saída original como vinculada para não ser reusada em outro estorno
-        if (livre?.id && !livre.related_sale_id) {
-          await supabase
+          // Busca candidatas SEM amarrar à data (data da saída pode divergir do vencimento)
+          const { data: candidatas } = await supabase
             .from("stock_movements")
-            .update({ related_sale_id: row.id, related_sale_type: tipo })
-            .eq("id", livre.id);
+            .select("id, stock_location_id, custo_unitario, data, related_sale_id")
+            .eq("company_id", selected)
+            .eq("product_id", prod.id)
+            .eq("tipo", "saida")
+            .eq("motivo", "Venda")
+            .eq("quantidade", it.qtd)
+            .order("data", { ascending: false })
+            .limit(20);
+
+          // Prefere as que ainda não estão vinculadas a outra venda
+          const livre = (candidatas ?? []).find((c) => !c.related_sale_id) ?? candidatas?.[0];
+          const locId = livre?.stock_location_id ?? defaultLocationId ?? null;
+          const custo = livre?.custo_unitario ?? (it.custo > 0 ? it.custo : Number(prod.custo_unitario ?? 0)) ?? null;
+
+          const { error: smErr } = await supabase.from("stock_movements").insert({
+            company_id: selected,
+            product_id: prod.id,
+            tipo: "entrada",
+            quantidade: it.qtd,
+            custo_unitario: custo || null,
+            motivo: "Estorno de venda",
+            data: dataRef,
+            stock_location_id: locId,
+            related_sale_id: row.id,
+            related_sale_type: tipo,
+          });
+          if (smErr) throw smErr;
+
+          // Marca a saída original como vinculada para não ser reusada em outro estorno
+          if (livre?.id && !livre.related_sale_id) {
+            await supabase
+              .from("stock_movements")
+              .update({ related_sale_id: row.id, related_sale_type: tipo })
+              .eq("id", livre.id);
+          }
         }
       }
     }
