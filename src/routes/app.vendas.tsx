@@ -838,11 +838,12 @@ function VendasPage() {
 
 
   type ParsedItem = { nome: string; qtd: number; preco: number; custo: number; subtotal: number; custoTotal: number; margem: number };
-  type SaleMov = { id: string; product_id: string | null; quantidade: number | string; custo_unitario: number | string | null; data: string | null };
+  type SaleMov = { id: string; product_id: string | null; quantidade: number | string; custo_unitario: number | string | null; data: string | null; related_sale_id?: string | null; related_sale_type?: string | null };
   function extractItemsBlock(desc: string): string {
     // Encontra o último bloco "(...)" no fim da descrição, respeitando parênteses aninhados
     // (ex.: "Venda (2x Café Gourmet grão (500g) @55.00|c39.92)")
     const s = desc.trimEnd();
+
     if (!s.endsWith(")")) return "";
     let depth = 0;
     for (let i = s.length - 1; i >= 0; i--) {
