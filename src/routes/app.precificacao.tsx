@@ -101,7 +101,7 @@ function PrecificacaoPage() {
 
   async function remove(r: PricingRecord) {
     if (!confirm(`Excluir precificação "${r.nome}"?`)) return;
-    const { error } = await supabase.from("pricing_records").delete().eq("id", r.id);
+    const { error } = await supabase.from("pricing_records").update({ deleted_at: new Date().toISOString() }).eq("id", r.id);
     if (error) toast.error(error.message);
     else { toast.success("Excluído"); qc.invalidateQueries({ queryKey: ["pricing", selected] }); }
   }

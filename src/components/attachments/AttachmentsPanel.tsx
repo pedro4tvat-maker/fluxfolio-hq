@@ -124,7 +124,7 @@ export function AttachmentsPanel({
     if (!confirm(`Excluir ${a.file_name}?`)) return;
     const { error: sErr } = await supabase.storage.from("attachments").remove([a.file_path]);
     if (sErr) { toast.error(sErr.message); return; }
-    const { error } = await supabase.from("attachments").delete().eq("id", a.id);
+    const { error } = await supabase.from("attachments").update({ deleted_at: new Date().toISOString() }).eq("id", a.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Anexo removido");
     qc.invalidateQueries({ queryKey });

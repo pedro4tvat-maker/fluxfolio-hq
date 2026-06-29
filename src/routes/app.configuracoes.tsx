@@ -698,7 +698,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   });
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("categories").delete().eq("id", id);
+      const { error } = await supabase.from("categories").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -728,7 +728,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   });
   const deleteCC = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("cost_centers").delete().eq("id", id);
+      const { error } = await supabase.from("cost_centers").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -807,7 +807,7 @@ function RulesView({ onBack }: { onBack: () => void }) {
   });
 
   const del = useMutation({
-    mutationFn: async (id: string) => { await supabase.from("import_rules").delete().eq("id", id); },
+    mutationFn: async (id: string) => { await supabase.from("import_rules").update({ deleted_at: new Date().toISOString() }).eq("id", id); },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["import-rules"] }),
   });
 

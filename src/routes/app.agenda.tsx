@@ -230,7 +230,7 @@ function Inner() {
 
   const delMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await sb.from("consultancy_activities").delete().eq("id", id);
+      const { error } = await sb.from("consultancy_activities").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["agenda-activities"] }); toast.success("Atividade removida"); },

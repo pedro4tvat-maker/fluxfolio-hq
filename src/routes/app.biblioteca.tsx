@@ -262,7 +262,7 @@ function BibliotecaPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await sb.from("consultant_library_templates").delete().eq("id", id);
+      const { error } = await sb.from("consultant_library_templates").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

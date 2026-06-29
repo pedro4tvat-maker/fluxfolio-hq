@@ -188,7 +188,7 @@ function AtasPage() {
 
   const delMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await sb.from("meeting_minutes").delete().eq("id", id);
+      const { error } = await sb.from("meeting_minutes").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
