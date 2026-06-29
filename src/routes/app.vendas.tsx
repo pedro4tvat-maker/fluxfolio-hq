@@ -1348,6 +1348,7 @@ function VendasPage() {
       .eq("company_id", selected)
       .eq("related_sale_id", row.id)
       .eq("tipo", "entrada")
+      .is("deleted_at", null)
       .ilike("motivo", "Estorno%")
       .limit(1);
     if (jaEstornados && jaEstornados.length > 0) {
@@ -1360,7 +1361,8 @@ function VendasPage() {
       .select("id, product_id, quantidade, custo_unitario, stock_location_id, data")
       .eq("company_id", selected)
       .eq("related_sale_id", row.id)
-      .eq("tipo", "saida");
+      .eq("tipo", "saida")
+      .is("deleted_at", null);
 
     if (saidas && saidas.length > 0) {
       // Caminho preferencial: devolve cada item ao MESMO local de origem
