@@ -128,7 +128,7 @@ function Page() {
       const contactIds = Array.from(new Set(vistaSales.map((r: any) => r.crm_contact_id).filter(Boolean)));
       const contactMap = new Map<string, string>();
       if (contactIds.length) {
-        const { data: contacts } = await supabase.from("crm_contacts").select("id, name").in("id", contactIds);
+        const { data: contacts } = await supabase.from("crm_contacts").select("id, name").in("id", contactIds).is("deleted_at", null);
         (contacts ?? []).forEach((c: any) => contactMap.set(c.id, c.name));
       }
       vistaSales.forEach((r: any) => raw.push({
