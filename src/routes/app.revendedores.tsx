@@ -160,7 +160,7 @@ function LocationsTab({ companyId }: { companyId: string }) {
     // Verifica uso: movimentos de estoque e revendedores vinculados
     const [{ count: movCount }, { count: resCount }] = await Promise.all([
       supabase.from("stock_movements").select("id", { count: "exact", head: true }).eq("stock_location_id", row.id),
-      supabase.from("resellers").select("id", { count: "exact", head: true }).eq("stock_location_id", row.id),
+      supabase.from("resellers").select("id", { count: "exact", head: true }).eq("stock_location_id", row.id).is("deleted_at", null),
     ]);
     if ((movCount ?? 0) > 0 || (resCount ?? 0) > 0) {
       toast.error(
@@ -169,7 +169,7 @@ function LocationsTab({ companyId }: { companyId: string }) {
       return;
     }
     if (!window.confirm(`Excluir o centro "${row.nome}"? Esta ação não pode ser desfeita.`)) return;
-    const { error } = await supabase.from("stock_locations").delete().eq("id", row.id);
+    const { error } = await supabase.from("stock_locations").update({ deleted_at: new Date().toISOString(), ativa: false }).eq("id", row.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Centro excluído");
     qc.invalidateQueries({ queryKey: ["stock-locations-admin", companyId] });
@@ -242,7 +242,7 @@ function ResellersTab({ companyId }: { companyId: string }) {
   const { data: locations = [] } = useQuery({
     queryKey: ["stock-locations-for-reseller", companyId],
     queryFn: async () => {
-      const { data } = await supabase.from("stock_locations").select("id, nome, tipo").eq("company_id", companyId).eq("ativa", true).order("nome");
+      const { data } = await supabase.from("stock_locations").select("id, nome, tipo").eq("company_id", companyId).eq("ativa", true).is("deleted_at", null).order("nome");
       return data ?? [];
     },
   });
@@ -250,7 +250,7 @@ function ResellersTab({ companyId }: { companyId: string }) {
   const { data: resellers = [], isLoading } = useQuery({
     queryKey: ["resellers-admin", companyId],
     queryFn: async () => {
-      const { data } = await supabase.from("resellers").select("id, nome, email, telefone, documento, stock_location_id, commission_pct, ativo").eq("company_id", companyId).order("nome");
+      const { data } = await supabase.from("resellers").select("id, nome, email, telefone, documento, stock_location_id, commission_pct, ativo").eq("company_id", companyId).is("deleted_at", null).order("nome");
       return (data ?? []) as ResellerRow[];
     },
   });
@@ -293,7 +293,7 @@ function ResellersTab({ companyId }: { companyId: string }) {
 
   async function remove(r: ResellerRow) {
     if (!window.confirm(`Excluir revendedor "${r.nome}"?`)) return;
-    const { error } = await supabase.from("resellers").delete().eq("id", r.id);
+    const { error } = await supabase.from("resellers").update({ deleted_at: new Date().toISOString(), ativo: false }).eq("id", r.id);
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["resellers-admin", companyId] });
     qc.invalidateQueries({ queryKey: ["resellers", companyId] });
@@ -370,7 +370,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
   const { data: resellers = [] } = useQuery({
     queryKey: ["resellers-settlement", companyId],
     queryFn: async () => {
-      const { data } = await supabase.from("resellers").select("id, nome, stock_location_id, commission_pct").eq("company_id", companyId).eq("ativo", true).order("nome");
+      const { data } = await supabase.from("resellers").select("id, nome, stock_location_id, commission_pct").eq("company_id", companyId).eq("ativo", true).is("deleted_at", null).order("nome");
       return (data ?? []) as Array<{ id: string; nome: string; stock_location_id: string | null; commission_pct: number }>;
     },
   });

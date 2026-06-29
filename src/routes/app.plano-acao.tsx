@@ -185,6 +185,7 @@ function PlanoAcaoPage() {
         .from("action_plans")
         .select("*")
         .eq("company_id", companyId!)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Action[];
@@ -286,7 +287,7 @@ function PlanoAcaoPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await sb.from("action_plans").delete().eq("id", id);
+      const { error } = await sb.from("action_plans").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -308,6 +309,7 @@ function PlanoAcaoPage() {
       if (vars.status === "concluida" && consultant?.id && companyId && user?.id) {
         const { data: remaining } = await sb.from("action_plans")
           .select("id").eq("company_id", companyId)
+          .is("deleted_at", null)
           .not("status", "in", "(concluida,cancelada)");
         if ((remaining ?? []).length === 0) {
           const moved = await maybeAdvanceStage({
