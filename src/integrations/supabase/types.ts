@@ -67,6 +67,7 @@ export type Database = {
           consultant_id: string
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           diagnostic_id: string | null
           due_date: string | null
@@ -95,6 +96,7 @@ export type Database = {
           consultant_id: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           diagnostic_id?: string | null
           due_date?: string | null
@@ -123,6 +125,7 @@ export type Database = {
           consultant_id?: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           diagnostic_id?: string | null
           due_date?: string | null
@@ -707,6 +710,7 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           due_date: string | null
           id: string
@@ -723,6 +727,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -739,6 +744,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -1053,6 +1059,7 @@ export type Database = {
           company_id: string | null
           consultant_id: string
           created_at: string
+          deleted_at: string | null
           due_day: number
           end_date: string | null
           id: string
@@ -1070,6 +1077,7 @@ export type Database = {
           company_id?: string | null
           consultant_id: string
           created_at?: string
+          deleted_at?: string | null
           due_day?: number
           end_date?: string | null
           id?: string
@@ -1087,6 +1095,7 @@ export type Database = {
           company_id?: string | null
           consultant_id?: string
           created_at?: string
+          deleted_at?: string | null
           due_day?: number
           end_date?: string | null
           id?: string
@@ -1277,6 +1286,7 @@ export type Database = {
           category: string | null
           consultant_id: string
           created_at: string
+          deleted_at: string | null
           description: string
           due_date: string
           id: string
@@ -1292,6 +1302,7 @@ export type Database = {
           category?: string | null
           consultant_id: string
           created_at?: string
+          deleted_at?: string | null
           description: string
           due_date: string
           id?: string
@@ -1307,6 +1318,7 @@ export type Database = {
           category?: string | null
           consultant_id?: string
           created_at?: string
+          deleted_at?: string | null
           description?: string
           due_date?: string
           id?: string
@@ -1334,6 +1346,7 @@ export type Database = {
           consultant_id: string
           contract_id: string | null
           created_at: string
+          deleted_at: string | null
           description: string
           due_date: string
           id: string
@@ -1351,6 +1364,7 @@ export type Database = {
           consultant_id: string
           contract_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           description: string
           due_date: string
           id?: string
@@ -1368,6 +1382,7 @@ export type Database = {
           consultant_id?: string
           contract_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string
           due_date?: string
           id?: string
@@ -2661,6 +2676,7 @@ export type Database = {
           conta_id: string | null
           created_at: string
           data_pagamento: string | null
+          deleted_at: string | null
           descricao: string
           forma_pagamento: string | null
           fornecedor: string | null
@@ -2684,6 +2700,7 @@ export type Database = {
           conta_id?: string | null
           created_at?: string
           data_pagamento?: string | null
+          deleted_at?: string | null
           descricao: string
           forma_pagamento?: string | null
           fornecedor?: string | null
@@ -2707,6 +2724,7 @@ export type Database = {
           conta_id?: string | null
           created_at?: string
           data_pagamento?: string | null
+          deleted_at?: string | null
           descricao?: string
           forma_pagamento?: string | null
           fornecedor?: string | null
@@ -3110,6 +3128,7 @@ export type Database = {
           commission_pct: number
           company_id: string
           created_at: string
+          deleted_at: string | null
           documento: string | null
           email: string | null
           id: string
@@ -3124,6 +3143,7 @@ export type Database = {
           commission_pct?: number
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           documento?: string | null
           email?: string | null
           id?: string
@@ -3138,6 +3158,7 @@ export type Database = {
           commission_pct?: number
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           documento?: string | null
           email?: string | null
           id?: string
@@ -3382,6 +3403,7 @@ export type Database = {
           branch_id: string | null
           company_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           is_default: boolean
           nome: string
@@ -3395,6 +3417,7 @@ export type Database = {
           branch_id?: string | null
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_default?: boolean
           nome: string
@@ -3408,6 +3431,7 @@ export type Database = {
           branch_id?: string | null
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_default?: boolean
           nome?: string
