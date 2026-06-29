@@ -392,6 +392,25 @@ function TransactionDialog({
   const [status, setStatus] = useState<"realizado" | "previsto">(tx?.status === "cancelado" ? "realizado" : (tx?.status as any) ?? "realizado");
   const [observacoes, setObservacoes] = useState(tx?.observacoes ?? "");
   const [saving, setSaving] = useState(false);
+  const [descMode, setDescMode] = useState<"livre" | "os">("livre");
+
+  // Últimas vendas da empresa (para vincular OS na descrição)
+  const { data: ultimasVendas } = useQuery({
+    queryKey: ["fluxo-vendas-recentes", companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("transactions")
+        .select("id, data, descricao, valor")
+        .eq("company_id", companyId)
+        .eq("tipo", "entrada")
+        .ilike("descricao", "Venda%")
+        .order("data", { ascending: false })
+        .limit(50);
+      return data ?? [];
+    },
+  });
+
 
   const catFiltered = categorias.filter((c) => c.tipo === tipo);
 
