@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Wrench, Plus, Trash2, Upload, CheckCircle2, AlertTriangle, FileSpreadsheet } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Wrench, Plus, Trash2, Upload, CheckCircle2, AlertTriangle, FileSpreadsheet, Info } from "lucide-react";
 import { toast } from "sonner";
 import { parseFile, parseAmount } from "@/lib/import-engine";
 
@@ -25,10 +26,13 @@ type PendingSale = {
   os_code: string | null;
   customer: string | null;
   date: string;
-  due: string | null;
+  created_at: string | null;
+  forma_pagamento: string | null;
   amount: number;
   description: string | null;
   reconstruction_status: string | null;
+  ordem: number;
+  alerts: string[];
 };
 
 type LineItem = {
@@ -45,6 +49,18 @@ function emptyItem(): LineItem {
   return { product_id: "", product_name: "", quantity: "", unit_price: "", unit_cost: "", stock_location_id: "", observation: "" };
 }
 
+function shortId(id: string) { return id.slice(0, 8).toUpperCase(); }
+function formatDateTime(s: string | null) {
+  if (!s) return "—";
+  try { const d = new Date(s); return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return s; }
+}
+function isDescOverwrittenByOs(desc: string | null, os: string | null) {
+  if (!desc) return false;
+  const d = desc.trim();
+  if (os && d.toUpperCase() === os.toUpperCase()) return true;
+  return /^OS\s*#?[A-Za-z0-9-]+$/i.test(d);
+}
+
 function Page() {
   const { selected } = useSelectedCompany();
   const qc = useQueryClient();
@@ -52,9 +68,15 @@ function Page() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string>("all"); // all|sem|com
+  const [dupFilter, setDupFilter] = useState<string>("all"); // all|dup|unique|sem
+  const [descFilter, setDescFilter] = useState<string>("all"); // all|perdida|preservada
   const [selectedSale, setSelectedSale] = useState<PendingSale | null>(null);
+  const [detailOnly, setDetailOnly] = useState(false);
   const [items, setItems] = useState<LineItem[]>([emptyItem()]);
   const [origin, setOrigin] = useState<string>("conferencia_manual");
+  const [manualClient, setManualClient] = useState<string>("");
+  const [reconstructionNote, setReconstructionNote] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   // Stats
@@ -88,40 +110,71 @@ function Page() {
     queryKey: ["recovery-pending", selected],
     enabled: !!selected,
     queryFn: async () => {
-      const out: PendingSale[] = [];
+      const raw: PendingSale[] = [];
       const { data: vista, error: vistaErr } = await supabase
         .from("transactions")
-        .select("id, os_code, descricao, valor, data, reconstruction_status, crm_contact_id")
+        .select("id, os_code, descricao, valor, data, created_at, forma_pagamento, reconstruction_status, crm_contact_id")
         .eq("company_id", selected!)
-        .eq("needs_manual_item_reconstruction", true)
-        .order("data", { ascending: false });
+        .eq("needs_manual_item_reconstruction", true);
       if (vistaErr) console.error("[reconstrucao] transactions:", vistaErr);
       const contactIds = Array.from(new Set((vista ?? []).map((r: any) => r.crm_contact_id).filter(Boolean)));
       const contactMap = new Map<string, string>();
       if (contactIds.length) {
-        const { data: contacts } = await supabase
-          .from("crm_contacts").select("id, name").in("id", contactIds);
+        const { data: contacts } = await supabase.from("crm_contacts").select("id, name").in("id", contactIds);
         (contacts ?? []).forEach((c: any) => contactMap.set(c.id, c.name));
       }
-      (vista ?? []).forEach((r: any) => out.push({
+      (vista ?? []).forEach((r: any) => raw.push({
         id: r.id, type: "vista", os_code: r.os_code,
         customer: r.crm_contact_id ? contactMap.get(r.crm_contact_id) ?? null : null,
-        date: r.data, due: null, amount: Number(r.valor ?? 0), description: r.descricao,
+        date: r.data, created_at: r.created_at, forma_pagamento: r.forma_pagamento,
+        amount: Number(r.valor ?? 0), description: r.descricao,
         reconstruction_status: r.reconstruction_status,
+        ordem: 0, alerts: [],
       }));
       const { data: prazo, error: prazoErr } = await supabase
         .from("receivables")
-        .select("id, os_code, descricao, cliente, valor, vencimento, reconstruction_status")
+        .select("id, os_code, descricao, cliente, valor, vencimento, created_at, forma_recebimento, reconstruction_status")
         .eq("company_id", selected!)
-        .eq("needs_manual_item_reconstruction", true)
-        .order("vencimento", { ascending: false });
+        .eq("needs_manual_item_reconstruction", true);
       if (prazoErr) console.error("[reconstrucao] receivables:", prazoErr);
-      (prazo ?? []).forEach((r: any) => out.push({
+      (prazo ?? []).forEach((r: any) => raw.push({
         id: r.id, type: "prazo", os_code: r.os_code, customer: r.cliente,
-        date: r.vencimento, due: r.vencimento, amount: Number(r.valor ?? 0), description: r.descricao,
+        date: r.vencimento, created_at: r.created_at, forma_pagamento: r.forma_recebimento,
+        amount: Number(r.valor ?? 0), description: r.descricao,
         reconstruction_status: r.reconstruction_status,
+        ordem: 0, alerts: [],
       }));
-      return out;
+
+      // Duplicate OS map (apenas dentre pendentes)
+      const osCount = new Map<string, number>();
+      raw.forEach((s) => { if (s.os_code) osCount.set(s.os_code, (osCount.get(s.os_code) ?? 0) + 1); });
+
+      // Ordem cronológica por tipo: data ASC, created_at ASC, id ASC
+      const byType: Record<"vista" | "prazo", PendingSale[]> = { vista: [], prazo: [] };
+      raw.forEach((s) => byType[s.type].push(s));
+      (["vista", "prazo"] as const).forEach((t) => {
+        byType[t].sort((a, b) => {
+          const da = a.date ?? ""; const db = b.date ?? "";
+          if (da !== db) return da < db ? -1 : 1;
+          const ca = a.created_at ?? ""; const cb = b.created_at ?? "";
+          if (ca !== cb) return ca < cb ? -1 : 1;
+          return a.id < b.id ? -1 : 1;
+        });
+        byType[t].forEach((s, idx) => { s.ordem = idx + 1; });
+      });
+
+      // Alertas
+      raw.forEach((s) => {
+        const a: string[] = [];
+        if (!s.customer) a.push("Cliente não identificado");
+        if (!s.description || !s.description.trim()) a.push("Sem descrição preservada");
+        else if (isDescOverwrittenByOs(s.description, s.os_code)) a.push("Descrição sobrescrita por OS");
+        if (!s.os_code) a.push("Sem OS");
+        else if ((osCount.get(s.os_code) ?? 0) > 1) a.push("OS duplicada");
+        s.alerts = a;
+      });
+
+      return raw;
     },
   });
 
@@ -144,19 +197,44 @@ function Page() {
   });
 
   const filtered = useMemo(() => {
-    return sales.filter((s) => {
+    const out = sales.filter((s) => {
       if (typeFilter !== "all" && s.type !== typeFilter) return false;
       if (statusFilter !== "all" && (s.reconstruction_status ?? "pendente_revisao_manual") !== statusFilter) return false;
+      if (clientFilter === "sem" && s.customer) return false;
+      if (clientFilter === "com" && !s.customer) return false;
+      if (dupFilter === "dup" && !s.alerts.includes("OS duplicada")) return false;
+      if (dupFilter === "unique" && (s.alerts.includes("OS duplicada") || s.alerts.includes("Sem OS"))) return false;
+      if (dupFilter === "sem" && !s.alerts.includes("Sem OS")) return false;
+      if (descFilter === "perdida" && !(s.alerts.includes("Sem descrição preservada") || s.alerts.includes("Descrição sobrescrita por OS"))) return false;
+      if (descFilter === "preservada" && (s.alerts.includes("Sem descrição preservada") || s.alerts.includes("Descrição sobrescrita por OS"))) return false;
       const q = search.trim().toLowerCase();
-      if (q && !(s.os_code?.toLowerCase().includes(q) || s.customer?.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q))) return false;
+      if (q && !(
+        s.os_code?.toLowerCase().includes(q) ||
+        s.customer?.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q) ||
+        shortId(s.id).toLowerCase().includes(q) ||
+        String(s.amount).includes(q)
+      )) return false;
       return true;
     });
-  }, [sales, search, statusFilter, typeFilter]);
+    // Default sort: tipo, data, created_at, ordem
+    out.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "vista" ? -1 : 1;
+      if (a.date !== b.date) return (a.date ?? "") < (b.date ?? "") ? -1 : 1;
+      const ca = a.created_at ?? ""; const cb = b.created_at ?? "";
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      return a.ordem - b.ordem;
+    });
+    return out;
+  }, [sales, search, statusFilter, typeFilter, clientFilter, dupFilter, descFilter]);
 
-  function openReconstruct(sale: PendingSale) {
+  function openReconstruct(sale: PendingSale, mode: "detail" | "edit" = "detail") {
     setSelectedSale(sale);
+    setDetailOnly(mode === "detail");
     setItems([emptyItem()]);
     setOrigin("conferencia_manual");
+    setManualClient(sale.customer ?? "");
+    setReconstructionNote("");
   }
 
   function addItem() { setItems((p) => [...p, emptyItem()]); }
@@ -171,10 +249,15 @@ function Page() {
     if (!selectedSale || !selected) return;
     const valid = items.filter((it) => it.product_name.trim() && Number(it.quantity) > 0);
     if (valid.length === 0) { toast.error("Adicione pelo menos um item com nome e quantidade."); return; }
+    if (!origin) { toast.error("Informe a origem da informação."); return; }
+    const needsSource = selectedSale.alerts.some((a) => ["Cliente não identificado", "Sem descrição preservada", "Descrição sobrescrita por OS"].includes(a));
+    if (needsSource && !reconstructionNote.trim()) {
+      toast.error("Esta venda não possui cliente, descrição ou produtos preservados. Informe a observação da origem usada para reconstrução antes de salvar.");
+      return;
+    }
 
     setSaving(true);
     try {
-      // bloqueio de duplicidade
       const { count: existing } = await supabase
         .from("sale_items").select("id", { count: "exact", head: true }).eq("sale_id", selectedSale.id);
       if ((existing ?? 0) > 0) {
@@ -185,6 +268,14 @@ function Page() {
       const totalItemsAmount = valid.reduce((a, it) => a + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0);
       const diff = (selectedSale.amount || 0) - totalItemsAmount;
       const conferida = Math.abs(diff) < 0.01;
+
+      const clientChanged = manualClient.trim() && manualClient.trim() !== (selectedSale.customer ?? "").trim();
+      const noteParts = [
+        `Origem: ${origin}`,
+        `Ordem #${selectedSale.ordem} · ID ${shortId(selectedSale.id)}`,
+        reconstructionNote.trim() ? `Obs: ${reconstructionNote.trim()}` : "",
+        clientChanged ? `Cliente informado manualmente: ${manualClient.trim()}` : "",
+      ].filter(Boolean);
 
       const { data: log, error: logErr } = await (supabase as any).from("sales_recovery_log").insert({
         company_id: selected,
@@ -197,7 +288,7 @@ function Page() {
         total_sale_amount: selectedSale.amount,
         total_items_amount: totalItemsAmount,
         difference_amount: diff,
-        notes: `Origem: ${origin}`,
+        notes: noteParts.join(" | "),
       }).select("id").single();
       if (logErr) throw logErr;
 
@@ -235,10 +326,15 @@ function Page() {
       if (itemsErr) throw itemsErr;
 
       const tbl = selectedSale.type === "vista" ? "transactions" : "receivables";
-      await (supabase as any).from(tbl).update({
+      const update: any = {
         reconstruction_status: conferida ? "reconstruida_conferida" : "reconstruida_com_divergencia",
         needs_manual_item_reconstruction: false,
-      }).eq("id", selectedSale.id);
+      };
+      // Atualiza cliente da venda a prazo quando informado manualmente
+      if (clientChanged && selectedSale.type === "prazo") {
+        update.cliente = manualClient.trim();
+      }
+      await (supabase as any).from(tbl).update(update).eq("id", selectedSale.id);
 
       toast.success(conferida ? "Reconstrução conferida com sucesso!" : "Reconstrução salva com divergência de valor.");
       setSelectedSale(null);
@@ -264,6 +360,17 @@ function Page() {
     qc.invalidateQueries({ queryKey: ["recovery-stats"] });
   }
 
+  // Resumo "Vendas à vista não identificadas"
+  const resumoVista = useMemo(() => {
+    const v = sales.filter((s) => s.type === "vista");
+    const semCliente = v.filter((s) => !s.customer);
+    const descPerdida = v.filter((s) => s.alerts.includes("Sem descrição preservada") || s.alerts.includes("Descrição sobrescrita por OS"));
+    const dup = v.filter((s) => s.alerts.includes("OS duplicada"));
+    const semOs = v.filter((s) => s.alerts.includes("Sem OS"));
+    const totalValor = semCliente.reduce((a, s) => a + s.amount, 0);
+    return { total: v.length, semCliente: semCliente.length, descPerdida: descPerdida.length, dup: dup.length, semOs: semOs.length, totalValor };
+  }, [sales]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -282,6 +389,21 @@ function Page() {
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Conferidas / divergentes</div><div className="text-2xl font-semibold">{stats?.conferidas ?? 0} / <span className="text-amber-600">{stats?.divergentes ?? 0}</span></div></CardContent></Card>
       </div>
 
+      {/* Resumo de vendas à vista não identificadas */}
+      <Card className="border-orange-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="size-4 text-orange-600" /> Vendas à vista não identificadas</CardTitle>
+          <CardDescription>Quanto ainda falta para reconstruir com segurança.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+          <div><div className="text-xs text-muted-foreground">Pendentes à vista</div><div className="text-lg font-semibold">{resumoVista.total}</div></div>
+          <div><div className="text-xs text-muted-foreground">Sem cliente</div><div className="text-lg font-semibold text-orange-700">{resumoVista.semCliente}</div></div>
+          <div><div className="text-xs text-muted-foreground">Descrição perdida/sobrescrita</div><div className="text-lg font-semibold text-orange-700">{resumoVista.descPerdida}</div></div>
+          <div><div className="text-xs text-muted-foreground">OS duplicada</div><div className="text-lg font-semibold text-orange-700">{resumoVista.dup}</div></div>
+          <div><div className="text-xs text-muted-foreground">Valor sem cliente</div><div className="text-lg font-semibold">{formatMoney(resumoVista.totalValor)}</div></div>
+        </CardContent>
+      </Card>
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="pending">Pendentes</TabsTrigger>
@@ -292,7 +414,7 @@ function Page() {
           <Card>
             <CardHeader><CardTitle className="text-base">Filtros</CardTitle></CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-4">
-              <div><Label className="text-xs">Busca (OS, cliente, descrição)</Label><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ex.: E0042" /></div>
+              <div className="md:col-span-2"><Label className="text-xs">Busca (OS, cliente, descrição, ID, valor)</Label><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ex.: E0007, 745, Jucelia" /></div>
               <div><Label className="text-xs">Tipo</Label>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -314,6 +436,37 @@ function Page() {
                   </SelectContent>
                 </Select>
               </div>
+              <div><Label className="text-xs">Cliente</Label>
+                <Select value={clientFilter} onValueChange={setClientFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="sem">Sem cliente</SelectItem>
+                    <SelectItem value="com">Com cliente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label className="text-xs">OS</Label>
+                <Select value={dupFilter} onValueChange={setDupFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="dup">OS duplicada</SelectItem>
+                    <SelectItem value="unique">OS única</SelectItem>
+                    <SelectItem value="sem">Sem OS</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label className="text-xs">Descrição</Label>
+                <Select value={descFilter} onValueChange={setDescFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="perdida">Perdida / sobrescrita</SelectItem>
+                    <SelectItem value="preservada">Preservada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-end text-xs text-muted-foreground">{filtered.length} vendas listadas</div>
             </CardContent>
           </Card>
@@ -322,35 +475,69 @@ function Page() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">Ordem</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>OS</TableHead>
+                  <TableHead className="font-mono text-xs">ID</TableHead>
+                  <TableHead>Data / Hora</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Pagto</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
+                  <TableHead>Alertas</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((s) => (
-                  <TableRow key={`${s.type}-${s.id}`}>
-                    <TableCell><Badge variant={s.type === "vista" ? "default" : "secondary"}>{s.type === "vista" ? "À vista" : "A prazo"}</Badge></TableCell>
-                    <TableCell className="font-mono text-xs">{s.os_code ?? "—"}</TableCell>
-                    <TableCell>{s.customer ?? "—"}</TableCell>
-                    <TableCell>{formatDate(s.date)}</TableCell>
-                    <TableCell className="text-right">{formatMoney(s.amount)}</TableCell>
-                    <TableCell>
-                      {s.reconstruction_status === "reconstruida_conferida" ? <Badge className="bg-green-600">Conferida</Badge>
-                        : s.reconstruction_status === "reconstruida_com_divergencia" ? <Badge variant="destructive">Divergência</Badge>
-                        : <Badge variant="outline">Pendente</Badge>}
-                    </TableCell>
-                    <TableCell className="flex gap-1">
-                      <Button size="sm" variant="default" onClick={() => openReconstruct(s)}><Wrench className="size-3" /> Reconstruir</Button>
-                      <Button size="sm" variant="ghost" onClick={() => markChecked(s)} title="Marcar como conferida sem itens"><CheckCircle2 className="size-3" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma venda pendente.</TableCell></TableRow>}
+                {filtered.map((s) => {
+                  const descOverwritten = s.alerts.includes("Descrição sobrescrita por OS");
+                  const semDesc = s.alerts.includes("Sem descrição preservada");
+                  return (
+                    <TableRow key={`${s.type}-${s.id}`}>
+                      <TableCell className="font-mono text-xs">#{String(s.ordem).padStart(3, "0")}</TableCell>
+                      <TableCell><Badge variant={s.type === "vista" ? "default" : "secondary"}>{s.type === "vista" ? "À vista" : "A prazo"}</Badge></TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {s.os_code ?? <span className="text-muted-foreground italic">sem OS</span>}
+                        {s.alerts.includes("OS duplicada") && <Badge variant="destructive" className="ml-1 text-[10px] px-1 py-0">DUP</Badge>}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{shortId(s.id)}</TableCell>
+                      <TableCell className="text-xs">
+                        <div>{formatDate(s.date)}</div>
+                        <div className="text-muted-foreground">{formatDateTime(s.created_at)}</div>
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate" title={s.customer ?? ""}>
+                        {s.customer ?? <span className="text-orange-600 italic">Cliente não identificado</span>}
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate text-xs" title={s.description ?? ""}>
+                        {semDesc ? <span className="text-orange-600 italic">Sem descrição preservada</span>
+                          : descOverwritten ? <span className="text-orange-600 italic">{s.description}</span>
+                          : s.description}
+                      </TableCell>
+                      <TableCell className="text-xs">{s.forma_pagamento ?? "—"}</TableCell>
+                      <TableCell className="text-right">{formatMoney(s.amount)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {s.alerts.length === 0 && <Badge variant="outline" className="text-[10px]">ok</Badge>}
+                          {s.alerts.map((a) => (
+                            <Badge key={a} variant="outline" className="text-[10px] border-orange-300 text-orange-700">{a}</Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {s.reconstruction_status === "reconstruida_conferida" ? <Badge className="bg-green-600">Conferida</Badge>
+                          : s.reconstruction_status === "reconstruida_com_divergencia" ? <Badge variant="destructive">Divergência</Badge>
+                          : <Badge variant="outline">Pendente</Badge>}
+                      </TableCell>
+                      <TableCell className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => openReconstruct(s, "detail")} title="Ver detalhes"><Info className="size-3" /></Button>
+                        <Button size="sm" variant="default" onClick={() => openReconstruct(s, "edit")}><Wrench className="size-3" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => markChecked(s)} title="Marcar como conferida sem itens"><CheckCircle2 className="size-3" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filtered.length === 0 && <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Nenhuma venda pendente.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
@@ -363,81 +550,121 @@ function Page() {
 
       {/* Reconstruction modal */}
       <Dialog open={!!selectedSale} onOpenChange={(o) => !o && setSelectedSale(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Reconstruir itens — OS {selectedSale?.os_code ?? "—"}</DialogTitle>
+            <DialogTitle>
+              {detailOnly ? "Detalhes da venda" : "Reconstruir itens"} — Ordem #{String(selectedSale?.ordem ?? 0).padStart(3, "0")}
+              {selectedSale?.os_code && <span className="ml-2 text-muted-foreground font-mono text-sm">{selectedSale.os_code}</span>}
+            </DialogTitle>
             <CardDescription>
-              {selectedSale?.customer ?? "Sem cliente"} · {selectedSale && formatDate(selectedSale.date)} · Total da venda: <strong>{selectedSale && formatMoney(selectedSale.amount)}</strong>
+              ID {selectedSale && shortId(selectedSale.id)} · {selectedSale && formatDate(selectedSale.date)} · {selectedSale && formatDateTime(selectedSale.created_at)} · Total: <strong>{selectedSale && formatMoney(selectedSale.amount)}</strong>
             </CardDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
-            {items.map((it, i) => (
-              <div key={i} className="grid grid-cols-12 gap-2 p-3 rounded-lg border">
-                <div className="col-span-12 md:col-span-4">
-                  <Label className="text-xs">Produto</Label>
-                  <Select value={it.product_id || "_custom"} onValueChange={(v) => {
-                    if (v === "_custom") { updateItem(i, { product_id: "", product_name: it.product_name }); }
-                    else { const p: any = (products as any[]).find((x) => x.id === v); updateItem(i, { product_id: v, product_name: p?.nome ?? "", unit_cost: p?.custo_unitario ? String(p.custo_unitario) : it.unit_cost, unit_price: p?.preco_venda && !it.unit_price ? String(p.preco_venda) : it.unit_price }); }
-                  }}>
-                    <SelectTrigger><SelectValue placeholder="Selecione ou digite manual" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_custom">— Digitar manualmente —</SelectItem>
-                      {(products as any[]).map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {!it.product_id && <Input className="mt-1" placeholder="Nome do produto/serviço" value={it.product_name} onChange={(e) => updateItem(i, { product_name: e.target.value })} />}
-                </div>
-                <div className="col-span-4 md:col-span-1"><Label className="text-xs">Qtd</Label><Input type="number" value={it.quantity} onChange={(e) => updateItem(i, { quantity: e.target.value })} /></div>
-                <div className="col-span-4 md:col-span-2"><Label className="text-xs">Preço un.</Label><Input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: e.target.value })} /></div>
-                <div className="col-span-4 md:col-span-2"><Label className="text-xs">Custo un.</Label><Input type="number" step="0.01" value={it.unit_cost} onChange={(e) => updateItem(i, { unit_cost: e.target.value })} /></div>
-                <div className="col-span-10 md:col-span-2">
-                  <Label className="text-xs">Local de estoque</Label>
-                  <Select value={it.stock_location_id || "_none"} onValueChange={(v) => updateItem(i, { stock_location_id: v === "_none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">— Sem informação —</SelectItem>
-                      {(stockLocations as any[]).map((l) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2 md:col-span-1 flex items-end"><Button size="icon" variant="ghost" onClick={() => removeItem(i)}><Trash2 className="size-4" /></Button></div>
-                <div className="col-span-12"><Input placeholder="Observação (opcional)" value={it.observation} onChange={(e) => updateItem(i, { observation: e.target.value })} /></div>
-              </div>
-            ))}
-            <Button variant="outline" onClick={addItem}><Plus className="size-4" /> Adicionar item</Button>
-
-            <div className="grid md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Origem da informação</Label>
-                <Select value={origin} onValueChange={setOrigin}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pdf_antigo">PDF antigo</SelectItem>
-                    <SelectItem value="print">Print</SelectItem>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="planilha">Planilha</SelectItem>
-                    <SelectItem value="conferencia_manual">Conferência manual</SelectItem>
-                    <SelectItem value="memoria_operacional">Memória operacional</SelectItem>
-                    <SelectItem value="outro">Outro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
-                <div className="text-sm">
-                  Soma dos itens: <strong>{formatMoney(totalItems)}</strong>
-                  {selectedSale && Math.abs(totalItems - selectedSale.amount) > 0.01 && (
-                    <Badge variant="destructive" className="ml-2"><AlertTriangle className="size-3 mr-1" /> Diferença: {formatMoney(totalItems - selectedSale.amount)}</Badge>
-                  )}
+          {/* Painel de detalhes */}
+          {selectedSale && (
+            <div className="rounded-lg border bg-muted/30 p-3 grid md:grid-cols-3 gap-3 text-sm">
+              <div><div className="text-xs text-muted-foreground">Tipo</div>{selectedSale.type === "vista" ? "À vista" : "A prazo"}</div>
+              <div><div className="text-xs text-muted-foreground">Forma de pagamento</div>{selectedSale.forma_pagamento ?? "—"}</div>
+              <div><div className="text-xs text-muted-foreground">OS atual</div><span className="font-mono">{selectedSale.os_code ?? "—"}</span></div>
+              <div className="md:col-span-2"><div className="text-xs text-muted-foreground">Descrição atual</div>{selectedSale.description ?? <span className="italic text-muted-foreground">—</span>}</div>
+              <div><div className="text-xs text-muted-foreground">Cliente atual</div>{selectedSale.customer ?? <span className="text-orange-600 italic">Não identificado</span>}</div>
+              <div className="md:col-span-3">
+                <div className="text-xs text-muted-foreground mb-1">Alertas</div>
+                <div className="flex flex-wrap gap-1">
+                  {selectedSale.alerts.length === 0 && <Badge variant="outline">Sem alertas</Badge>}
+                  {selectedSale.alerts.map((a) => <Badge key={a} variant="outline" className="border-orange-300 text-orange-700">{a}</Badge>)}
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedSale(null)}>Cancelar</Button>
-            <Button onClick={saveReconstruction} disabled={saving}>{saving ? "Salvando..." : "Salvar reconstrução"}</Button>
-          </DialogFooter>
+          {detailOnly ? (
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSelectedSale(null)}>Fechar</Button>
+              <Button onClick={() => setDetailOnly(false)}><Wrench className="size-4" /> Iniciar reconstrução</Button>
+            </DialogFooter>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Cliente identificado (opcional)</Label>
+                  <Input value={manualClient} onChange={(e) => setManualClient(e.target.value)} placeholder="Informe o cliente, se souber" />
+                </div>
+                <div>
+                  <Label className="text-xs">Origem da informação</Label>
+                  <Select value={origin} onValueChange={setOrigin}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pdf_antigo">PDF antigo</SelectItem>
+                      <SelectItem value="print">Print</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="planilha">Planilha</SelectItem>
+                      <SelectItem value="comprovante">Comprovante</SelectItem>
+                      <SelectItem value="conferencia_manual">Conferência manual</SelectItem>
+                      <SelectItem value="memoria_operacional">Memória operacional</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2">
+                  <Label className="text-xs">Observação da reconstrução</Label>
+                  <Textarea value={reconstructionNote} onChange={(e) => setReconstructionNote(e.target.value)} placeholder='Ex.: "Venda identificada pelo valor R$ 745,00 no dia 16/06, conferida com mensagem do WhatsApp."' />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {items.map((it, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 p-3 rounded-lg border">
+                    <div className="col-span-12 md:col-span-4">
+                      <Label className="text-xs">Produto</Label>
+                      <Select value={it.product_id || "_custom"} onValueChange={(v) => {
+                        if (v === "_custom") { updateItem(i, { product_id: "", product_name: it.product_name }); }
+                        else { const p: any = (products as any[]).find((x) => x.id === v); updateItem(i, { product_id: v, product_name: p?.nome ?? "", unit_cost: p?.custo_unitario ? String(p.custo_unitario) : it.unit_cost, unit_price: p?.preco_venda && !it.unit_price ? String(p.preco_venda) : it.unit_price }); }
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione ou digite manual" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_custom">— Digitar manualmente —</SelectItem>
+                          {(products as any[]).map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      {!it.product_id && <Input className="mt-1" placeholder="Nome do produto/serviço" value={it.product_name} onChange={(e) => updateItem(i, { product_name: e.target.value })} />}
+                    </div>
+                    <div className="col-span-4 md:col-span-1"><Label className="text-xs">Qtd</Label><Input type="number" value={it.quantity} onChange={(e) => updateItem(i, { quantity: e.target.value })} /></div>
+                    <div className="col-span-4 md:col-span-2"><Label className="text-xs">Preço un.</Label><Input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: e.target.value })} /></div>
+                    <div className="col-span-4 md:col-span-2"><Label className="text-xs">Custo un.</Label><Input type="number" step="0.01" value={it.unit_cost} onChange={(e) => updateItem(i, { unit_cost: e.target.value })} /></div>
+                    <div className="col-span-10 md:col-span-2">
+                      <Label className="text-xs">Local de estoque</Label>
+                      <Select value={it.stock_location_id || "_none"} onValueChange={(v) => updateItem(i, { stock_location_id: v === "_none" ? "" : v })}>
+                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none">— Sem informação —</SelectItem>
+                          {(stockLocations as any[]).map((l) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2 md:col-span-1 flex items-end"><Button size="icon" variant="ghost" onClick={() => removeItem(i)}><Trash2 className="size-4" /></Button></div>
+                    <div className="col-span-12"><Input placeholder="Observação (opcional)" value={it.observation} onChange={(e) => updateItem(i, { observation: e.target.value })} /></div>
+                  </div>
+                ))}
+                <Button variant="outline" onClick={addItem}><Plus className="size-4" /> Adicionar item</Button>
+
+                <div className="flex items-end justify-end">
+                  <div className="text-sm">
+                    Soma dos itens: <strong>{formatMoney(totalItems)}</strong>
+                    {selectedSale && Math.abs(totalItems - selectedSale.amount) > 0.01 && (
+                      <Badge variant="destructive" className="ml-2"><AlertTriangle className="size-3 mr-1" /> Diferença: {formatMoney(totalItems - selectedSale.amount)}</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSelectedSale(null)}>Cancelar</Button>
+                <Button onClick={saveReconstruction} disabled={saving}>{saving ? "Salvando..." : "Salvar reconstrução"}</Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
@@ -445,6 +672,7 @@ function Page() {
 }
 
 function ImportPanel({ sales, products, stockLocations, onDone, companyId }: { sales: PendingSale[]; products: any[]; stockLocations: any[]; onDone: () => void; companyId: string }) {
+  void products; void stockLocations;
   const [rows, setRows] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -481,7 +709,7 @@ function ImportPanel({ sales, products, stockLocations, onDone, companyId }: { s
     setImporting(true);
     let ok = 0, errs = 0;
     try {
-      for (const [os, group] of grouped) {
+      for (const [, group] of grouped) {
         if (!group.sale || group.errors.length > 0) { errs++; continue; }
         const { count: existing } = await supabase.from("sale_items").select("id", { count: "exact", head: true }).eq("sale_id", group.sale.id);
         if ((existing ?? 0) > 0) { errs++; continue; }
