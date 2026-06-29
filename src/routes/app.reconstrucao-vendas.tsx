@@ -89,23 +89,33 @@ function Page() {
     enabled: !!selected,
     queryFn: async () => {
       const out: PendingSale[] = [];
-      const { data: vista } = await supabase
+      const { data: vista, error: vistaErr } = await supabase
         .from("transactions")
-        .select("id, os_code, descricao, valor, data, reconstruction_status, crm_contacts(name)")
+        .select("id, os_code, descricao, valor, data, reconstruction_status, crm_contact_id")
         .eq("company_id", selected!)
         .eq("needs_manual_item_reconstruction", true)
         .order("data", { ascending: false });
+      if (vistaErr) console.error("[reconstrucao] transactions:", vistaErr);
+      const contactIds = Array.from(new Set((vista ?? []).map((r: any) => r.crm_contact_id).filter(Boolean)));
+      const contactMap = new Map<string, string>();
+      if (contactIds.length) {
+        const { data: contacts } = await supabase
+          .from("crm_contacts").select("id, name").in("id", contactIds);
+        (contacts ?? []).forEach((c: any) => contactMap.set(c.id, c.name));
+      }
       (vista ?? []).forEach((r: any) => out.push({
-        id: r.id, type: "vista", os_code: r.os_code, customer: r.crm_contacts?.name ?? null,
+        id: r.id, type: "vista", os_code: r.os_code,
+        customer: r.crm_contact_id ? contactMap.get(r.crm_contact_id) ?? null : null,
         date: r.data, due: null, amount: Number(r.valor ?? 0), description: r.descricao,
         reconstruction_status: r.reconstruction_status,
       }));
-      const { data: prazo } = await supabase
+      const { data: prazo, error: prazoErr } = await supabase
         .from("receivables")
         .select("id, os_code, descricao, cliente, valor, vencimento, reconstruction_status")
         .eq("company_id", selected!)
         .eq("needs_manual_item_reconstruction", true)
         .order("vencimento", { ascending: false });
+      if (prazoErr) console.error("[reconstrucao] receivables:", prazoErr);
       (prazo ?? []).forEach((r: any) => out.push({
         id: r.id, type: "prazo", os_code: r.os_code, customer: r.cliente,
         date: r.vencimento, due: r.vencimento, amount: Number(r.valor ?? 0), description: r.descricao,
