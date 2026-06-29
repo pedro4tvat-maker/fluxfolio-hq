@@ -711,8 +711,8 @@ function VendasPage() {
     }
   }
 
-  function generateOrderHTML({ openPrint }: { openPrint: boolean }) {
-    const orderNumber = `OS-${Date.now().toString().slice(-8)}`;
+  function generateOrderHTML({ openPrint, orderNumber: providedOrderNumber }: { openPrint: boolean; orderNumber?: string }) {
+    const orderNumber = providedOrderNumber ?? `OS-${Date.now().toString().slice(-8)}`;
     const empresaDoc = company?.cnpj ?? company?.documento ?? "";
     const empresaEnd = [company?.endereco, company?.bairro, company?.cidade, company?.estado, company?.cep]
       .filter(Boolean)
