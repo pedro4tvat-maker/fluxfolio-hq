@@ -281,7 +281,7 @@ function EstoquePage() {
 
   async function handleDeleteProduct(p: Product) {
     if (!confirm(`Excluir o produto "${p.nome}"? As movimentações ficarão no histórico.`)) return;
-    const { error } = await supabase.from("products").delete().eq("id", p.id);
+    const { error } = await supabase.from("products").update({ deleted_at: new Date().toISOString() }).eq("id", p.id);
     if (error) {
       toast.error(error.message);
       return;

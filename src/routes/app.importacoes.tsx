@@ -689,9 +689,10 @@ function HistoryView({ onBack }: { onBack: () => void }) {
           await supabase.from("receivables").update({ status: "em_aberto", data_recebimento: null }).eq("id", t.reconciled_with_id);
         }
       }
-      await supabase.from("transactions").delete().eq("import_batch_id", batchId);
-      await supabase.from("payables").delete().eq("import_batch_id", batchId);
-      await supabase.from("receivables").delete().eq("import_batch_id", batchId);
+      const nowIso = new Date().toISOString();
+      await supabase.from("transactions").update({ deleted_at: nowIso }).eq("import_batch_id", batchId);
+      await supabase.from("payables").update({ deleted_at: nowIso }).eq("import_batch_id", batchId);
+      await supabase.from("receivables").update({ deleted_at: nowIso }).eq("import_batch_id", batchId);
       await supabase.from("import_batches").update({ status: "desfeito", undone_at: new Date().toISOString() }).eq("id", batchId);
     },
     onSuccess: () => {

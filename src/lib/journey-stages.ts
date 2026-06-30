@@ -54,6 +54,7 @@ export async function loadStagesForConsultant(consultantId: string): Promise<Jou
     .from("consultancy_journey_stages")
     .select("stage_key, label, position")
     .eq("consultant_id", consultantId)
+    .is("deleted_at", null)
     .order("position", { ascending: true });
   if (!data || data.length === 0) return [...DEFAULT_JOURNEY_STAGES];
   return data.map((r: any) => ({ v: r.stage_key, l: r.label }));

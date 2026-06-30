@@ -1471,12 +1471,13 @@ function VendasPage() {
 
 
 
-    // 4) Remove o lançamento financeiro da venda
+    // 4) Marca o lançamento financeiro como excluído (soft delete — recuperável)
+    const nowIso = new Date().toISOString();
     if (tipo === "vista") {
-      const { error } = await supabase.from("transactions").delete().eq("id", row.id);
+      const { error } = await supabase.from("transactions").update({ deleted_at: nowIso }).eq("id", row.id);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from("receivables").delete().eq("id", row.id);
+      const { error } = await supabase.from("receivables").update({ deleted_at: nowIso }).eq("id", row.id);
       if (error) throw error;
     }
   }
