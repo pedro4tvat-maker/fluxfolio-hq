@@ -117,7 +117,7 @@ function ContasAReceber() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("receivables").delete().eq("id", id);
+      const { error } = await supabase.from("receivables").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Excluído"); qc.invalidateQueries({ queryKey: ["receivables"] }); qc.invalidateQueries({ queryKey: ["transactions"] }); },

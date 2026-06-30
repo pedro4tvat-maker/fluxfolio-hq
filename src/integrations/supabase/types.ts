@@ -1129,6 +1129,7 @@ export type Database = {
         Row: {
           consultant_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           is_terminal: boolean
           label: string
@@ -1139,6 +1140,7 @@ export type Database = {
         Insert: {
           consultant_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_terminal?: boolean
           label: string
@@ -1149,6 +1151,7 @@ export type Database = {
         Update: {
           consultant_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_terminal?: boolean
           label?: string

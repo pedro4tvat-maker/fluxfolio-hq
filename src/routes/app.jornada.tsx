@@ -583,7 +583,7 @@ function CustomizeMethodDialog({ consultantId, initial, onClose }: {
       if (items.some((s) => !s.v.trim() || !s.l.trim())) throw new Error("Chave e nome são obrigatórios.");
       const keys = items.map((s) => s.v);
       if (new Set(keys).size !== keys.length) throw new Error("Chaves duplicadas.");
-      await sb.from("consultancy_journey_stages").delete().eq("consultant_id", consultantId);
+      await sb.from("consultancy_journey_stages").update({ deleted_at: new Date().toISOString() }).eq("consultant_id", consultantId).is("deleted_at", null);
       if (items.length === 0) return;
       const rows = items.map((s, i) => ({
         consultant_id: consultantId, stage_key: s.v.trim(), label: s.l.trim(), position: i,
