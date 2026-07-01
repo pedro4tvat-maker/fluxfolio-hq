@@ -11,6 +11,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useRecoveryFlags } from "@/hooks/use-recovery-flags";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CONSULTORIA_SECTIONS } from "@/routes/app.consultoria";
