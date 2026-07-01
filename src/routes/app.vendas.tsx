@@ -1573,6 +1573,7 @@ function VendasPage() {
       setOpen(true);
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
       qc.invalidateQueries({ queryKey: ["products-sel"] });
+      qc.invalidateQueries({ queryKey: ["product-stock-by-location"] });
       toast.success("Venda carregada para edição. Ajuste e salve novamente.");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: unknown) {
