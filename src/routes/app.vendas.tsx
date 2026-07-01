@@ -1504,6 +1504,7 @@ function VendasPage() {
       toast.success("Venda cancelada e estoque estornado");
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
       qc.invalidateQueries({ queryKey: ["products-sel"] });
+      qc.invalidateQueries({ queryKey: ["product-stock-by-location"] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg || "Erro ao cancelar venda");
