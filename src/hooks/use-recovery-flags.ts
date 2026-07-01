@@ -18,9 +18,9 @@ export function useRecoveryFlags() {
     queryFn: async () => {
       const companyId = selected!;
       const [txPend, recPend, recovery, renumber, needsReview] = await Promise.all([
-        supabase.from("transactions").select("id", { count: "exact", head: true })
+        (supabase.from("transactions") as any).select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "pendente_revisao_manual").is("deleted_at", null),
-        supabase.from("receivables").select("id", { count: "exact", head: true })
+        (supabase.from("receivables") as any).select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "pendente_revisao_manual").is("deleted_at", null),
         supabase.from("sales_recovery_log").select("id", { count: "exact", head: true })
           .eq("company_id", companyId),
