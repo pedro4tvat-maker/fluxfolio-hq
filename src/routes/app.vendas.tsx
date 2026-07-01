@@ -22,6 +22,8 @@ function ItemLocationBalance({ productId, locationId, requested }: { productId: 
   const { data: saldo } = useQuery({
     queryKey: ["product-stock-by-location", productId, locationId],
     enabled: !!productId && !!locationId,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase.rpc("product_stock_by_location", {
         _product_id: productId,
@@ -45,6 +47,7 @@ function ItemLocationBalance({ productId, locationId, requested }: { productId: 
     </div>
   );
 }
+
 
 type CrmContact = {
   id: string;
