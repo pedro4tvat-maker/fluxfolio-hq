@@ -22,6 +22,8 @@ function ItemLocationBalance({ productId, locationId, requested }: { productId: 
   const { data: saldo } = useQuery({
     queryKey: ["product-stock-by-location", productId, locationId],
     enabled: !!productId && !!locationId,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase.rpc("product_stock_by_location", {
         _product_id: productId,
@@ -45,6 +47,7 @@ function ItemLocationBalance({ productId, locationId, requested }: { productId: 
     </div>
   );
 }
+
 
 type CrmContact = {
   id: string;
@@ -712,6 +715,7 @@ function VendasPage() {
       resetForm();
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
       qc.invalidateQueries({ queryKey: ["products-sel"] });
+      qc.invalidateQueries({ queryKey: ["product-stock-by-location"] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg || "Erro ao salvar");
@@ -1500,6 +1504,7 @@ function VendasPage() {
       toast.success("Venda cancelada e estoque estornado");
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
       qc.invalidateQueries({ queryKey: ["products-sel"] });
+      qc.invalidateQueries({ queryKey: ["product-stock-by-location"] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg || "Erro ao cancelar venda");
@@ -1568,6 +1573,7 @@ function VendasPage() {
       setOpen(true);
       qc.invalidateQueries({ queryKey: ["vendas-list"] });
       qc.invalidateQueries({ queryKey: ["products-sel"] });
+      qc.invalidateQueries({ queryKey: ["product-stock-by-location"] });
       toast.success("Venda carregada para edição. Ajuste e salve novamente.");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: unknown) {

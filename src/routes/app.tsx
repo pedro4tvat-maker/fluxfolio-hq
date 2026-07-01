@@ -11,6 +11,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useRecoveryFlags } from "@/hooks/use-recovery-flags";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CONSULTORIA_SECTIONS } from "@/routes/app.consultoria";
@@ -100,7 +101,22 @@ function AppLayout() {
   useEffect(() => { if (path.startsWith("/app/consultoria")) setConsultoriaOpen(true); }, [path]);
   useEffect(() => { if (path.startsWith("/app/agenda")) setAgendaOpen(true); }, [path]);
 
-  const nav = useMemo<NavEntry[]>(() => (isConsultant ? consultantNav : clientNav), [isConsultant]);
+  const { showReconstrucao, showCorrecaoOs } = useRecoveryFlags();
+
+  const nav = useMemo<NavEntry[]>(() => {
+    if (isConsultant) return consultantNav;
+    return clientNav.map((entry) => {
+      if (!isGroup(entry) || entry.id !== "fluxo") return entry;
+      return {
+        ...entry,
+        children: entry.children.filter((c) => {
+          if (c.to === "/app/reconstrucao-vendas") return showReconstrucao;
+          if (c.to === "/app/correcao-os") return showCorrecaoOs;
+          return true;
+        }),
+      };
+    });
+  }, [isConsultant, showReconstrucao, showCorrecaoOs]);
 
   const [groupsOpen, setGroupsOpen] = useState<Record<string, boolean>>({
     fluxo: true,
