@@ -419,16 +419,12 @@ function VendasPage() {
   }
 
   function snapshotsToParsed(snaps: SaleItemSnapshot[], saleValue?: number): ParsedItem[] {
-    const proportionalReconstruction = isProportionalReconstruction(snaps, saleValue);
     return snaps.map((it) => {
       const qtd = Number(it.quantity) || 0;
       const preco = Number(it.unit_price) || 0;
       const custo = Number(it.unit_cost) || 0;
       const subtotal = Number(it.total_revenue) > 0 ? Number(it.total_revenue) : qtd * preco;
       const custoTotal = Number(it.total_cost) > 0 ? Number(it.total_cost) : qtd * custo;
-      const reviewReason = proportionalReconstruction
-        ? "Preço unitário estimado por reconstrução proporcional; confirme o preço real lançado na venda."
-        : it.review_reason;
       return {
         nome: it.product_name_snapshot || "Produto sem identificação",
         qtd,
@@ -437,8 +433,8 @@ function VendasPage() {
         subtotal,
         custoTotal,
         margem: Number(it.margin_value) || subtotal - custoTotal,
-        needsReview: !!it.needs_review || proportionalReconstruction || qtd <= 0 || preco <= 0,
-        reviewReason,
+        needsReview: !!it.needs_review || qtd <= 0 || preco <= 0,
+        reviewReason: it.review_reason,
       };
     });
   }
@@ -1141,8 +1137,8 @@ function VendasPage() {
         subtotal,
         custoTotal,
         margem: subtotal - custoTotal,
-        needsReview: !priceFromDescription,
-        reviewReason: !priceFromDescription ? "Preço não estava gravado na descrição original; usado preço atual do cadastro." : null,
+        needsReview: qtd <= 0 || preco <= 0,
+        reviewReason: preco <= 0 ? "Preço unitário ausente." : null,
       };
     }).filter(Boolean) as ParsedItem[];
 
@@ -1166,8 +1162,8 @@ function VendasPage() {
             subtotal: qtd * preco,
             custoTotal: qtd * custo,
             margem: qtd * (preco - custo),
-            needsReview: true,
-            reviewReason: "Preço unitário estimado a partir do cadastro e das movimentações de estoque; confirme o preço real da venda.",
+            needsReview: qtd <= 0 || preco <= 0,
+            reviewReason: preco <= 0 ? "Preço unitário ausente." : null,
           } as ParsedItem;
         });
         // Ajuste proporcional para casar com o valor real da venda
@@ -1178,8 +1174,8 @@ function VendasPage() {
             l.preco = l.preco * fator;
             l.subtotal = l.qtd * l.preco;
             l.margem = l.subtotal - l.custoTotal;
-            l.needsReview = true;
-            l.reviewReason = "Preço unitário rateado para fechar com o valor financeiro da venda; confirme o preço real de cada item.";
+            l.needsReview = l.qtd <= 0 || l.preco <= 0;
+            l.reviewReason = l.preco <= 0 ? "Preço unitário ausente." : null;
           });
         } else if (somaCalc === 0 && valorTotal > 0) {
           const totalQtd = linhas.reduce((a, b) => a + b.qtd, 0) || 1;
@@ -1188,8 +1184,8 @@ function VendasPage() {
             l.preco = precoMedio;
             l.subtotal = l.qtd * precoMedio;
             l.margem = l.subtotal - l.custoTotal;
-            l.needsReview = true;
-            l.reviewReason = "Preço médio estimado para fechar com o valor financeiro da venda; confirme o preço real de cada item.";
+            l.needsReview = l.qtd <= 0 || l.preco <= 0;
+            l.reviewReason = l.preco <= 0 ? "Preço unitário ausente." : null;
           });
         }
         return linhas;
@@ -1326,7 +1322,6 @@ function VendasPage() {
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
     const vendasIncompletas = all.filter((s) => s.itens.length === 0 || s.itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0)).length;
     const validAll = all.filter((s) => s.itens.length > 0);
-    const itensParaRevisar = validAll.reduce((sum, sale) => sum + sale.itens.filter((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0).length, 0);
     const totalReceita = validAll.reduce((a, b) => a + b.totalReceita, 0);
     const totalCusto = validAll.reduce((a, b) => a + b.totalCusto, 0);
     const totalMargem = totalReceita - totalCusto;
@@ -1344,24 +1339,20 @@ function VendasPage() {
           <td class="num">${formatMoney(it.subtotal)}</td>
           <td class="num">${formatMoney(it.custoTotal)}</td>
           <td class="num ${it.margem >= 0 ? "pos" : "neg"}">${formatMoney(it.margem)}</td>
-          <td class="center ${it.needsReview ? "warn" : "pos"}">${it.needsReview ? "Revisar" : "OK"}</td>
-          <td class="muted">${escapeHtml(it.reviewReason || "")}</td>
         </tr>`).join("");
-      const saleNeedsReview = s.itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0);
       return `<div class="sale-block">
         <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px">
-          <div><b>#${idx + 1} · ${escapeHtml(s.cliente)}</b> <span class="muted">(${s.tipo === "vista" ? "à vista" : "a prazo"})</span> ${saleNeedsReview ? `<span class="badge-warn">revisar preços</span>` : ""}</div>
+          <div><b>#${idx + 1} · ${escapeHtml(s.cliente)}</b> <span class="muted">(${s.tipo === "vista" ? "à vista" : "a prazo"})</span></div>
           <div class="muted">${s.dataRef ? formatDate(s.dataRef) : "—"}</div>
         </div>
         <table>
-          <thead><tr><th>Produto</th><th class="center">Qtd</th><th class="num">Preço un.</th><th class="num">Custo un.</th><th class="num">Receita</th><th class="num">Custo</th><th class="num">Margem</th><th class="center">Status</th><th>Diagnóstico</th></tr></thead>
+          <thead><tr><th>Produto</th><th class="center">Qtd</th><th class="num">Preço un.</th><th class="num">Custo un.</th><th class="num">Receita</th><th class="num">Custo</th><th class="num">Margem</th></tr></thead>
           <tbody>${linhas}</tbody>
           <tfoot><tr>
             <td colspan="4" class="num"><b>Totais</b></td>
             <td class="num"><b>${formatMoney(s.totalReceita)}</b></td>
             <td class="num"><b>${formatMoney(s.totalCusto)}</b></td>
             <td class="num ${s.margem >= 0 ? "pos" : "neg"}"><b>${formatMoney(s.margem)} (${pct.toFixed(1)}%)</b></td>
-            <td colspan="2"></td>
           </tr></tfoot>
         </table>
       </div>`;
@@ -1384,9 +1375,7 @@ function VendasPage() {
         <div class="card"><div class="stat">Custos diretos</div><div class="stat-val">${formatMoney(totalCusto)}</div></div>
         <div class="card"><div class="stat">Margem do período</div><div class="stat-val ${totalMargem >= 0 ? "pos" : "neg"}">${formatMoney(totalMargem)} (${margemPct.toFixed(1)}%)</div></div>
         <div class="card"><div class="stat">Vendas incompletas</div><div class="stat-val">${vendasIncompletas}</div></div>
-        <div class="card"><div class="stat">Itens a revisar</div><div class="stat-val ${itensParaRevisar > 0 ? "warn" : "pos"}">${itensParaRevisar}</div></div>
       </div>
-      ${itensParaRevisar > 0 ? `<div class="alert"><b>Diagnóstico:</b> há itens com preço unitário estimado/reconstruído. O total financeiro da venda pode estar correto, mas o preço unitário por produto não deve ser tratado como preço real até revisão.</div>` : ""}
       <h2>Detalhamento por venda</h2>
       ${blocks}
       <div class="footer">Custos baseados no snapshot da venda. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
