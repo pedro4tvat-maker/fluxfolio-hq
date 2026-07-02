@@ -81,6 +81,8 @@ export type SaleItemReport = {
   margin_value: number;
   margin_percentage: number;
   needs_review: boolean;
+  recovery_log_id: string | null;
+  recovered_from_stock_movement: boolean;
 };
 
 export type Account = {
@@ -161,7 +163,7 @@ export async function fetchReportData(
     applyBranch(
       (supabase as any)
         .from("sale_items")
-        .select("id, company_id, branch_id, sale_id, sale_type, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, needs_review")
+        .select("id, company_id, branch_id, sale_id, sale_type, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, needs_review, recovery_log_id, recovered_from_stock_movement")
         .eq("company_id", companyId)
         .is("deleted_at", null),
       branchId,
@@ -195,6 +197,8 @@ export async function fetchReportData(
       margin_value: Number(r.margin_value),
       margin_percentage: Number(r.margin_percentage),
       needs_review: Boolean(r.needs_review),
+      recovery_log_id: r.recovery_log_id ?? null,
+      recovered_from_stock_movement: Boolean(r.recovered_from_stock_movement),
     })),
     accounts: ((accs as any).data ?? []).map((r: any) => ({ ...r, saldo_inicial: Number(r.saldo_inicial) })),
     budgets: ((budgets as any).data ?? []).map((r: any) => ({ ...r, valor_orcado: Number(r.valor_orcado) })),
@@ -653,7 +657,9 @@ export function buildVendasMargem(data: ReportData, period: Period) {
   const vendaIdsVista = new Set(vendasVista.map((v) => v.id));
   const vendaIdsPrazo = new Set(vendasPrazo.map((v) => v.id));
   const itens = data.saleItems.filter(
-    (it) => (it.sale_type === "vista" && vendaIdsVista.has(it.sale_id)) || (it.sale_type === "prazo" && vendaIdsPrazo.has(it.sale_id)),
+    (it) =>
+      ((it.sale_type === "vista" && vendaIdsVista.has(it.sale_id)) || (it.sale_type === "prazo" && vendaIdsPrazo.has(it.sale_id))) &&
+      (it.recovery_log_id || it.recovered_from_stock_movement || it.unit_price > 0 || it.total_revenue > 0),
   );
   const vendasComItens = new Set(itens.map((it) => `${it.sale_type}:${it.sale_id}`));
   const faturamentoItens = itens.reduce((s, it) => s + it.total_revenue, 0);

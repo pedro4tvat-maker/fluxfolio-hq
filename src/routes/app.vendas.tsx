@@ -94,6 +94,8 @@ type SaleItemSnapshot = {
   stock_location_id: string | null;
   needs_review?: boolean | null;
   review_reason?: string | null;
+  recovery_log_id?: string | null;
+  recovered_from_stock_movement?: boolean | null;
 };
 
 type ParsedItem = {
@@ -358,7 +360,7 @@ function VendasPage() {
           .limit(2000),
         (supabase as any)
           .from("sale_items")
-          .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+          .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason, recovery_log_id, recovered_from_stock_movement")
           .eq("company_id", selected!)
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
@@ -384,7 +386,13 @@ function VendasPage() {
 
   const filteredContacts = useMemo(() => contacts, [contacts]);
 
-  const saleItemSnapshots = useMemo(() => (vendas?.saleItems ?? []) as SaleItemSnapshot[], [vendas?.saleItems]);
+  function isRealSaleItemSnapshot(it: SaleItemSnapshot) {
+    return !!it.recovery_log_id || !!it.recovered_from_stock_movement || Number(it.unit_price) > 0 || Number(it.total_revenue) > 0;
+  }
+
+  const saleItemSnapshots = useMemo(() => {
+    return ((vendas?.saleItems ?? []) as SaleItemSnapshot[]).filter(isRealSaleItemSnapshot);
+  }, [vendas?.saleItems]);
 
   function saleItemsFor(saleId: string, saleType: "vista" | "prazo", pool = saleItemSnapshots) {
     return pool.filter((it) => it.sale_id === saleId && it.sale_type === saleType);
@@ -860,11 +868,11 @@ function VendasPage() {
     if (parsedLinhas.length === 0) {
       const { data: dbItems } = await (supabase as any)
         .from("sale_items")
-        .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+        .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason, recovery_log_id, recovered_from_stock_movement")
         .eq("sale_id", row.id)
         .eq("sale_type", tipo)
         .is("deleted_at", null);
-      parsedLinhas = snapshotsToParsed((dbItems ?? []) as SaleItemSnapshot[]).map((it) => ({
+      parsedLinhas = snapshotsToParsed(((dbItems ?? []) as SaleItemSnapshot[]).filter(isRealSaleItemSnapshot)).map((it) => ({
         nome: it.nome,
         qtd: it.qtd,
         preco: it.preco,
@@ -1265,7 +1273,7 @@ function VendasPage() {
       return s >= from && s <= to;
     };
     const sharedPool: SaleMov[] = (vendas.movs ?? []).map((m) => ({ ...m })) as SaleMov[];
-    const sharedSaleItems: SaleItemSnapshot[] = (vendas.saleItems ?? []).map((m) => ({ ...m })) as SaleItemSnapshot[];
+    const sharedSaleItems: SaleItemSnapshot[] = saleItemSnapshots.map((m) => ({ ...m })) as SaleItemSnapshot[];
     const vistaRows = vendas.tx
       .filter((r) => inRange(r.data))
       .map((r) => buildSaleMarginRows(r, "vista", sharedPool, sharedSaleItems));
@@ -1395,11 +1403,11 @@ function VendasPage() {
       if (itemSnapshots.length === 0) {
         const { data: dbItems } = await (supabase as any)
           .from("sale_items")
-          .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason")
+          .select("id, sale_id, sale_type, company_id, branch_id, product_id, product_name_snapshot, quantity, unit_price, unit_cost, total_revenue, total_cost, margin_value, margin_percentage, stock_location_id, needs_review, review_reason, recovery_log_id, recovered_from_stock_movement")
           .eq("sale_id", row.id)
           .eq("sale_type", tipo)
           .is("deleted_at", null);
-        itemSnapshots = (dbItems ?? []) as SaleItemSnapshot[];
+        itemSnapshots = ((dbItems ?? []) as SaleItemSnapshot[]).filter(isRealSaleItemSnapshot);
       }
       const physicalItems = itemSnapshots.filter((it) => it.product_id && Number(it.quantity) > 0);
       if (physicalItems.length > 0) {
