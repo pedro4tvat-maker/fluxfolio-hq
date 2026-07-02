@@ -153,6 +153,27 @@ function Relatorios() {
     toast.success("Exportado.");
   };
 
+  const exportPDF = (title: string, rows: Record<string, unknown>[]) => {
+    if (!rows?.length) {
+      toast.error("Nada para exportar.");
+      return;
+    }
+    const empresa = company?.nome ?? "Empresa";
+    const html = buildReportHTML({
+      title,
+      empresa,
+      periodo: `${formatDateBR(inicio)} a ${formatDateBR(fim)}`,
+      rows,
+    });
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (!w) {
+      toast.error("Permita pop-ups para gerar o PDF.");
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+  };
+
   if (!currentCompanyId) {
     return (
       <div className="space-y-6 max-w-5xl">
@@ -263,6 +284,7 @@ function Relatorios() {
               period={period}
               prevPeriod={prevPeriod}
               onExport={exportCSV}
+              onExportPDF={exportPDF}
             />
           )}
         </div>
@@ -275,9 +297,77 @@ function Loading() {
   return <div className="text-sm text-muted-foreground py-8 text-center">Carregando dados...</div>;
 }
 
+
+function formatDateBR(d: string) {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  return `${day}/${m}/${y}`;
+}
+
+function buildReportHTML({ title, empresa, periodo, rows }: { title: string; empresa: string; periodo: string; rows: Record<string, unknown>[] }) {
+  const headers = Object.keys(rows[0] ?? {});
+  const isMoneyCol = (h: string) => /valor|saldo|total|orçado|realizado|diferença|atual|anterior|preço|custo|margem|ebitda|receita|lucro|entradas|saídas|resultado|a pagar|a receber/i.test(h);
+  const isNumberCol = (h: string) => rows.some((r) => typeof r[h] === "number");
+  const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const fmt = (v: unknown, h: string) => {
+    if (v == null || v === "") return "—";
+    if (typeof v === "number") return isMoneyCol(h) ? brl.format(v) : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+    return String(v);
+  };
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  const thead = headers.map((h) => `<th style="text-align:${isNumberCol(h) ? "right" : "left"}">${esc(h)}</th>`).join("");
+  const tbody = rows.map((r) => {
+    const tds = headers.map((h) => {
+      const v = r[h];
+      const align = isNumberCol(h) ? "right" : "left";
+      const negative = typeof v === "number" && v < 0;
+      return `<td style="text-align:${align};${negative ? "color:#b91c1c;" : ""}${isNumberCol(h) ? "font-variant-numeric:tabular-nums;" : ""}">${esc(fmt(v, h))}</td>`;
+    }).join("");
+    return `<tr>${tds}</tr>`;
+  }).join("");
+  const now = new Date().toLocaleString("pt-BR");
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(title)} — ${esc(empresa)}</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1f2937; margin: 0; padding: 32px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .header { border-bottom: 2px solid #628A4C; padding-bottom: 16px; margin-bottom: 24px; display:flex; justify-content:space-between; align-items:flex-end; gap:16px; }
+  .brand { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #628A4C; font-weight: 700; }
+  h1 { font-size: 22px; margin: 4px 0 0; color: #111827; }
+  .meta { font-size: 11px; color: #6b7280; text-align: right; line-height: 1.6; }
+  .meta strong { color: #1f2937; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+  thead th { background: #F1EEE6; color: #1f2937; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .04em; padding: 8px 10px; border-bottom: 1px solid #d9d9d6; }
+  tbody td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+  tbody tr:nth-child(even) td { background: #fafaf7; }
+  tfoot td { font-weight: 600; border-top: 2px solid #628A4C; }
+  .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; display:flex; justify-content:space-between; }
+  .actions { position: fixed; top: 12px; right: 12px; }
+  .actions button { background: #628A4C; color: #fff; border: 0; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  @media print { .actions { display: none; } body { padding: 0; } }
+</style></head><body>
+  <div class="actions"><button onclick="window.print()">Imprimir / Salvar PDF</button></div>
+  <div class="header">
+    <div>
+      <div class="brand">Relatório Financeiro</div>
+      <h1>${esc(title)}</h1>
+    </div>
+    <div class="meta">
+      <div><strong>${esc(empresa)}</strong></div>
+      <div>Período: ${esc(periodo)}</div>
+      <div>Emitido em: ${esc(now)}</div>
+    </div>
+  </div>
+  <table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>
+  <div class="footer"><span>${esc(empresa)}</span><span>Sistema FP · ${esc(now)}</span></div>
+  <script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script>
+</body></html>`;
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
+
       <span className="block text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</span>
       {children}
     </label>
@@ -335,26 +425,26 @@ function KpiGrid({ items }: { items: { label: string; value: number; money?: boo
   );
 }
 
-function ExportBtn({ rows, name, onExport }: { rows: Record<string, unknown>[]; name: string; onExport: (r: any[], n: string) => void }) {
+function ExportBtn({ rows, name, title, onExport, onExportPDF }: { rows: Record<string, unknown>[]; name: string; title: string; onExport: (r: any[], n: string) => void; onExportPDF?: (title: string, rows: any[]) => void }) {
   return (
     <div className="flex gap-2">
       <Button variant="outline" size="sm" onClick={() => onExport(rows, name)}>
         <Download className="size-4" /> Exportar CSV
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => window.print()}>
-        Exportar PDF
+      <Button variant="outline" size="sm" onClick={() => onExportPDF ? onExportPDF(title, rows) : window.print()}>
+        <FileText className="size-4" /> Exportar PDF
       </Button>
     </div>
   );
 }
 
-function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExport }: any) {
+function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExport, onExportPDF }: any) {
   switch (type) {
     case "dre": {
       const r = buildDRE(data, period);
       return (
         <>
-          <Header title="DRE Gerencial" onExport={onExport} rows={r.rows} name="dre" />
+          <Header title="DRE Gerencial" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="dre" />
           {r.semClassificacao > 0 && (
             <div className="rounded-xl border-amber-500/30 bg-amber-500/10 border p-3 text-sm flex gap-2 items-start">
               <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
@@ -369,7 +459,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
       const r = buildFluxoRealizado(data, period);
       return (
         <>
-          <Header title="Fluxo de Caixa Realizado" onExport={onExport} rows={r.lancamentos} name="fluxo_realizado" />
+          <Header title="Fluxo de Caixa Realizado" onExport={onExport} onExportPDF={onExportPDF} rows={r.lancamentos} name="fluxo_realizado" />
           <KpiGrid items={[
             { label: "Saldo Inicial", value: r.summary.saldoInicial, money: true },
             { label: "Entradas", value: r.summary.entradas, money: true },
@@ -386,7 +476,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
       const r = buildFluxoProjetado(data);
       return (
         <>
-          <Header title="Fluxo de Caixa Projetado" onExport={onExport} rows={r.projecao} name="fluxo_projetado" />
+          <Header title="Fluxo de Caixa Projetado" onExport={onExport} onExportPDF={onExportPDF} rows={r.projecao} name="fluxo_projetado" />
           {r.summary.riscoNegativo && (
             <div className="rounded-xl border-destructive/30 bg-destructive/10 border p-3 text-sm flex gap-2 items-start">
               <AlertTriangle className="size-4 text-destructive shrink-0 mt-0.5" />
@@ -405,13 +495,13 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
     }
     case "lucro_operacional": {
       const r = buildLucroOperacional(data, period);
-      return <><Header title="Lucro Operacional" onExport={onExport} rows={r.rows} name="lucro_operacional" /><Table rows={r.rows} /></>;
+      return <><Header title="Lucro Operacional" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="lucro_operacional" /><Table rows={r.rows} /></>;
     }
     case "margem_contribuicao": {
       const r = buildMargemContribuicao(data, period);
       return (
         <>
-          <Header title="Margem de Contribuição" onExport={onExport} rows={r.produtos} name="margem_contribuicao" />
+          <Header title="Margem de Contribuição" onExport={onExport} onExportPDF={onExportPDF} rows={r.produtos} name="margem_contribuicao" />
           <KpiGrid items={[
             { label: "Receita", value: r.summary.receita, money: true },
             { label: "Custos Variáveis", value: r.summary.custosVariaveis, money: true },
@@ -426,7 +516,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
       const r = buildPontoEquilibrio(data, period);
       return (
         <>
-          <Header title="Ponto de Equilíbrio" onExport={onExport} rows={r.rows} name="ponto_equilibrio" />
+          <Header title="Ponto de Equilíbrio" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="ponto_equilibrio" />
           <div className={`rounded-xl border p-3 text-sm font-medium ${r.status === "acima" ? "border-emerald-500/30 bg-emerald-500/10" : r.status === "abaixo" ? "border-destructive/30 bg-destructive/10" : "border-amber-500/30 bg-amber-500/10"}`}>
             Status: {r.status === "acima" ? "Acima do PE" : r.status === "abaixo" ? "Abaixo do PE" : r.status === "proximo" ? "Próximo do PE" : "Indefinido"}
           </div>
@@ -438,7 +528,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
       const r = buildContasPagar(data, period);
       return (
         <>
-          <Header title="Contas a Pagar" onExport={onExport} rows={r.lista} name="contas_pagar" />
+          <Header title="Contas a Pagar" onExport={onExport} onExportPDF={onExportPDF} rows={r.lista} name="contas_pagar" />
           <KpiGrid items={[
             { label: "Total a Pagar", value: r.summary.totalPagar, money: true },
             { label: "Vencido", value: r.summary.vencido, money: true },
@@ -455,7 +545,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
       const r = buildContasReceber(data, period);
       return (
         <>
-          <Header title="Contas a Receber" onExport={onExport} rows={r.proximos} name="contas_receber" />
+          <Header title="Contas a Receber" onExport={onExport} onExportPDF={onExportPDF} rows={r.proximos} name="contas_receber" />
           <KpiGrid items={[
             { label: "Total a Receber", value: r.summary.totalReceber, money: true },
             { label: "Vencido", value: r.summary.vencido, money: true },
@@ -469,13 +559,13 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
     }
     case "orcado_realizado": {
       const r = buildOrcadoRealizado(data, period);
-      return <><Header title="Orçado x Realizado" onExport={onExport} rows={r.rows} name="orcado_realizado" /><Table rows={r.rows} /></>;
+      return <><Header title="Orçado x Realizado" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="orcado_realizado" /><Table rows={r.rows} /></>;
     }
     case "capital_giro": {
       const r = buildCapitalGiro(data);
       return (
         <>
-          <Header title="Capital de Giro" onExport={onExport} rows={r.rows} name="capital_giro" />
+          <Header title="Capital de Giro" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="capital_giro" />
           <div className="rounded-xl border p-3 text-sm">Situação: <strong>{r.situacao}</strong></div>
           <Table rows={r.rows} />
         </>
@@ -485,7 +575,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
       const r = buildEstoqueFinanceiro(data);
       return (
         <>
-          <Header title="Estoque Financeiro" onExport={onExport} rows={r.maiorValor} name="estoque_financeiro" />
+          <Header title="Estoque Financeiro" onExport={onExport} onExportPDF={onExportPDF} rows={r.maiorValor} name="estoque_financeiro" />
           <KpiGrid items={[
             { label: "Valor total", value: r.summary.total, money: true },
             { label: "Produtos", value: r.summary.totalProdutos },
@@ -501,7 +591,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
       const r = buildVendasMargem(data, period);
       return (
         <>
-          <Header title="Vendas e Margem" onExport={onExport} rows={r.produtos} name="vendas_margem" />
+          <Header title="Vendas e Margem" onExport={onExport} onExportPDF={onExportPDF} rows={r.produtos} name="vendas_margem" />
           <KpiGrid items={[
             { label: "Total vendido", value: r.summary.totalVendido, money: true },
             { label: "Custo total", value: r.summary.custoTotal, money: true },
@@ -516,18 +606,18 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
     }
     case "centro_custos": {
       const r = buildCentroCustos(data, period);
-      return <><Header title="Centro de Custos" onExport={onExport} rows={r.rows} name="centro_custos" /><Table rows={r.rows} /></>;
+      return <><Header title="Centro de Custos" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="centro_custos" /><Table rows={r.rows} /></>;
     }
     case "indicadores": {
       const r = buildIndicadores(data, period);
-      return <><Header title="Indicadores Financeiros" onExport={onExport} rows={r.rows} name="indicadores" /><Table rows={r.rows} /></>;
+      return <><Header title="Indicadores Financeiros" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="indicadores" /><Table rows={r.rows} /></>;
     }
     case "comparativo_periodos": {
       if (!dataPrev) return <Loading />;
       const r = buildComparativo(data, dataPrev, period, prevPeriod);
       return (
         <>
-          <Header title={`Comparativo: ${period.start}→${period.end} vs ${prevPeriod.start}→${prevPeriod.end}`} onExport={onExport} rows={r.rows} name="comparativo" />
+          <Header title={`Comparativo: ${period.start}→${period.end} vs ${prevPeriod.start}→${prevPeriod.end}`} onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="comparativo" />
           <Table rows={r.rows} />
         </>
       );
@@ -535,18 +625,18 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
     case "comparativo_filiais": {
       if (!filiais) return <Loading />;
       if (!filiais.rows.length) return <p className="text-sm text-muted-foreground py-6">Cadastre filiais para usar este relatório.</p>;
-      return <><Header title="Comparativo de Filiais" onExport={onExport} rows={filiais.rows} name="comparativo_filiais" /><Table rows={filiais.rows} /></>;
+      return <><Header title="Comparativo de Filiais" onExport={onExport} onExportPDF={onExportPDF} rows={filiais.rows} name="comparativo_filiais" /><Table rows={filiais.rows} /></>;
     }
     default:
       return null;
   }
 }
 
-function Header({ title, rows, name, onExport }: { title: string; rows: any[]; name: string; onExport: (r: any[], n: string) => void }) {
+function Header({ title, rows, name, onExport, onExportPDF }: { title: string; rows: any[]; name: string; onExport: (r: any[], n: string) => void; onExportPDF?: (title: string, rows: any[]) => void }) {
   return (
     <div className="flex items-center justify-between gap-2 flex-wrap">
       <h2 className="text-lg font-display font-semibold">{title}</h2>
-      <ExportBtn rows={rows} name={name} onExport={onExport} />
+      <ExportBtn rows={rows} name={name} title={title} onExport={onExport} onExportPDF={onExportPDF} />
     </div>
   );
 }
