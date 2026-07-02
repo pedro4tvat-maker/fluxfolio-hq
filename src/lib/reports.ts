@@ -449,20 +449,58 @@ export function buildMargemContribuicao(data: ReportData, period: Period) {
   const dre = buildDRE(data, period);
   const s = dre.summary;
   const mcPct = s.receitaLiquida > 0 ? (s.margemContribuicao / s.receitaLiquida) * 100 : 0;
-  const produtos = data.products
-    .filter((p) => p.preco_venda > 0)
-    .map((p) => ({
-      Produto: p.nome,
-      "Preço Venda": p.preco_venda,
-      "Custo Unit.": p.custo_unitario,
-      "MC R$": p.preco_venda - p.custo_unitario,
-      "MC %": ((p.preco_venda - p.custo_unitario) / p.preco_venda) * 100,
-    }));
+
+  // Agrega por produto a partir dos itens de venda do período (preço real praticado),
+  // e não do cadastro (products.preco_venda), evitando valores subvalorizados.
+  const vendasVistaIds = new Set(
+    data.transactions
+      .filter((t) => t.status === "realizado" && t.tipo === "entrada" && inPeriod(t.data, period))
+      .map((t) => t.id),
+  );
+  const vendasPrazoIds = new Set(
+    data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado").map((r) => r.id),
+  );
+  const itensPeriodo = data.saleItems.filter(
+    (it) =>
+      ((it.sale_type === "vista" && vendasVistaIds.has(it.sale_id)) ||
+        (it.sale_type === "prazo" && vendasPrazoIds.has(it.sale_id))) &&
+      (it.recovery_log_id || it.recovered_from_stock_movement || it.unit_price > 0 || it.total_revenue > 0),
+  );
+
+  type Agg = { nome: string; qtd: number; receita: number; custo: number };
+  const agg = new Map<string, Agg>();
+  itensPeriodo.forEach((it) => {
+    const key = it.product_id ?? `snap:${it.product_name_snapshot}`;
+    const cur = agg.get(key) ?? { nome: it.product_name_snapshot || "Produto", qtd: 0, receita: 0, custo: 0 };
+    cur.qtd += it.quantity;
+    cur.receita += it.total_revenue;
+    cur.custo += it.total_cost;
+    agg.set(key, cur);
+  });
+
+  const produtos = Array.from(agg.values())
+    .filter((a) => a.receita > 0 || a.qtd > 0)
+    .map((a) => {
+      const precoMedio = a.qtd > 0 ? a.receita / a.qtd : 0;
+      const custoMedio = a.qtd > 0 ? a.custo / a.qtd : 0;
+      const mc = a.receita - a.custo;
+      return {
+        Produto: a.nome,
+        Quantidade: a.qtd,
+        "Preço Venda": precoMedio,
+        "Custo Unit.": custoMedio,
+        "MC R$": mc,
+        "MC %": a.receita > 0 ? (mc / a.receita) * 100 : 0,
+      };
+    })
+    .sort((a, b) => (b["MC R$"] as number) - (a["MC R$"] as number));
+
   return {
     summary: { receita: s.receitaLiquida, custosVariaveis: s.receitaLiquida - s.margemContribuicao, mc: s.margemContribuicao, mcPct },
     produtos,
   };
 }
+
 
 // ============ PONTO DE EQUILÍBRIO ============
 export function buildPontoEquilibrio(data: ReportData, period: Period) {
