@@ -632,11 +632,11 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
   }
 }
 
-function Header({ title, rows, name, onExport }: { title: string; rows: any[]; name: string; onExport: (r: any[], n: string) => void }) {
+function Header({ title, rows, name, onExport, onExportPDF }: { title: string; rows: any[]; name: string; onExport: (r: any[], n: string) => void; onExportPDF?: (title: string, rows: any[]) => void }) {
   return (
     <div className="flex items-center justify-between gap-2 flex-wrap">
       <h2 className="text-lg font-display font-semibold">{title}</h2>
-      <ExportBtn rows={rows} name={name} onExport={onExport} />
+      <ExportBtn rows={rows} name={name} title={title} onExport={onExport} onExportPDF={onExportPDF} />
     </div>
   );
 }
