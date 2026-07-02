@@ -61,6 +61,22 @@ function isDescOverwrittenByOs(desc: string | null, os: string | null) {
   return /^OS\s*#?[A-Za-z0-9-]+$/i.test(d);
 }
 
+const REAL_RECONSTRUCTED_ITEM_FILTER =
+  "recovery_log_id.not.is.null,recovered_from_stock_movement.eq.true,unit_price.gt.0,total_revenue.gt.0";
+
+function realReconstructedItemsCount(companyId: string, saleId?: string, saleType?: "vista" | "prazo") {
+  let query = (supabase as any)
+    .from("sale_items")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .or(REAL_RECONSTRUCTED_ITEM_FILTER);
+
+  if (saleId) query = query.eq("sale_id", saleId);
+  if (saleType) query = query.eq("sale_type", saleType);
+  return query;
+}
+
 function Page() {
   const { selected } = useSelectedCompany();
   const qc = useQueryClient();
@@ -87,7 +103,7 @@ function Page() {
       const [t1, t2, t3, t4, t5, t6, t7] = await Promise.all([
         supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null),
         supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null),
-        supabase.from("sale_items").select("sale_id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null),
+        realReconstructedItemsCount(selected!),
         supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual").eq("tipo", "entrada").or("os_code.not.is.null,crm_contact_id.not.is.null"),
         supabase.from("receivables").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null).eq("needs_manual_item_reconstruction", true).eq("reconstruction_status", "pendente_revisao_manual").or("os_code.not.is.null,crm_contact_id.not.is.null,cliente.not.is.null"),
         supabase.from("transactions").select("id", { count: "exact", head: true }).eq("company_id", selected!).is("deleted_at", null).eq("reconstruction_status", "reconstruida_conferida"),
@@ -275,8 +291,7 @@ function Page() {
 
     setSaving(true);
     try {
-      const { count: existing } = await supabase
-        .from("sale_items").select("id", { count: "exact", head: true }).eq("sale_id", selectedSale.id);
+      const { count: existing } = await realReconstructedItemsCount(selected, selectedSale.id, selectedSale.type);
       if ((existing ?? 0) > 0) {
         toast.error("Esta venda já possui itens estruturados ou recuperação registrada. Revise antes de criar novos itens.");
         setSaving(false); return;
@@ -734,7 +749,7 @@ function ImportPanel({ sales, products, stockLocations, onDone, companyId }: { s
     try {
       for (const [, group] of grouped) {
         if (!group.sale || group.errors.length > 0) { errs++; continue; }
-        const { count: existing } = await supabase.from("sale_items").select("id", { count: "exact", head: true }).eq("sale_id", group.sale.id);
+        const { count: existing } = await realReconstructedItemsCount(companyId, group.sale.id, group.sale.type);
         if ((existing ?? 0) > 0) { errs++; continue; }
 
         const validItems = group.items
