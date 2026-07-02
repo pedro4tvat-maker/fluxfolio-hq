@@ -153,6 +153,27 @@ function Relatorios() {
     toast.success("Exportado.");
   };
 
+  const exportPDF = (title: string, rows: Record<string, unknown>[]) => {
+    if (!rows?.length) {
+      toast.error("Nada para exportar.");
+      return;
+    }
+    const empresa = company?.nome ?? "Empresa";
+    const html = buildReportHTML({
+      title,
+      empresa,
+      periodo: `${formatDateBR(inicio)} a ${formatDateBR(fim)}`,
+      rows,
+    });
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (!w) {
+      toast.error("Permita pop-ups para gerar o PDF.");
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+  };
+
   if (!currentCompanyId) {
     return (
       <div className="space-y-6 max-w-5xl">
