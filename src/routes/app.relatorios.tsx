@@ -297,17 +297,6 @@ function Loading() {
   return <div className="text-sm text-muted-foreground py-8 text-center">Carregando dados...</div>;
 }
 
-              period={period}
-              prevPeriod={prevPeriod}
-              onExport={exportCSV}
-              onExportPDF={exportPDF}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function formatDateBR(d: string) {
   if (!d) return "";
