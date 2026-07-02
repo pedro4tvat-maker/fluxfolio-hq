@@ -398,13 +398,37 @@ function VendasPage() {
     return pool.filter((it) => it.sale_id === saleId && it.sale_type === saleType);
   }
 
-  function snapshotsToParsed(snaps: SaleItemSnapshot[]): ParsedItem[] {
+  function isProportionalReconstruction(snaps: SaleItemSnapshot[], saleValue?: number) {
+    if (snaps.length < 2 || !(Number(saleValue) > 0)) return false;
+    const ratios = snaps
+      .map((it) => {
+        const prod = products?.find((p) => p.id === it.product_id || p.nome.toLowerCase() === it.product_name_snapshot.toLowerCase());
+        const catalogPrice = Number(prod?.preco_venda ?? 0);
+        const itemPrice = Number(it.unit_price ?? 0);
+        return catalogPrice > 0 && itemPrice > 0 ? itemPrice / catalogPrice : null;
+      })
+      .filter((v): v is number => v !== null && Number.isFinite(v));
+    if (ratios.length < 2) return false;
+
+    const min = Math.min(...ratios);
+    const max = Math.max(...ratios);
+    const avg = ratios.reduce((s, v) => s + v, 0) / ratios.length;
+    const itemsTotal = snaps.reduce((s, it) => s + Number(it.total_revenue ?? 0), 0);
+
+    return Math.abs(itemsTotal - Number(saleValue)) <= 0.05 && max - min <= 0.02 && avg > 0 && avg < 0.7;
+  }
+
+  function snapshotsToParsed(snaps: SaleItemSnapshot[], saleValue?: number): ParsedItem[] {
+    const proportionalReconstruction = isProportionalReconstruction(snaps, saleValue);
     return snaps.map((it) => {
       const qtd = Number(it.quantity) || 0;
       const preco = Number(it.unit_price) || 0;
       const custo = Number(it.unit_cost) || 0;
       const subtotal = Number(it.total_revenue) > 0 ? Number(it.total_revenue) : qtd * preco;
       const custoTotal = Number(it.total_cost) > 0 ? Number(it.total_cost) : qtd * custo;
+      const reviewReason = proportionalReconstruction
+        ? "Preço unitário estimado por reconstrução proporcional; confirme o preço real lançado na venda."
+        : it.review_reason;
       return {
         nome: it.product_name_snapshot || "Produto sem identificação",
         qtd,
@@ -413,8 +437,8 @@ function VendasPage() {
         subtotal,
         custoTotal,
         margem: Number(it.margin_value) || subtotal - custoTotal,
-        needsReview: !!it.needs_review || qtd <= 0 || preco <= 0,
-        reviewReason: it.review_reason,
+        needsReview: !!it.needs_review || proportionalReconstruction || qtd <= 0 || preco <= 0,
+        reviewReason,
       };
     });
   }
@@ -1065,7 +1089,7 @@ function VendasPage() {
   function parseSaleItems(descricao: string | null, valorTotal: number, saleDate: string | null, movsPool: SaleMov[], saleId?: string, saleType?: "vista" | "prazo", saleItemPool?: SaleItemSnapshot[]): ParsedItem[] {
     if (saleId && saleType) {
       const structured = saleItemPool ? saleItemsFor(saleId, saleType, saleItemPool) : saleItemsFor(saleId, saleType);
-      if (structured.length > 0) return snapshotsToParsed(structured);
+      if (structured.length > 0) return snapshotsToParsed(structured, valorTotal);
     }
 
     const desc = descricao || "";
@@ -1105,12 +1129,21 @@ function VendasPage() {
         }
       }
 
-      const preco = Number.isFinite(precoSale) && precoSale > 0
-        ? precoSale
-        : Number(prod?.preco_venda ?? 0);
+      const priceFromDescription = Number.isFinite(precoSale) && precoSale > 0;
+      const preco = priceFromDescription ? precoSale : Number(prod?.preco_venda ?? 0);
       const subtotal = qtd * preco;
       const custoTotal = qtd * custo;
-      return { nome, qtd, preco, custo, subtotal, custoTotal, margem: subtotal - custoTotal };
+      return {
+        nome,
+        qtd,
+        preco,
+        custo,
+        subtotal,
+        custoTotal,
+        margem: subtotal - custoTotal,
+        needsReview: !priceFromDescription,
+        reviewReason: !priceFromDescription ? "Preço não estava gravado na descrição original; usado preço atual do cadastro." : null,
+      };
     }).filter(Boolean) as ParsedItem[];
 
     if (parsed.length > 0) return parsed;
@@ -1133,6 +1166,8 @@ function VendasPage() {
             subtotal: qtd * preco,
             custoTotal: qtd * custo,
             margem: qtd * (preco - custo),
+            needsReview: true,
+            reviewReason: "Preço unitário estimado a partir do cadastro e das movimentações de estoque; confirme o preço real da venda.",
           } as ParsedItem;
         });
         // Ajuste proporcional para casar com o valor real da venda
@@ -1143,6 +1178,8 @@ function VendasPage() {
             l.preco = l.preco * fator;
             l.subtotal = l.qtd * l.preco;
             l.margem = l.subtotal - l.custoTotal;
+            l.needsReview = true;
+            l.reviewReason = "Preço unitário rateado para fechar com o valor financeiro da venda; confirme o preço real de cada item.";
           });
         } else if (somaCalc === 0 && valorTotal > 0) {
           const totalQtd = linhas.reduce((a, b) => a + b.qtd, 0) || 1;
@@ -1151,6 +1188,8 @@ function VendasPage() {
             l.preco = precoMedio;
             l.subtotal = l.qtd * precoMedio;
             l.margem = l.subtotal - l.custoTotal;
+            l.needsReview = true;
+            l.reviewReason = "Preço médio estimado para fechar com o valor financeiro da venda; confirme o preço real de cada item.";
           });
         }
         return linhas;
