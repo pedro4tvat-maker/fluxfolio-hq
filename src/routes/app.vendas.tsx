@@ -1242,6 +1242,9 @@ function VendasPage() {
     .center { text-align: center; }
     .pos { color: #15803d; font-weight: 600; }
     .neg { color: #b91c1c; font-weight: 600; }
+    .warn { color: #b45309; font-weight: 700; }
+    .badge-warn { display:inline-block; margin-left:6px; padding:2px 6px; border-radius:999px; background:#fef3c7; color:#92400e; font-size:10px; text-transform:uppercase; letter-spacing:.4px; }
+    .alert { margin-top:16px; border:1px solid #f59e0b; background:#fffbeb; color:#78350f; padding:12px; border-radius:8px; font-size:12px; }
     .sale-block { margin-top: 20px; border:1px solid #e5e5e5; border-radius:8px; padding:12px; page-break-inside: avoid; }
     .footer { margin-top: 32px; font-size: 11px; color:#666; text-align:center; }
     @media print { body { margin: 16mm; } .noprint { display:none; } }
@@ -1323,6 +1326,7 @@ function VendasPage() {
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
     const vendasIncompletas = all.filter((s) => s.itens.length === 0 || s.itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0)).length;
     const validAll = all.filter((s) => s.itens.length > 0);
+    const itensParaRevisar = validAll.reduce((sum, sale) => sum + sale.itens.filter((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0).length, 0);
     const totalReceita = validAll.reduce((a, b) => a + b.totalReceita, 0);
     const totalCusto = validAll.reduce((a, b) => a + b.totalCusto, 0);
     const totalMargem = totalReceita - totalCusto;
@@ -1340,20 +1344,24 @@ function VendasPage() {
           <td class="num">${formatMoney(it.subtotal)}</td>
           <td class="num">${formatMoney(it.custoTotal)}</td>
           <td class="num ${it.margem >= 0 ? "pos" : "neg"}">${formatMoney(it.margem)}</td>
+          <td class="center ${it.needsReview ? "warn" : "pos"}">${it.needsReview ? "Revisar" : "OK"}</td>
+          <td class="muted">${escapeHtml(it.reviewReason || "")}</td>
         </tr>`).join("");
+      const saleNeedsReview = s.itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0);
       return `<div class="sale-block">
         <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px">
-          <div><b>#${idx + 1} · ${escapeHtml(s.cliente)}</b> <span class="muted">(${s.tipo === "vista" ? "à vista" : "a prazo"})</span></div>
+          <div><b>#${idx + 1} · ${escapeHtml(s.cliente)}</b> <span class="muted">(${s.tipo === "vista" ? "à vista" : "a prazo"})</span> ${saleNeedsReview ? `<span class="badge-warn">revisar preços</span>` : ""}</div>
           <div class="muted">${s.dataRef ? formatDate(s.dataRef) : "—"}</div>
         </div>
         <table>
-          <thead><tr><th>Produto</th><th class="center">Qtd</th><th class="num">Preço un.</th><th class="num">Custo un.</th><th class="num">Receita</th><th class="num">Custo</th><th class="num">Margem</th></tr></thead>
+          <thead><tr><th>Produto</th><th class="center">Qtd</th><th class="num">Preço un.</th><th class="num">Custo un.</th><th class="num">Receita</th><th class="num">Custo</th><th class="num">Margem</th><th class="center">Status</th><th>Diagnóstico</th></tr></thead>
           <tbody>${linhas}</tbody>
           <tfoot><tr>
             <td colspan="4" class="num"><b>Totais</b></td>
             <td class="num"><b>${formatMoney(s.totalReceita)}</b></td>
             <td class="num"><b>${formatMoney(s.totalCusto)}</b></td>
             <td class="num ${s.margem >= 0 ? "pos" : "neg"}"><b>${formatMoney(s.margem)} (${pct.toFixed(1)}%)</b></td>
+            <td colspan="2"></td>
           </tr></tfoot>
         </table>
       </div>`;
@@ -1376,7 +1384,9 @@ function VendasPage() {
         <div class="card"><div class="stat">Custos diretos</div><div class="stat-val">${formatMoney(totalCusto)}</div></div>
         <div class="card"><div class="stat">Margem do período</div><div class="stat-val ${totalMargem >= 0 ? "pos" : "neg"}">${formatMoney(totalMargem)} (${margemPct.toFixed(1)}%)</div></div>
         <div class="card"><div class="stat">Vendas incompletas</div><div class="stat-val">${vendasIncompletas}</div></div>
+        <div class="card"><div class="stat">Itens a revisar</div><div class="stat-val ${itensParaRevisar > 0 ? "warn" : "pos"}">${itensParaRevisar}</div></div>
       </div>
+      ${itensParaRevisar > 0 ? `<div class="alert"><b>Diagnóstico:</b> há itens com preço unitário estimado/reconstruído. O total financeiro da venda pode estar correto, mas o preço unitário por produto não deve ser tratado como preço real até revisão.</div>` : ""}
       <h2>Detalhamento por venda</h2>
       ${blocks}
       <div class="footer">Custos baseados no snapshot da venda. Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
