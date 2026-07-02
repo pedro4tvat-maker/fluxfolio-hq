@@ -284,6 +284,7 @@ function Relatorios() {
               period={period}
               prevPeriod={prevPeriod}
               onExport={exportCSV}
+              onExportPDF={exportPDF}
             />
           )}
         </div>
