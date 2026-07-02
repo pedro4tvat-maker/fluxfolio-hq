@@ -128,7 +128,8 @@ export async function fetchReportData(
         .select("id, data, tipo, valor, descricao, status, categoria_id, centro_custo_id, conta_id, forma_pagamento")
         .eq("company_id", companyId)
         .is("deleted_at", null)
-        .gte("data", period.start)
+        // Busca o histórico até o fim do período para calcular corretamente
+        // o saldo inicial com os movimentos realizados antes da data inicial.
         .lte("data", period.end),
       branchId,
     )),
