@@ -425,20 +425,20 @@ function KpiGrid({ items }: { items: { label: string; value: number; money?: boo
   );
 }
 
-function ExportBtn({ rows, name, onExport }: { rows: Record<string, unknown>[]; name: string; onExport: (r: any[], n: string) => void }) {
+function ExportBtn({ rows, name, title, onExport, onExportPDF }: { rows: Record<string, unknown>[]; name: string; title: string; onExport: (r: any[], n: string) => void; onExportPDF?: (title: string, rows: any[]) => void }) {
   return (
     <div className="flex gap-2">
       <Button variant="outline" size="sm" onClick={() => onExport(rows, name)}>
         <Download className="size-4" /> Exportar CSV
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => window.print()}>
-        Exportar PDF
+      <Button variant="outline" size="sm" onClick={() => onExportPDF ? onExportPDF(title, rows) : window.print()}>
+        <FileText className="size-4" /> Exportar PDF
       </Button>
     </div>
   );
 }
 
-function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExport }: any) {
+function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExport, onExportPDF }: any) {
   switch (type) {
     case "dre": {
       const r = buildDRE(data, period);
