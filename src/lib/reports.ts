@@ -348,7 +348,13 @@ export function buildDRE(data: ReportData, period: Period) {
 // ============ FLUXO DE CAIXA REALIZADO ============
 export function buildFluxoRealizado(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
-  const saldoInicial = data.accounts.reduce((s, a) => s + a.saldo_inicial, 0);
+  // Saldo Inicial do período = saldo base das contas + resultado realizado ANTES do período.
+  // Não entra como faturamento/receita do mês; apenas compõe o resultado de caixa.
+  const baseAccounts = data.accounts.reduce((s, a) => s + a.saldo_inicial, 0);
+  const priorRealized = data.transactions
+    .filter((t) => t.status === "realizado" && t.data < period.start)
+    .reduce((s, t) => s + (t.tipo === "entrada" ? t.valor : -t.valor), 0);
+  const saldoInicial = baseAccounts + priorRealized;
   const entradas = realized.filter((t) => t.tipo === "entrada").reduce((s, t) => s + t.valor, 0);
   const saidas = realized.filter((t) => t.tipo === "saida").reduce((s, t) => s + t.valor, 0);
   const saldoFinal = saldoInicial + entradas - saidas;
