@@ -398,26 +398,6 @@ function VendasPage() {
     return pool.filter((it) => it.sale_id === saleId && it.sale_type === saleType);
   }
 
-  function isProportionalReconstruction(snaps: SaleItemSnapshot[], saleValue?: number) {
-    if (snaps.length < 2 || !(Number(saleValue) > 0)) return false;
-    const ratios = snaps
-      .map((it) => {
-        const prod = products?.find((p) => p.id === it.product_id || p.nome.toLowerCase() === it.product_name_snapshot.toLowerCase());
-        const catalogPrice = Number(prod?.preco_venda ?? 0);
-        const itemPrice = Number(it.unit_price ?? 0);
-        return catalogPrice > 0 && itemPrice > 0 ? itemPrice / catalogPrice : null;
-      })
-      .filter((v): v is number => v !== null && Number.isFinite(v));
-    if (ratios.length < 2) return false;
-
-    const min = Math.min(...ratios);
-    const max = Math.max(...ratios);
-    const avg = ratios.reduce((s, v) => s + v, 0) / ratios.length;
-    const itemsTotal = snaps.reduce((s, it) => s + Number(it.total_revenue ?? 0), 0);
-
-    return Math.abs(itemsTotal - Number(saleValue)) <= 0.05 && max - min <= 0.02 && avg > 0 && avg < 0.7;
-  }
-
   function snapshotsToParsed(snaps: SaleItemSnapshot[], saleValue?: number): ParsedItem[] {
     return snaps.map((it) => {
       const qtd = Number(it.quantity) || 0;
@@ -1320,7 +1300,6 @@ function VendasPage() {
       .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool, sharedSaleItems));
     const all = [...vistaRows, ...prazoRows];
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
-    const vendasIncompletas = all.filter((s) => s.itens.length === 0 || s.itens.some((it) => it.needsReview || it.qtd <= 0 || it.preco <= 0)).length;
     const validAll = all.filter((s) => s.itens.length > 0);
     const totalReceita = validAll.reduce((a, b) => a + b.totalReceita, 0);
     const totalCusto = validAll.reduce((a, b) => a + b.totalCusto, 0);
@@ -1374,7 +1353,6 @@ function VendasPage() {
         <div class="card"><div class="stat">Faturamento</div><div class="stat-val">${formatMoney(totalReceita)}</div></div>
         <div class="card"><div class="stat">Custos diretos</div><div class="stat-val">${formatMoney(totalCusto)}</div></div>
         <div class="card"><div class="stat">Margem do período</div><div class="stat-val ${totalMargem >= 0 ? "pos" : "neg"}">${formatMoney(totalMargem)} (${margemPct.toFixed(1)}%)</div></div>
-        <div class="card"><div class="stat">Vendas incompletas</div><div class="stat-val">${vendasIncompletas}</div></div>
       </div>
       <h2>Detalhamento por venda</h2>
       ${blocks}
