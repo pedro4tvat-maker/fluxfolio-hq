@@ -43,10 +43,15 @@ type LineItem = {
   unit_cost: string;
   stock_location_id: string;
   observation: string;
+  is_service: boolean;
 };
 
 function emptyItem(): LineItem {
-  return { product_id: "", product_name: "", quantity: "", unit_price: "", unit_cost: "", stock_location_id: "", observation: "" };
+  return { product_id: "", product_name: "", quantity: "", unit_price: "", unit_cost: "", stock_location_id: "", observation: "", is_service: false };
+}
+
+function emptyServiceItem(): LineItem {
+  return { product_id: "", product_name: "", quantity: "1", unit_price: "", unit_cost: "", stock_location_id: "", observation: "", is_service: true };
 }
 
 function shortId(id: string) { return id.slice(0, 8).toUpperCase(); }
