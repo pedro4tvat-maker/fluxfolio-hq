@@ -398,7 +398,7 @@ function VendasPage() {
     return pool.filter((it) => it.sale_id === saleId && it.sale_type === saleType);
   }
 
-  function snapshotsToParsed(snaps: SaleItemSnapshot[], saleValue?: number): ParsedItem[] {
+  function snapshotsToParsed(snaps: SaleItemSnapshot[], _saleValue?: number): ParsedItem[] {
     return snaps.map((it) => {
       const qtd = Number(it.quantity) || 0;
       const preco = Number(it.unit_price) || 0;
