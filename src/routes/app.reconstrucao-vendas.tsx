@@ -43,10 +43,15 @@ type LineItem = {
   unit_cost: string;
   stock_location_id: string;
   observation: string;
+  is_service: boolean;
 };
 
 function emptyItem(): LineItem {
-  return { product_id: "", product_name: "", quantity: "", unit_price: "", unit_cost: "", stock_location_id: "", observation: "" };
+  return { product_id: "", product_name: "", quantity: "", unit_price: "", unit_cost: "", stock_location_id: "", observation: "", is_service: false };
+}
+
+function emptyServiceItem(): LineItem {
+  return { product_id: "", product_name: "", quantity: "1", unit_price: "", unit_cost: "", stock_location_id: "", observation: "", is_service: true };
 }
 
 function shortId(id: string) { return id.slice(0, 8).toUpperCase(); }
@@ -271,6 +276,7 @@ function Page() {
   }
 
   function addItem() { setItems((p) => [...p, emptyItem()]); }
+  function addService() { setItems((p) => [...p, emptyServiceItem()]); }
   function removeItem(i: number) { setItems((p) => p.filter((_, idx) => idx !== i)); }
   function updateItem(i: number, patch: Partial<LineItem>) {
     setItems((p) => p.map((it, idx) => idx === i ? { ...it, ...patch } : it));
@@ -332,24 +338,28 @@ function Page() {
         const custoTotal = qtd * custo;
         const temPreco = preco > 0;
         const temCusto = custo > 0;
+        const isService = it.is_service;
+        const nameSnapshot = isService && !/^\[Servi[çc]o\]/i.test(it.product_name.trim())
+          ? `[Serviço] ${it.product_name.trim()}`
+          : it.product_name.trim();
         return {
           company_id: selected,
           sale_id: selectedSale.id,
           sale_type: selectedSale.type,
-          product_id: it.product_id || null,
-          product_name_snapshot: it.product_name.trim(),
+          product_id: isService ? null : (it.product_id || null),
+          product_name_snapshot: nameSnapshot,
           quantity: qtd,
           unit_price: temPreco ? preco : null,
-          unit_cost: temCusto ? custo : null,
+          unit_cost: !isService && temCusto ? custo : null,
           total_revenue: temPreco ? receita : null,
-          total_cost: temCusto ? custoTotal : null,
-          margin_value: temPreco && temCusto ? receita - custoTotal : null,
-          margin_percentage: temPreco && temCusto && receita > 0 ? ((receita - custoTotal) / receita) * 100 : null,
-          stock_location_id: it.stock_location_id || null,
-          needs_review: !temPreco || !temCusto,
-          review_reason: !temPreco ? "Preço de venda não informado" : !temCusto ? "Custo não informado" : null,
+          total_cost: !isService && temCusto ? custoTotal : null,
+          margin_value: !isService && temPreco && temCusto ? receita - custoTotal : (isService && temPreco ? receita : null),
+          margin_percentage: !isService && temPreco && temCusto && receita > 0 ? ((receita - custoTotal) / receita) * 100 : (isService && temPreco ? 100 : null),
+          stock_location_id: isService ? null : (it.stock_location_id || null),
+          needs_review: !temPreco || (!isService && !temCusto),
+          review_reason: !temPreco ? "Preço não informado" : (!isService && !temCusto) ? "Custo não informado" : null,
           recovered_from_stock_movement: false,
-          recovery_status: "reconstruido_manual",
+          recovery_status: isService ? "reconstruido_manual_servico" : "reconstruido_manual",
           recovery_log_id: log.id,
         };
       });
@@ -653,39 +663,60 @@ function Page() {
 
               <div className="space-y-3">
                 {items.map((it, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-2 p-3 rounded-lg border">
-                    <div className="col-span-12 md:col-span-4">
-                      <Label className="text-xs">Produto</Label>
-                      <Select value={it.product_id || "_custom"} onValueChange={(v) => {
-                        if (v === "_custom") { updateItem(i, { product_id: "", product_name: it.product_name }); }
-                        else { const p: any = (products as any[]).find((x) => x.id === v); updateItem(i, { product_id: v, product_name: p?.nome ?? "", unit_cost: p?.custo_unitario ? String(p.custo_unitario) : it.unit_cost, unit_price: p?.preco_venda && !it.unit_price ? String(p.preco_venda) : it.unit_price }); }
-                      }}>
-                        <SelectTrigger><SelectValue placeholder="Selecione ou digite manual" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_custom">— Digitar manualmente —</SelectItem>
-                          {(products as any[]).map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      {!it.product_id && <Input className="mt-1" placeholder="Nome do produto/serviço" value={it.product_name} onChange={(e) => updateItem(i, { product_name: e.target.value })} />}
-                    </div>
-                    <div className="col-span-4 md:col-span-1"><Label className="text-xs">Qtd</Label><Input type="number" value={it.quantity} onChange={(e) => updateItem(i, { quantity: e.target.value })} /></div>
-                    <div className="col-span-4 md:col-span-2"><Label className="text-xs">Preço un.</Label><Input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: e.target.value })} /></div>
-                    <div className="col-span-4 md:col-span-2"><Label className="text-xs">Custo un.</Label><Input type="number" step="0.01" value={it.unit_cost} onChange={(e) => updateItem(i, { unit_cost: e.target.value })} /></div>
-                    <div className="col-span-10 md:col-span-2">
-                      <Label className="text-xs">Local de estoque</Label>
-                      <Select value={it.stock_location_id || "_none"} onValueChange={(v) => updateItem(i, { stock_location_id: v === "_none" ? "" : v })}>
-                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">— Sem informação —</SelectItem>
-                          {(stockLocations as any[]).map((l) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2 md:col-span-1 flex items-end"><Button size="icon" variant="ghost" onClick={() => removeItem(i)}><Trash2 className="size-4" /></Button></div>
-                    <div className="col-span-12"><Input placeholder="Observação (opcional)" value={it.observation} onChange={(e) => updateItem(i, { observation: e.target.value })} /></div>
+                  <div key={i} className={`grid grid-cols-12 gap-2 p-3 rounded-lg border ${it.is_service ? "bg-blue-50/40 border-blue-200" : ""}`}>
+                    {it.is_service ? (
+                      <>
+                        <div className="col-span-12 md:col-span-6">
+                          <Label className="text-xs flex items-center gap-2">
+                            <Badge variant="outline" className="border-blue-400 text-blue-700 text-[10px]">Serviço</Badge>
+                            Descrição do serviço (frete, taxa, mão de obra, etc.)
+                          </Label>
+                          <Input placeholder="Ex.: Frete adicional" value={it.product_name} onChange={(e) => updateItem(i, { product_name: e.target.value })} />
+                        </div>
+                        <div className="col-span-4 md:col-span-1"><Label className="text-xs">Qtd</Label><Input type="number" value={it.quantity} onChange={(e) => updateItem(i, { quantity: e.target.value })} /></div>
+                        <div className="col-span-8 md:col-span-4"><Label className="text-xs">Valor un.</Label><Input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: e.target.value })} /></div>
+                        <div className="col-span-12 md:col-span-1 flex items-end"><Button size="icon" variant="ghost" onClick={() => removeItem(i)}><Trash2 className="size-4" /></Button></div>
+                        <div className="col-span-12"><Input placeholder="Observação (opcional)" value={it.observation} onChange={(e) => updateItem(i, { observation: e.target.value })} /></div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="col-span-12 md:col-span-4">
+                          <Label className="text-xs">Produto</Label>
+                          <Select value={it.product_id || "_custom"} onValueChange={(v) => {
+                            if (v === "_custom") { updateItem(i, { product_id: "", product_name: it.product_name }); }
+                            else { const p: any = (products as any[]).find((x) => x.id === v); updateItem(i, { product_id: v, product_name: p?.nome ?? "", unit_cost: p?.custo_unitario ? String(p.custo_unitario) : it.unit_cost, unit_price: p?.preco_venda && !it.unit_price ? String(p.preco_venda) : it.unit_price }); }
+                          }}>
+                            <SelectTrigger><SelectValue placeholder="Selecione ou digite manual" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_custom">— Digitar manualmente —</SelectItem>
+                              {(products as any[]).map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          {!it.product_id && <Input className="mt-1" placeholder="Nome do produto" value={it.product_name} onChange={(e) => updateItem(i, { product_name: e.target.value })} />}
+                        </div>
+                        <div className="col-span-4 md:col-span-1"><Label className="text-xs">Qtd</Label><Input type="number" value={it.quantity} onChange={(e) => updateItem(i, { quantity: e.target.value })} /></div>
+                        <div className="col-span-4 md:col-span-2"><Label className="text-xs">Preço un.</Label><Input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: e.target.value })} /></div>
+                        <div className="col-span-4 md:col-span-2"><Label className="text-xs">Custo un.</Label><Input type="number" step="0.01" value={it.unit_cost} onChange={(e) => updateItem(i, { unit_cost: e.target.value })} /></div>
+                        <div className="col-span-10 md:col-span-2">
+                          <Label className="text-xs">Local de estoque</Label>
+                          <Select value={it.stock_location_id || "_none"} onValueChange={(v) => updateItem(i, { stock_location_id: v === "_none" ? "" : v })}>
+                            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none">— Sem informação —</SelectItem>
+                              {(stockLocations as any[]).map((l) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2 md:col-span-1 flex items-end"><Button size="icon" variant="ghost" onClick={() => removeItem(i)}><Trash2 className="size-4" /></Button></div>
+                        <div className="col-span-12"><Input placeholder="Observação (opcional)" value={it.observation} onChange={(e) => updateItem(i, { observation: e.target.value })} /></div>
+                      </>
+                    )}
                   </div>
                 ))}
-                <Button variant="outline" onClick={addItem}><Plus className="size-4" /> Adicionar item</Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={addItem}><Plus className="size-4" /> Adicionar produto</Button>
+                  <Button variant="outline" onClick={addService}><Plus className="size-4" /> Adicionar serviço (frete, taxa, etc.)</Button>
+                </div>
 
                 <div className="flex items-end justify-end">
                   <div className="text-sm">
