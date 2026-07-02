@@ -341,7 +341,7 @@ function ExportBtn({ rows, name, onExport }: { rows: Record<string, unknown>[]; 
       <Button variant="outline" size="sm" onClick={() => onExport(rows, name)}>
         <Download className="size-4" /> Exportar CSV
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => toast.info("Exportação PDF estará disponível em breve.")}>
+      <Button variant="ghost" size="sm" onClick={() => window.print()}>
         Exportar PDF
       </Button>
     </div>
