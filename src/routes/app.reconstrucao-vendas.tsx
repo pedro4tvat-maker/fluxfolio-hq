@@ -337,24 +337,28 @@ function Page() {
         const custoTotal = qtd * custo;
         const temPreco = preco > 0;
         const temCusto = custo > 0;
+        const isService = it.is_service;
+        const nameSnapshot = isService && !/^\[Servi[çc]o\]/i.test(it.product_name.trim())
+          ? `[Serviço] ${it.product_name.trim()}`
+          : it.product_name.trim();
         return {
           company_id: selected,
           sale_id: selectedSale.id,
           sale_type: selectedSale.type,
-          product_id: it.product_id || null,
-          product_name_snapshot: it.product_name.trim(),
+          product_id: isService ? null : (it.product_id || null),
+          product_name_snapshot: nameSnapshot,
           quantity: qtd,
           unit_price: temPreco ? preco : null,
-          unit_cost: temCusto ? custo : null,
+          unit_cost: !isService && temCusto ? custo : null,
           total_revenue: temPreco ? receita : null,
-          total_cost: temCusto ? custoTotal : null,
-          margin_value: temPreco && temCusto ? receita - custoTotal : null,
-          margin_percentage: temPreco && temCusto && receita > 0 ? ((receita - custoTotal) / receita) * 100 : null,
-          stock_location_id: it.stock_location_id || null,
-          needs_review: !temPreco || !temCusto,
-          review_reason: !temPreco ? "Preço de venda não informado" : !temCusto ? "Custo não informado" : null,
+          total_cost: !isService && temCusto ? custoTotal : null,
+          margin_value: !isService && temPreco && temCusto ? receita - custoTotal : (isService && temPreco ? receita : null),
+          margin_percentage: !isService && temPreco && temCusto && receita > 0 ? ((receita - custoTotal) / receita) * 100 : (isService && temPreco ? 100 : null),
+          stock_location_id: isService ? null : (it.stock_location_id || null),
+          needs_review: !temPreco || (!isService && !temCusto),
+          review_reason: !temPreco ? "Preço não informado" : (!isService && !temCusto) ? "Custo não informado" : null,
           recovered_from_stock_movement: false,
-          recovery_status: "reconstruido_manual",
+          recovery_status: isService ? "reconstruido_manual_servico" : "reconstruido_manual",
           recovery_log_id: log.id,
         };
       });
