@@ -165,13 +165,20 @@ function Relatorios() {
       periodo: `${formatDateBR(inicio)} a ${formatDateBR(fim)}`,
       rows,
     });
-    const w = window.open("", "_blank", "noopener,noreferrer");
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
     if (!w) {
-      toast.error("Permita pop-ups para gerar o PDF.");
-      return;
+      // Popup blocked — fallback to download
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(empresa || "empresa").replace(/[^a-z0-9]+/gi, "_")}_${title.replace(/[^a-z0-9]+/gi, "_")}.html`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.info("Pop-up bloqueado. Baixamos o relatório — abra o arquivo e use Ctrl+P para salvar em PDF.");
     }
-    w.document.write(html);
-    w.document.close();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   if (!currentCompanyId) {
