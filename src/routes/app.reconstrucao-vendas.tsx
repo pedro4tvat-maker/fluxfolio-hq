@@ -276,6 +276,7 @@ function Page() {
   }
 
   function addItem() { setItems((p) => [...p, emptyItem()]); }
+  function addService() { setItems((p) => [...p, emptyServiceItem()]); }
   function removeItem(i: number) { setItems((p) => p.filter((_, idx) => idx !== i)); }
   function updateItem(i: number, patch: Partial<LineItem>) {
     setItems((p) => p.map((it, idx) => idx === i ? { ...it, ...patch } : it));
