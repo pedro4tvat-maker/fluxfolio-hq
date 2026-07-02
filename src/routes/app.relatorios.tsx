@@ -296,9 +296,88 @@ function Loading() {
   return <div className="text-sm text-muted-foreground py-8 text-center">Carregando dados...</div>;
 }
 
+              period={period}
+              prevPeriod={prevPeriod}
+              onExport={exportCSV}
+              onExportPDF={exportPDF}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatDateBR(d: string) {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  return `${day}/${m}/${y}`;
+}
+
+function buildReportHTML({ title, empresa, periodo, rows }: { title: string; empresa: string; periodo: string; rows: Record<string, unknown>[] }) {
+  const headers = Object.keys(rows[0] ?? {});
+  const isMoneyCol = (h: string) => /valor|saldo|total|orçado|realizado|diferença|atual|anterior|preço|custo|margem|ebitda|receita|lucro|entradas|saídas|resultado|a pagar|a receber/i.test(h);
+  const isNumberCol = (h: string) => rows.some((r) => typeof r[h] === "number");
+  const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const fmt = (v: unknown, h: string) => {
+    if (v == null || v === "") return "—";
+    if (typeof v === "number") return isMoneyCol(h) ? brl.format(v) : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+    return String(v);
+  };
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  const thead = headers.map((h) => `<th style="text-align:${isNumberCol(h) ? "right" : "left"}">${esc(h)}</th>`).join("");
+  const tbody = rows.map((r) => {
+    const tds = headers.map((h) => {
+      const v = r[h];
+      const align = isNumberCol(h) ? "right" : "left";
+      const negative = typeof v === "number" && v < 0;
+      return `<td style="text-align:${align};${negative ? "color:#b91c1c;" : ""}${isNumberCol(h) ? "font-variant-numeric:tabular-nums;" : ""}">${esc(fmt(v, h))}</td>`;
+    }).join("");
+    return `<tr>${tds}</tr>`;
+  }).join("");
+  const now = new Date().toLocaleString("pt-BR");
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(title)} — ${esc(empresa)}</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1f2937; margin: 0; padding: 32px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .header { border-bottom: 2px solid #628A4C; padding-bottom: 16px; margin-bottom: 24px; display:flex; justify-content:space-between; align-items:flex-end; gap:16px; }
+  .brand { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #628A4C; font-weight: 700; }
+  h1 { font-size: 22px; margin: 4px 0 0; color: #111827; }
+  .meta { font-size: 11px; color: #6b7280; text-align: right; line-height: 1.6; }
+  .meta strong { color: #1f2937; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+  thead th { background: #F1EEE6; color: #1f2937; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .04em; padding: 8px 10px; border-bottom: 1px solid #d9d9d6; }
+  tbody td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+  tbody tr:nth-child(even) td { background: #fafaf7; }
+  tfoot td { font-weight: 600; border-top: 2px solid #628A4C; }
+  .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; display:flex; justify-content:space-between; }
+  .actions { position: fixed; top: 12px; right: 12px; }
+  .actions button { background: #628A4C; color: #fff; border: 0; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  @media print { .actions { display: none; } body { padding: 0; } }
+</style></head><body>
+  <div class="actions"><button onclick="window.print()">Imprimir / Salvar PDF</button></div>
+  <div class="header">
+    <div>
+      <div class="brand">Relatório Financeiro</div>
+      <h1>${esc(title)}</h1>
+    </div>
+    <div class="meta">
+      <div><strong>${esc(empresa)}</strong></div>
+      <div>Período: ${esc(periodo)}</div>
+      <div>Emitido em: ${esc(now)}</div>
+    </div>
+  </div>
+  <table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>
+  <div class="footer"><span>${esc(empresa)}</span><span>Sistema FP · ${esc(now)}</span></div>
+  <script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script>
+</body></html>`;
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
+
       <span className="block text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</span>
       {children}
     </label>
