@@ -321,8 +321,7 @@ function FluxoCaixa() {
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost" size="icon"
-                          disabled={isAuto}
-                          title={isAuto ? "Lançamento automático. Edite em Contas a Pagar/Receber." : "Editar"}
+                          title={isAuto ? "Lançamento automático (origem: Contas a Pagar/Receber). Edite com cuidado — a origem não será alterada." : "Editar"}
                           onClick={() => setEditingTx(t)}
                         >
                           <Pencil className="size-4" />
