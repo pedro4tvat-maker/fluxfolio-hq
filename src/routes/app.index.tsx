@@ -788,7 +788,7 @@ function ClientDashboard() {
             label="Faturamento do mês"
             value={formatMoney(data.entradas)}
             hint={data.entradasDelta != null ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior` : "Sem histórico ainda"}
-            tone={data.entradasDelta != null && data.entradasDelta < 0 ? "danger" : "success"}
+            tone="success"
             featured
             className="md:col-span-2"
           />
