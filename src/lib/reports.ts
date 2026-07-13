@@ -127,7 +127,7 @@ export async function fetchReportData(
     applyCC(applyBranch(
       supabase
         .from("transactions")
-        .select("id, data, tipo, valor, descricao, status, categoria_id, centro_custo_id, conta_id, forma_pagamento")
+        .select("id, data, tipo, valor, descricao, status, categoria_id, centro_custo_id, conta_id, forma_pagamento, os_code")
         .eq("company_id", companyId)
         .is("deleted_at", null)
         // Busca o histórico até o fim do período para calcular corretamente
@@ -147,7 +147,7 @@ export async function fetchReportData(
     applyBranch(
       supabase
         .from("receivables")
-        .select("id, descricao, cliente, valor, vencimento, data_recebimento, status, forma_recebimento, categoria_id")
+        .select("id, descricao, cliente, valor, vencimento, data_recebimento, status, forma_recebimento, categoria_id, os_code, sale_id")
         .eq("company_id", companyId)
         .is("deleted_at", null),
       branchId,
