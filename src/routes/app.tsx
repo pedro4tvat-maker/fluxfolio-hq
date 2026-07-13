@@ -37,6 +37,7 @@ const consultantNav: NavEntry[] = [
   { to: "/app", label: "Painel do consultor", icon: LayoutDashboard, exact: true },
   { to: "/app/clientes", label: "Empresas / Clientes", icon: Building2 },
   { to: "/app/diagnostico", label: "Diagnóstico Financeiro", icon: BadgeCheck },
+  { to: "/app/executivo", label: "Análise Gerencial", icon: FileBarChart },
   { to: "/app/consultoria", label: "Minha Consultoria", icon: BadgeCheck },
   { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
   { to: "/app/jornada", label: "Jornada da Consultoria", icon: RouteIcon },
@@ -66,6 +67,7 @@ const clientNav: NavEntry[] = [
     label: "Gerenciamento",
     icon: Tag,
     children: [
+      { to: "/app/executivo", label: "Análise Gerencial", icon: FileBarChart },
       { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
       { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
       { to: "/app/documentos", label: "Documentos e Anexos", icon: FolderArchive },

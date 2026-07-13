@@ -1941,12 +1941,16 @@ export type Database = {
           created_at: string
           created_by: string | null
           diagnostico: string | null
+          ia_analysis: string | null
           id: string
           mes: number
           observacoes: string | null
+          periodo_fim: string | null
+          periodo_inicio: string | null
           plano_acao: string | null
           problemas: string | null
           recomendacoes: string | null
+          snapshot: Json | null
           updated_at: string
         }
         Insert: {
@@ -1956,12 +1960,16 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           diagnostico?: string | null
+          ia_analysis?: string | null
           id?: string
           mes: number
           observacoes?: string | null
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
           plano_acao?: string | null
           problemas?: string | null
           recomendacoes?: string | null
+          snapshot?: Json | null
           updated_at?: string
         }
         Update: {
@@ -1971,12 +1979,16 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           diagnostico?: string | null
+          ia_analysis?: string | null
           id?: string
           mes?: number
           observacoes?: string | null
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
           plano_acao?: string | null
           problemas?: string | null
           recomendacoes?: string | null
+          snapshot?: Json | null
           updated_at?: string
         }
         Relationships: []
