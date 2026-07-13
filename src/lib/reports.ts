@@ -826,3 +826,191 @@ export async function buildComparativoFiliais(companyId: string, period: Period)
   );
   return { rows };
 }
+
+// ============ INCONSISTÊNCIAS PARA RELATÓRIO EXECUTIVO ============
+export type Inconsistencia = {
+  os: string;
+  cliente: string;
+  problema: string;
+  impacto: string;
+  acao: string;
+};
+
+export function buildInconsistencias(data: ReportData, period: Period): Inconsistencia[] {
+  const out: Inconsistencia[] = [];
+  const vendasVista = data.transactions.filter(
+    (t) => t.status === "realizado" && t.tipo === "entrada" && inPeriod(t.data, period),
+  );
+  const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
+  const itensPorVenda = new Map<string, SaleItemReport[]>();
+  data.saleItems.forEach((it) => {
+    const k = `${it.sale_type}:${it.sale_id}`;
+    const arr = itensPorVenda.get(k) ?? [];
+    arr.push(it);
+    itensPorVenda.set(k, arr);
+  });
+
+  const check = (
+    saleId: string,
+    saleType: "vista" | "prazo",
+    total: number,
+    label: string,
+    cliente: string,
+    osCode: string | null,
+  ) => {
+    const key = `${saleType}:${saleId}`;
+    const itens = itensPorVenda.get(key) ?? [];
+    const os = osCode || label.slice(0, 24);
+    if (itens.length === 0) {
+      out.push({
+        os,
+        cliente,
+        problema: "Venda sem itens (sale_items)",
+        impacto: "Margem e custo do produto não podem ser calculados",
+        acao: "Reconstruir os itens da venda pela tela de Reconstrução de Vendas",
+      });
+      return;
+    }
+    const somaItens = itens.reduce((s, it) => s + it.total_revenue, 0);
+    const diff = Math.abs(somaItens - total);
+    if (total > 0 && diff / total > 0.02) {
+      out.push({
+        os,
+        cliente,
+        problema: `Total da venda (${total.toFixed(2)}) diverge da soma dos itens (${somaItens.toFixed(2)})`,
+        impacto: "Faturamento por item ficará diferente do faturamento oficial",
+        acao: "Rever preços dos itens ou o valor total da venda",
+      });
+    }
+    itens.forEach((it) => {
+      if (it.quantity <= 0) {
+        out.push({ os, cliente, problema: `Item "${it.product_name_snapshot}" com quantidade zero`, impacto: "Item ignorado no cálculo de margem", acao: "Ajustar quantidade do item" });
+      } else if (it.unit_price <= 0) {
+        out.push({ os, cliente, problema: `Item "${it.product_name_snapshot}" sem preço de venda`, impacto: "Receita do item não entra na margem", acao: "Informar o preço de venda praticado" });
+      }
+      if (it.unit_cost <= 0) {
+        out.push({ os, cliente, problema: `Item "${it.product_name_snapshot}" sem custo cadastrado`, impacto: "Margem fica inflada artificialmente", acao: "Cadastrar custo unitário do produto" });
+      }
+    });
+  };
+
+  vendasVista.forEach((t) => check(t.id, "vista", t.valor, t.descricao || "Venda à vista", "—", (t as any).os_code ?? null));
+  vendasPrazo.forEach((r) => check(r.id, "prazo", r.valor, r.descricao || "Venda a prazo", r.cliente || "—", (r as any).os_code ?? null));
+
+  // OS duplicadas
+  const osSeen = new Map<string, number>();
+  [...vendasVista.map((t) => (t as any).os_code), ...vendasPrazo.map((r) => (r as any).os_code)]
+    .filter(Boolean)
+    .forEach((os: string) => osSeen.set(os, (osSeen.get(os) ?? 0) + 1));
+  osSeen.forEach((n, os) => {
+    if (n > 1) out.push({ os, cliente: "—", problema: `OS ${os} aparece ${n} vezes`, impacto: "Faturamento pode estar duplicado", acao: "Renumerar OS via Correção de OSs" });
+  });
+
+  return out;
+}
+
+// ============ SÉRIE MENSAL PARA GRÁFICOS EXECUTIVOS ============
+export type SerieMes = {
+  label: string;
+  periodo: Period;
+  receitaBruta: number;
+  receitaLiquida: number;
+  custosVariaveis: number;
+  custosFixos: number;
+  despesasOp: number;
+  despesasFin: number;
+  resultadoOperacional: number;
+  lucroLiquido: number;
+  margemOperacional: number;
+  margemLiquida: number;
+  qtdVendas: number;
+  ticketMedio: number;
+};
+
+export async function buildSerieMensal(
+  companyId: string,
+  branchId: string | null,
+  periodoInicio: string,
+  periodoFim: string,
+): Promise<SerieMes[]> {
+  const start = new Date(periodoInicio + "T00:00:00");
+  const end = new Date(periodoFim + "T00:00:00");
+  const meses: { label: string; periodo: Period }[] = [];
+  const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  const stopMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cur <= stopMonth) {
+    const y = cur.getFullYear();
+    const m = cur.getMonth();
+    const periodo: Period = {
+      start: new Date(y, m, 1).toISOString().slice(0, 10),
+      end: new Date(y, m + 1, 0).toISOString().slice(0, 10),
+    };
+    meses.push({ label: `${String(m + 1).padStart(2, "0")}/${String(y).slice(2)}`, periodo });
+    cur.setMonth(cur.getMonth() + 1);
+    if (meses.length > 36) break;
+  }
+  const result: SerieMes[] = [];
+  for (const { label, periodo } of meses) {
+    const data = await fetchReportData(companyId, branchId, periodo);
+    const dre = buildDRE(data, periodo).summary;
+    const vendas = buildVendasMargem(data, periodo).summary;
+    const custosVariaveis = dre.receitaLiquida - dre.margemContribuicao;
+    const custosFixos = dre.margemContribuicao - dre.resultadoOperacional;
+    const despesasFin = dre.resultadoOperacional - dre.lucroLiquido;
+    result.push({
+      label,
+      periodo,
+      receitaBruta: dre.receitaBruta,
+      receitaLiquida: dre.receitaLiquida,
+      custosVariaveis: Math.max(0, custosVariaveis),
+      custosFixos: Math.max(0, custosFixos),
+      despesasOp: 0,
+      despesasFin: Math.max(0, despesasFin),
+      resultadoOperacional: dre.resultadoOperacional,
+      lucroLiquido: dre.lucroLiquido,
+      margemOperacional: dre.receitaLiquida > 0 ? (dre.resultadoOperacional / dre.receitaLiquida) * 100 : 0,
+      margemLiquida: dre.margemLiquida,
+      qtdVendas: vendas.qtd,
+      ticketMedio: vendas.ticket,
+    });
+  }
+  return result;
+}
+
+// ============ DESTAQUES / ALERTAS ============
+export type Destaque = { tipo: "positivo" | "atencao" | "critico"; texto: string };
+
+export function buildDestaquesAlertas(
+  serie: SerieMes[],
+  vendas: { margemPct: number; custoZerado: number; itensIncompletos: number },
+  cr: { inadimplencia: number; vencido: number },
+  cp: { vencido: number },
+  estoque: { abaixoMin: number; zerados: number },
+): Destaque[] {
+  const out: Destaque[] = [];
+  if (serie.length >= 2) {
+    const cur = serie[serie.length - 1];
+    const prev = serie[serie.length - 2];
+    if (prev.receitaBruta > 0) {
+      const g = ((cur.receitaBruta - prev.receitaBruta) / prev.receitaBruta) * 100;
+      if (g >= 10) out.push({ tipo: "positivo", texto: `Receita cresceu ${g.toFixed(1)}% em relação ao mês anterior` });
+      else if (g <= -10) out.push({ tipo: "critico", texto: `Receita caiu ${Math.abs(g).toFixed(1)}% em relação ao mês anterior` });
+    }
+    if (prev.lucroLiquido !== 0) {
+      const g = ((cur.lucroLiquido - prev.lucroLiquido) / Math.abs(prev.lucroLiquido)) * 100;
+      if (g >= 15) out.push({ tipo: "positivo", texto: `Lucro líquido subiu ${g.toFixed(1)}% no período` });
+      else if (g <= -15) out.push({ tipo: "atencao", texto: `Lucro líquido recuou ${Math.abs(g).toFixed(1)}%` });
+    }
+    if (cur.margemOperacional < 0) out.push({ tipo: "critico", texto: `Margem operacional ficou negativa (${cur.margemOperacional.toFixed(1)}%)` });
+    else if (cur.margemOperacional < 10) out.push({ tipo: "atencao", texto: `Margem operacional abaixo do ideal (${cur.margemOperacional.toFixed(1)}%)` });
+    if (cur.receitaLiquida > 0 && cur.custosVariaveis / cur.receitaLiquida > 0.5) out.push({ tipo: "atencao", texto: `Custos variáveis consumiram ${((cur.custosVariaveis / cur.receitaLiquida) * 100).toFixed(0)}% da receita líquida` });
+  }
+  if (vendas.margemPct < 20 && vendas.margemPct > 0) out.push({ tipo: "atencao", texto: `Margem média dos produtos abaixo de 20% (${vendas.margemPct.toFixed(1)}%)` });
+  if (vendas.custoZerado > 0) out.push({ tipo: "critico", texto: `${vendas.custoZerado} itens vendidos sem custo cadastrado — margem distorcida` });
+  if (vendas.itensIncompletos > 0) out.push({ tipo: "atencao", texto: `${vendas.itensIncompletos} itens com informação incompleta na venda` });
+  if (cr.vencido > 0) out.push({ tipo: cr.inadimplencia > 20 ? "critico" : "atencao", texto: `Contas a receber vencidas: R$ ${cr.vencido.toFixed(2)} (${cr.inadimplencia.toFixed(1)}% de inadimplência)` });
+  if (cp.vencido > 0) out.push({ tipo: "atencao", texto: `Contas a pagar vencidas: R$ ${cp.vencido.toFixed(2)}` });
+  if (estoque.zerados > 0) out.push({ tipo: "atencao", texto: `${estoque.zerados} produtos com estoque zerado` });
+  if (estoque.abaixoMin > 0) out.push({ tipo: "atencao", texto: `${estoque.abaixoMin} produtos abaixo do estoque mínimo` });
+  return out;
+}
