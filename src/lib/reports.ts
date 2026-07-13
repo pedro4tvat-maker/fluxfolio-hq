@@ -147,7 +147,7 @@ export async function fetchReportData(
     applyBranch(
       supabase
         .from("receivables")
-        .select("id, descricao, cliente, valor, vencimento, data_recebimento, status, forma_recebimento, categoria_id, os_code, sale_id")
+        .select("id, descricao, cliente, valor, vencimento, data_recebimento, status, forma_recebimento, categoria_id, os_code")
         .eq("company_id", companyId)
         .is("deleted_at", null),
       branchId,
