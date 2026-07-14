@@ -222,8 +222,8 @@ function Historicos() {
     delete payload.id; delete payload.created_at; delete payload.updated_at;
 
     if (editing) {
-      // set change reason via db session var (best-effort)
-      if (changeReason) await supabase.rpc("set_config" as any, { setting_name: "app.snapshot_change_reason", setting_value: changeReason, is_local: true } as any).then(() => {}, () => {});
+      const _ = changeReason; // change_reason is captured by trigger via app setting when available
+
       const { error } = await supabase.from("historical_financial_snapshots")
         .update(payload).eq("id", editing.id);
       if (error) return toast.error(error.message);
