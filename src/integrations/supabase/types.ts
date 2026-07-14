@@ -2307,6 +2307,203 @@ export type Database = {
         }
         Relationships: []
       }
+      historical_financial_snapshot_versions: {
+        Row: {
+          change_reason: string | null
+          changed_at: string
+          changed_by: string | null
+          company_id: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          snapshot_id: string
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          company_id: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          snapshot_id: string
+        }
+        Update: {
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          company_id?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          snapshot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historical_financial_snapshot_versions_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "historical_financial_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historical_financial_snapshots: {
+        Row: {
+          accounts_payable_open: number | null
+          accounts_payable_overdue: number | null
+          accounts_receivable_open: number | null
+          accounts_receivable_overdue: number | null
+          administrative_expenses: number | null
+          average_ticket: number | null
+          branch_id: string | null
+          company_id: string
+          contribution_margin_percentage: number | null
+          contribution_margin_value: number | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          discounts: number | null
+          financial_expenses: number | null
+          fixed_costs: number | null
+          fixed_expenses: number | null
+          gross_margin_percentage: number | null
+          gross_margin_value: number | null
+          id: string
+          inventory_value: number | null
+          marketing_expenses: number | null
+          net_result: number | null
+          notes: string | null
+          operational_expenses: number | null
+          operational_margin_percentage: number | null
+          operational_result: number | null
+          other_expenses: number | null
+          payroll_costs: number | null
+          period_end: string | null
+          period_start: string | null
+          reference_month: number
+          reference_year: number
+          refunds: number | null
+          revenue_gross: number | null
+          revenue_net: number | null
+          sales_count: number | null
+          source_description: string | null
+          source_type: Database["public"]["Enums"]["historical_source_type"]
+          status: Database["public"]["Enums"]["historical_snapshot_status"]
+          taxes: number | null
+          updated_at: string
+          variable_costs: number | null
+          variable_expenses: number | null
+        }
+        Insert: {
+          accounts_payable_open?: number | null
+          accounts_payable_overdue?: number | null
+          accounts_receivable_open?: number | null
+          accounts_receivable_overdue?: number | null
+          administrative_expenses?: number | null
+          average_ticket?: number | null
+          branch_id?: string | null
+          company_id: string
+          contribution_margin_percentage?: number | null
+          contribution_margin_value?: number | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          discounts?: number | null
+          financial_expenses?: number | null
+          fixed_costs?: number | null
+          fixed_expenses?: number | null
+          gross_margin_percentage?: number | null
+          gross_margin_value?: number | null
+          id?: string
+          inventory_value?: number | null
+          marketing_expenses?: number | null
+          net_result?: number | null
+          notes?: string | null
+          operational_expenses?: number | null
+          operational_margin_percentage?: number | null
+          operational_result?: number | null
+          other_expenses?: number | null
+          payroll_costs?: number | null
+          period_end?: string | null
+          period_start?: string | null
+          reference_month: number
+          reference_year: number
+          refunds?: number | null
+          revenue_gross?: number | null
+          revenue_net?: number | null
+          sales_count?: number | null
+          source_description?: string | null
+          source_type?: Database["public"]["Enums"]["historical_source_type"]
+          status?: Database["public"]["Enums"]["historical_snapshot_status"]
+          taxes?: number | null
+          updated_at?: string
+          variable_costs?: number | null
+          variable_expenses?: number | null
+        }
+        Update: {
+          accounts_payable_open?: number | null
+          accounts_payable_overdue?: number | null
+          accounts_receivable_open?: number | null
+          accounts_receivable_overdue?: number | null
+          administrative_expenses?: number | null
+          average_ticket?: number | null
+          branch_id?: string | null
+          company_id?: string
+          contribution_margin_percentage?: number | null
+          contribution_margin_value?: number | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          discounts?: number | null
+          financial_expenses?: number | null
+          fixed_costs?: number | null
+          fixed_expenses?: number | null
+          gross_margin_percentage?: number | null
+          gross_margin_value?: number | null
+          id?: string
+          inventory_value?: number | null
+          marketing_expenses?: number | null
+          net_result?: number | null
+          notes?: string | null
+          operational_expenses?: number | null
+          operational_margin_percentage?: number | null
+          operational_result?: number | null
+          other_expenses?: number | null
+          payroll_costs?: number | null
+          period_end?: string | null
+          period_start?: string | null
+          reference_month?: number
+          reference_year?: number
+          refunds?: number | null
+          revenue_gross?: number | null
+          revenue_net?: number | null
+          sales_count?: number | null
+          source_description?: string | null
+          source_type?: Database["public"]["Enums"]["historical_source_type"]
+          status?: Database["public"]["Enums"]["historical_snapshot_status"]
+          taxes?: number | null
+          updated_at?: string
+          variable_costs?: number | null
+          variable_expenses?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historical_financial_snapshots_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_financial_snapshots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_batches: {
         Row: {
           branch_id: string | null
@@ -3835,6 +4032,20 @@ export type Database = {
     }
     Enums: {
       app_role: "consultant" | "client_manager" | "operator"
+      historical_snapshot_status:
+        | "rascunho"
+        | "conferido"
+        | "aprovado"
+        | "substituido"
+      historical_source_type:
+        | "manual"
+        | "planilha"
+        | "relatorio_antigo"
+        | "extrato"
+        | "sistema_anterior"
+        | "contabilidade"
+        | "estimativa_cliente"
+        | "outro"
       payable_status: "em_aberto" | "pago" | "vencido"
       receivable_status: "em_aberto" | "recebido" | "vencido"
       recurrence: "unica" | "semanal" | "mensal" | "anual"
@@ -3978,6 +4189,22 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["consultant", "client_manager", "operator"],
+      historical_snapshot_status: [
+        "rascunho",
+        "conferido",
+        "aprovado",
+        "substituido",
+      ],
+      historical_source_type: [
+        "manual",
+        "planilha",
+        "relatorio_antigo",
+        "extrato",
+        "sistema_anterior",
+        "contabilidade",
+        "estimativa_cliente",
+        "outro",
+      ],
       payable_status: ["em_aberto", "pago", "vencido"],
       receivable_status: ["em_aberto", "recebido", "vencido"],
       recurrence: ["unica", "semanal", "mensal", "anual"],
