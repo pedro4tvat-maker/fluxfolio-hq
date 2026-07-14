@@ -953,6 +953,21 @@ export async function buildSerieMensal(
     if (meses.length > 36) break;
   }
   const result: SerieMes[] = [];
+  // Fetch historical snapshots for the whole period once
+  const { data: snaps } = await supabase
+    .from("historical_financial_snapshots")
+    .select("*")
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .gte("reference_year", start.getFullYear())
+    .lte("reference_year", end.getFullYear());
+  const snapByKey = new Map<string, any>();
+  (snaps ?? []).forEach((s: any) => {
+    if (branchId && s.branch_id && s.branch_id !== branchId) return;
+    if (branchId && !s.branch_id) { /* allow company-wide snapshot as fallback */ }
+    snapByKey.set(`${s.reference_year}-${s.reference_month}`, s);
+  });
+
   for (const { label, periodo } of meses) {
     const data = await fetchReportData(companyId, branchId, periodo);
     const dre = buildDRE(data, periodo).summary;
@@ -960,25 +975,60 @@ export async function buildSerieMensal(
     const custosVariaveis = dre.receitaLiquida - dre.margemContribuicao;
     const custosFixos = dre.margemContribuicao - dre.resultadoOperacional;
     const despesasFin = dre.resultadoOperacional - dre.lucroLiquido;
-    result.push({
-      label,
-      periodo,
-      receitaBruta: dre.receitaBruta,
-      receitaLiquida: dre.receitaLiquida,
-      custosVariaveis: Math.max(0, custosVariaveis),
-      custosFixos: Math.max(0, custosFixos),
-      despesasOp: 0,
-      despesasFin: Math.max(0, despesasFin),
-      resultadoOperacional: dre.resultadoOperacional,
-      lucroLiquido: dre.lucroLiquido,
-      margemOperacional: dre.receitaLiquida > 0 ? (dre.resultadoOperacional / dre.receitaLiquida) * 100 : 0,
-      margemLiquida: dre.margemLiquida,
-      qtdVendas: vendas.qtd,
-      ticketMedio: vendas.ticket,
-    });
+    const [ys, ms] = periodo.start.split("-");
+    const snap = snapByKey.get(`${Number(ys)}-${Number(ms)}`);
+    const hasOperational = dre.receitaBruta > 0 || vendas.qtd > 0;
+    if (snap && !hasOperational) {
+      const rl = Number(snap.revenue_net ?? 0);
+      const cv = Number(snap.variable_costs ?? 0);
+      const cf = Number(snap.fixed_costs ?? 0) + Number(snap.fixed_expenses ?? 0);
+      const desp = Number(snap.variable_expenses ?? 0) + Number(snap.payroll_costs ?? 0)
+        + Number(snap.marketing_expenses ?? 0) + Number(snap.administrative_expenses ?? 0)
+        + Number(snap.operational_expenses ?? 0) + Number(snap.other_expenses ?? 0);
+      const df = Number(snap.financial_expenses ?? 0);
+      const ro = Number(snap.operational_result ?? (rl - cv - cf - desp - df));
+      const ll = Number(snap.net_result ?? ro);
+      result.push({
+        label, periodo,
+        receitaBruta: Number(snap.revenue_gross ?? 0),
+        receitaLiquida: rl,
+        custosVariaveis: cv,
+        custosFixos: cf,
+        despesasOp: desp,
+        despesasFin: df,
+        resultadoOperacional: ro,
+        lucroLiquido: ll,
+        margemOperacional: rl > 0 ? (ro / rl) * 100 : 0,
+        margemLiquida: rl > 0 ? (ll / rl) * 100 : 0,
+        qtdVendas: Number(snap.sales_count ?? 0),
+        ticketMedio: Number(snap.average_ticket ?? 0),
+        source: "historico",
+        historicalId: snap.id,
+      });
+    } else {
+      result.push({
+        label,
+        periodo,
+        receitaBruta: dre.receitaBruta,
+        receitaLiquida: dre.receitaLiquida,
+        custosVariaveis: Math.max(0, custosVariaveis),
+        custosFixos: Math.max(0, custosFixos),
+        despesasOp: 0,
+        despesasFin: Math.max(0, despesasFin),
+        resultadoOperacional: dre.resultadoOperacional,
+        lucroLiquido: dre.lucroLiquido,
+        margemOperacional: dre.receitaLiquida > 0 ? (dre.resultadoOperacional / dre.receitaLiquida) * 100 : 0,
+        margemLiquida: dre.margemLiquida,
+        qtdVendas: vendas.qtd,
+        ticketMedio: vendas.ticket,
+        source: snap && hasOperational ? "conflito" : "operacional",
+        historicalId: snap?.id ?? null,
+      });
+    }
   }
   return result;
 }
+
 
 // ============ DESTAQUES / ALERTAS ============
 export type Destaque = { tipo: "positivo" | "atencao" | "critico"; texto: string };
