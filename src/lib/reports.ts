@@ -925,7 +925,10 @@ export type SerieMes = {
   margemLiquida: number;
   qtdVendas: number;
   ticketMedio: number;
+  source: "operacional" | "historico" | "conflito";
+  historicalId?: string | null;
 };
+
 
 export async function buildSerieMensal(
   companyId: string,
