@@ -1,101 +1,92 @@
+## Módulo "Dados Históricos Gerenciais"
 
-## Relatório Executivo Gerencial (Análise Gerencial)
+Novo módulo para lançar snapshots mensais consolidados de meses anteriores ao início do uso do sistema, alimentando o Relatório Executivo Gerencial sem tocar em estoque, OS, sale_items, transactions, receivables, payables ou fluxo de caixa atual.
 
-Vou **evoluir** a tela `/app/executivo` que já existe (hoje é um diagnóstico mensal simples salvo em `executive_reports`) para o dashboard gerencial descrito, reutilizando 100% das funções de cálculo já em `src/lib/reports.ts` (`fetchReportData`, `buildDRE`, `buildVendasMargem`, `buildLucroOperacional`, `buildMargemContribuicao`, `buildPontoEquilibrio`, `buildComparativo`, etc.) e as fontes já corretas (`sale_items`, `transactions`, `receivables`, `payables`, `stock_movements`, `products`, `categories`, `cost_centers`). Nada de recalcular margem por descrição/OS.
+### 1. Banco de dados (migração)
 
-### Menu
-- Renomear a entrada existente `Relatórios consolidados` **não** — em vez disso, adicionar novo item no menu do **consultor** e do **cliente**: `Análise Gerencial` → `/app/executivo` (mantém a rota, mas a UI é reconstruída). O antigo diagnóstico salvo continua acessível dentro da nova tela como aba "Diagnóstico do consultor".
+**Tabela `public.historical_financial_snapshots`**
+Todos os campos pedidos: `company_id`, `branch_id`, `reference_month` (1–12), `reference_year`, `period_start`, `period_end`, `source_type` (enum), `source_description`, receita bruta/líquida, `sales_count`, `average_ticket`, custos variáveis/fixos, despesas (fixas, variáveis, financeiras, folha, marketing, administrativas, operacionais, outras), impostos, descontos, devoluções, valores de margem (bruta, contribuição, operacional), resultado operacional/líquido, contas a receber/pagar (abertas/vencidas), `inventory_value`, `notes`, `status` (rascunho/conferido/aprovado/substituído), `created_by`, `created_at`, `updated_at`, `deleted_at`.
+Constraint UNIQUE parcial em (`company_id`, `branch_id`, `reference_year`, `reference_month`) WHERE `deleted_at IS NULL`.
 
-### UI / Fluxo
+**Tabela `public.historical_financial_snapshot_versions`**
+`snapshot_id`, `old_data jsonb`, `new_data jsonb`, `changed_by`, `changed_at`, `change_reason`. Trigger BEFORE UPDATE grava versão.
 
-Cabeçalho de filtros:
-- Empresa (consultor) / Filial / Período inicial / Período final / Modo de comparação (`Mensal | Trimestral | Anual`) / Toggle "Incluir gráficos" / Toggle "Incluir análise IA" / Botão "Gerar".
+**Enum `historical_source_type`**: manual, planilha, relatorio_antigo, extrato, sistema_anterior, contabilidade, estimativa_cliente, outro.
 
-Estrutura da tela (uma página, seções âncora):
-1. **Cabeçalho executivo** — nome da empresa, período analisado, data de geração, logo.
-2. **Cards de indicadores** (topo, grid responsivo) — todos os KPIs listados (receita bruta, líquida, custos variáveis, despesas fixas/variáveis/financeiras, resultado e margem operacional, margem de contribuição, lucro líquido, crescimento da receita, variação do lucro, ticket médio, qtd vendas, contas vencidas, a receber, a pagar, ponto de equilíbrio). Cada card mostra valor + variação vs período anterior com seta e cor semântica (nunca vermelho por "faturou menos" isoladamente — segue a regra já memorizada).
-3. **Gráficos** (Recharts, já usado no projeto):
-   - Receita bruta × líquida por mês (barras agrupadas)
-   - Resultado operacional por mês (barras)
-   - Composição custos/despesas sobre receita (stacked 100%)
-   - Margem operacional por mês (linha)
-   - Evolução do faturamento (área)
-   - Vendas por centro de estoque (barras horizontais)
-   - Top produtos por faturamento / maior margem / menor margem (3 tabelas-mini)
-   - Despesas por categoria (donut)
-   - Contas a receber vencidas por faixa de atraso (barras)
-4. **Tabela comparativa mensal** — meses lado a lado com variação % e observação automática.
-5. **Destaques do período** — gerados por regra (não IA): crescimentos, quedas, alertas.
-6. **Alertas automáticos** — regras determinísticas listadas.
-7. **Inconsistências encontradas** — validador (ver abaixo). Se lista vazia, seção fica oculta.
-8. **Análise consultiva com IA** (opcional) — só executa ao clicar "Gerar análise". Envia **apenas os indicadores já calculados** (JSON) para o Lovable AI Gateway; prompt do sistema proíbe inventar números. Retorna Resumo executivo / Pontos positivos / Pontos de atenção / Recomendações / Próximas ações.
-9. **Diagnóstico do consultor** (aba/collapse) — mantém o textarea salvo em `executive_reports` que já existe hoje.
-10. **Rodapé** — "Relatório gerado pelo SistemaFP PJ — Finanças em Propósito".
+**RLS + GRANTS** (SELECT/INSERT/UPDATE/DELETE para authenticated, ALL para service_role):
+- Consultor/owner/membro da empresa lê e escreve seus snapshots (via `owner_id`, `company_members`, `consultant_company_links`).
+- Cliente lê sempre; edita apenas se `allow_client_edit` (flag na empresa já existente ou default false — inicialmente somente consultor edita, conforme pedido).
 
-### Exportações
-Botões na barra superior:
-- **Exportar PDF** — via `window.print()` com `@media print` estilizado (padrão do projeto, sem nova dependência).
-- **Versão WhatsApp** — abre modal com texto resumido (receita, lucro/margem, ponto de atenção, próxima ação) + botão copiar.
-- **Versão resumida** — imprime só cards + destaques.
-- **Salvar relatório** — persiste snapshot JSON em `executive_reports` (campo novo `snapshot jsonb`, ver migração).
-- **Compartilhar com cliente** — copia link `/app/executivo?company=...&start=...&end=...`.
+### 2. Server functions (`src/lib/historical.functions.ts`)
+- `listHistoricalSnapshots({ companyId, branchId? })`
+- `getHistoricalSnapshot({ id })`
+- `upsertHistoricalSnapshot({ ...payload, changeReason? })` — recalcula campos derivados (ticket médio, margens, resultado operacional), valida (mês/ano/empresa obrigatórios, receita líquida ≤ bruta salvo justificativa em notes, sem valores negativos), grava versão.
+- `deleteHistoricalSnapshot({ id })` — soft delete.
+- `importHistoricalSnapshotsPreview({ rows })` e `importHistoricalSnapshotsCommit({ rows })` — CSV/planilha, resolve empresa por nome, mostra prévia, faz upsert com confirmação.
 
-### Cálculos e fontes
-Reutiliza integralmente:
-- `sale_items` como fonte oficial de itens vendidos (`buildVendasMargem`, `buildMargemContribuicao`).
-- `transactions` + `receivables` para receita bruta; canceladas (`status='cancelado'`) excluídas.
-- Custos variáveis = `Σ sale_items.unit_cost × quantity` **para a linha de margem**, e categorias marcadas `variable_cost` **para a DRE de caixa** — deixando explícito na UI qual visão está sendo mostrada (memória do usuário: DRE usa caixa, margem usa custo do produto).
-- Ticket médio = receita bruta / nº de vendas (`transactions.tipo='entrada' + receivables`).
-- Crescimento, variação: já em `buildComparativo`, expandido para N períodos.
+### 3. UI
 
-### Validador de inconsistências
-Nova função `buildInconsistencias(data, period)` em `src/lib/reports.ts`:
-- vendas sem `sale_items`
-- itens com `unit_price`, `unit_cost` ou `quantity` = 0
-- vendas com `status='cancelado'` somando em totais (checagem defensiva)
-- `receivables` sem `sale_id` vinculado
-- OS duplicadas (`os_code` repetido em transactions+receivables)
-- produtos sem `custo_unitario`
-- venda com `valor` divergente de `Σ sale_items.total_revenue`
+**Menu** (`src/routes/app.tsx`):
+- Consultor: novo item "Dados Históricos" → `/app/historicos`.
+- Cliente (grupo Gerenciamento): "Dados Históricos" → `/app/historicos` (visualização; edição só se consultor).
 
-Retorna `{ os_code, cliente, problema, impacto, acao_sugerida }[]`.
+**Rota `src/routes/app.historicos.tsx`**
+- Header: seleção de empresa + filial + botão "Novo snapshot" + botão "Importar planilha".
+- Tabela listagem: mês/ano, receita bruta, líquida, custos, despesas, resultado operacional, margem %, origem, status, ações (visualizar, editar, excluir).
+- Filtros por ano/status.
+- Badges de alertas (receita líquida > bruta, margem negativa, custo > 70%, despesa fixa > 40%, incompleto).
 
-### IA
-- Server function `generateExecutiveAnalysis` em `src/lib/executive-ai.functions.ts` com `requireSupabaseAuth`.
-- Model: `google/gemini-2.5-flash` via Lovable AI Gateway (`LOVABLE_API_KEY`).
-- Input: objeto com KPIs, série mensal, top produtos, destaques, inconsistências.
-- Prompt: "Você é consultor financeiro. Use APENAS os números fornecidos. Não invente. Responda no formato: Resumo executivo / Pontos positivos / Pontos de atenção / Recomendações / Próximas ações."
-- Trata 429 e 402 com toast claro.
+**Componentes** (`src/components/historicos/`):
+- `SnapshotForm.tsx` — formulário completo com cálculo automático em tempo real. Aviso de duplicidade oferece "editar existente" ou "criar nova versão" (nova versão marca antigo como `substituido`).
+- `SnapshotImportModal.tsx` — upload CSV, parse, prévia, commit.
+- `SnapshotAlerts.tsx` — regras determinísticas.
+- `SnapshotStatusBadge.tsx`.
 
-### Persistência (migração)
-Adicionar colunas em `executive_reports`:
-- `snapshot jsonb` — KPIs e séries do relatório salvo
-- `ia_analysis text` — última análise IA
-- `periodo_inicio date`, `periodo_fim date` — para relatórios multi-mês
-Índice em `(company_id, branch_id, periodo_inicio, periodo_fim)`.
-Policies existentes (por `company_id`) já cobrem RLS; sem mudança.
+### 4. Integração com Relatório Executivo Gerencial
 
-### Design
-Paleta brandbook Finanças em Propósito aplicada via tokens em `src/styles.css` (adicionar se faltar): `--fep-green`, `--fep-green-2`, `--fep-support`, `--fep-light`, `--fep-graphite`, `--fep-offwhite`, `--fep-sand`, `--fep-neutral`. Componentes usam esses tokens; sem dourado/azul/preto dominante/verde neon. Print CSS remove sidebar e botões.
+Em `src/lib/reports.ts`:
+- Nova função `fetchHistoricalSnapshots(companyId, branchId, start, end)`.
+- `buildSerieMensal` estendido: para cada mês do período, verifica se há snapshot histórico e/ou dados operacionais reais.
+  - Sem operacional + com snapshot → usa snapshot, marca `source: 'historico'`.
+  - Com operacional completo → usa real, marca `source: 'operacional'`.
+  - Ambos → marca `source: 'conflito'` e devolve os dois; UI mostra seletor.
+- KPIs agregados respeitam a fonte escolhida por mês.
 
-### Permissões
-- Consultor: vê empresas via `companies` (RLS já filtra por `owner_id` + `consultant_company_links`).
-- Cliente: seleção limitada a `company_members` (hook `useSelectedCompany` já existe).
-- `branch_id` respeitado em todos os filtros (já implementado em `fetchReportData`).
+Em `src/routes/app.executivo.tsx`:
+- Toggle "Fonte por período": Automático (padrão) / Só operacional / Só histórico / Comparar.
+- Etiqueta visual "Dados históricos lançados manualmente" nas células/pontos de gráfico de meses que vieram de snapshot.
+- Aviso quando há conflito no mesmo mês.
+
+### 5. Isolamento
+Nenhuma escrita em `transactions`, `receivables`, `payables`, `stock_movements`, `sale_items`, `products`, `os_renumbering_log`. Todo cálculo derivado fica em `historical_financial_snapshots`. Snapshots nunca aparecem em Fluxo de Caixa, Vendas, Estoque, DRE de caixa da tela atual — só no Relatório Executivo Gerencial e na tela de Dados Históricos.
+
+### 6. Auditoria
+- Trigger de versão em `historical_financial_snapshot_versions`.
+- `audit_log` já existente é acionado via trigger genérico se aplicável (opcional; a tabela de versões cobre o histórico completo).
+
+### 7. Exportação
+- Botão "Exportar PDF" via `window.print()` com CSS específico.
+- Botão "Exportar CSV".
+- Botão "Resumo WhatsApp" (modal com texto formatado e copiar).
+
+### 8. Como testar
+1. Login como consultor, selecionar empresa cliente.
+2. Menu → Dados Históricos → Novo snapshot para abril/2026, maio/2026, junho/2026 com receitas, custos, despesas.
+3. Verificar cálculos (ticket médio, margens, resultado operacional).
+4. Ir em Análise Gerencial, período abril–julho, ver série mensal misturando snapshot (abr–jun) + operacional (jul).
+5. Confirmar que Fluxo de Caixa, Estoque, Vendas, Contas continuam intactos.
+6. Testar importação CSV com 3 meses.
+7. Editar snapshot e conferir versão criada em `historical_financial_snapshot_versions`.
 
 ### Arquivos previstos
-- `src/routes/app.executivo.tsx` — reescrito (mantém rota, mantém diagnóstico salvo dentro de aba).
-- `src/components/executivo/KpiCard.tsx`, `ChartsSection.tsx`, `ComparativoTable.tsx`, `DestaquesSection.tsx`, `AlertasSection.tsx`, `InconsistenciasSection.tsx`, `IAAnalysisSection.tsx`, `WhatsAppModal.tsx`, `ExecPrintStyles.tsx`.
-- `src/lib/reports.ts` — adiciona `buildInconsistencias`, `buildSerieMensal(company, branch, periodoInicio, periodoFim)`, `buildDestaques`, `buildAlertas`.
-- `src/lib/executive-ai.functions.ts` — server fn IA.
-- `src/routes/app.tsx` — adiciona item de menu "Análise Gerencial" para cliente e consultor.
-- Migração SQL para colunas novas em `executive_reports`.
+- Migração SQL (tabelas + enum + policies + grants + trigger de versão).
+- `src/lib/historical.functions.ts`
+- `src/routes/app.historicos.tsx`
+- `src/components/historicos/SnapshotForm.tsx`, `SnapshotImportModal.tsx`, `SnapshotAlerts.tsx`, `SnapshotStatusBadge.tsx`
+- Edições em `src/routes/app.tsx` (menu), `src/lib/reports.ts` (fonte por período), `src/routes/app.executivo.tsx` (seletor + etiquetas).
 
-### Testes manuais
-Executar com empresa que tenha ≥ 3 meses de vendas: validar receita bruta/mês, receita líquida, custo total, margem total, resultado operacional, gráficos, tabela comparativa, inconsistências, PDF (print), WhatsApp, IA.
+### Fora de escopo
+- Importação detalhada que gera vendas/estoque reais (fluxo futuro dedicado).
+- Aprovação com assinatura eletrônica do cliente (v2).
 
-### Fora de escopo (proponho não fazer nesta iteração)
-- Geração real de arquivo `.pptx` (o botão "Gerar apresentação" abre a versão print otimizada em landscape em vez de gerar pptx nativo).
-- Múltiplas filiais lado a lado no mesmo relatório (já existe `buildComparativoFiliais`, mas UI dedicada ficaria para v2).
-
-Confirma que posso seguir com essa abordagem?
+Confirma que posso seguir?

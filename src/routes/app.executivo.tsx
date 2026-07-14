@@ -447,8 +447,21 @@ function Executivo() {
                       <tr>
                         <th className="text-left py-2 px-3 text-xs uppercase font-medium">Indicador</th>
                         {serie.map((s) => (
-                          <th key={s.label} className="text-right py-2 px-3 text-xs uppercase font-medium">{s.label}</th>
+                          <th key={s.label} className="text-right py-2 px-3 text-xs uppercase font-medium">
+                            {s.label}
+                            {s.source === "historico" && (
+                              <div className="text-[10px] font-normal text-amber-700 normal-case" title="Dados históricos lançados manualmente">
+                                histórico
+                              </div>
+                            )}
+                            {s.source === "conflito" && (
+                              <div className="text-[10px] font-normal text-red-600 normal-case" title="Existem dados operacionais e históricos para este mês. Foi usado o operacional.">
+                                conflito
+                              </div>
+                            )}
+                          </th>
                         ))}
+
                         <th className="text-right py-2 px-3 text-xs uppercase font-medium">Var último</th>
                       </tr>
                     </thead>
