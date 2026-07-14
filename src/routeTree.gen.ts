@@ -24,6 +24,7 @@ import { Route as AppPendenciasRouteImport } from './routes/app.pendencias'
 import { Route as AppOrcamentoRouteImport } from './routes/app.orcamento'
 import { Route as AppJornadaRouteImport } from './routes/app.jornada'
 import { Route as AppImportacoesRouteImport } from './routes/app.importacoes'
+import { Route as AppHistoricosRouteImport } from './routes/app.historicos'
 import { Route as AppFluxoCaixaRouteImport } from './routes/app.fluxo-caixa'
 import { Route as AppExecutivoRouteImport } from './routes/app.executivo'
 import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
@@ -121,6 +122,11 @@ const AppJornadaRoute = AppJornadaRouteImport.update({
 const AppImportacoesRoute = AppImportacoesRouteImport.update({
   id: '/importacoes',
   path: '/importacoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHistoricosRoute = AppHistoricosRouteImport.update({
+  id: '/historicos',
+  path: '/historicos',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFluxoCaixaRoute = AppFluxoCaixaRouteImport.update({
@@ -262,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/historicos': typeof AppHistoricosRoute
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/jornada': typeof AppJornadaRouteWithChildren
   '/app/orcamento': typeof AppOrcamentoRoute
@@ -301,6 +308,7 @@ export interface FileRoutesByTo {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/historicos': typeof AppHistoricosRoute
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/jornada': typeof AppJornadaRouteWithChildren
   '/app/orcamento': typeof AppOrcamentoRoute
@@ -342,6 +350,7 @@ export interface FileRoutesById {
   '/app/estoque': typeof AppEstoqueRoute
   '/app/executivo': typeof AppExecutivoRoute
   '/app/fluxo-caixa': typeof AppFluxoCaixaRoute
+  '/app/historicos': typeof AppHistoricosRoute
   '/app/importacoes': typeof AppImportacoesRoute
   '/app/jornada': typeof AppJornadaRouteWithChildren
   '/app/orcamento': typeof AppOrcamentoRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
+    | '/app/historicos'
     | '/app/importacoes'
     | '/app/jornada'
     | '/app/orcamento'
@@ -423,6 +433,7 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
+    | '/app/historicos'
     | '/app/importacoes'
     | '/app/jornada'
     | '/app/orcamento'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/app/estoque'
     | '/app/executivo'
     | '/app/fluxo-caixa'
+    | '/app/historicos'
     | '/app/importacoes'
     | '/app/jornada'
     | '/app/orcamento'
@@ -594,6 +606,13 @@ declare module '@tanstack/react-router' {
       path: '/importacoes'
       fullPath: '/app/importacoes'
       preLoaderRoute: typeof AppImportacoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/historicos': {
+      id: '/app/historicos'
+      path: '/historicos'
+      fullPath: '/app/historicos'
+      preLoaderRoute: typeof AppHistoricosRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/fluxo-caixa': {
@@ -817,6 +836,7 @@ interface AppRouteChildren {
   AppEstoqueRoute: typeof AppEstoqueRoute
   AppExecutivoRoute: typeof AppExecutivoRoute
   AppFluxoCaixaRoute: typeof AppFluxoCaixaRoute
+  AppHistoricosRoute: typeof AppHistoricosRoute
   AppImportacoesRoute: typeof AppImportacoesRoute
   AppJornadaRoute: typeof AppJornadaRouteWithChildren
   AppOrcamentoRoute: typeof AppOrcamentoRoute
@@ -849,6 +869,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEstoqueRoute: AppEstoqueRoute,
   AppExecutivoRoute: AppExecutivoRoute,
   AppFluxoCaixaRoute: AppFluxoCaixaRoute,
+  AppHistoricosRoute: AppHistoricosRoute,
   AppImportacoesRoute: AppImportacoesRoute,
   AppJornadaRoute: AppJornadaRouteWithChildren,
   AppOrcamentoRoute: AppOrcamentoRoute,

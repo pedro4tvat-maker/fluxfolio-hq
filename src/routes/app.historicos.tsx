@@ -184,7 +184,7 @@ function Historicos() {
   const derived = useMemo(() => computeDerived(form), [form]);
   const currentAlerts = useMemo(() => alertsFor({ ...form, ...derived }), [form, derived]);
 
-  const setField = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const setField = (k: string, v: any) => setForm((f: Snap) => ({ ...f, [k]: v }));
 
   const openNew = () => { setEditing(null); setOpen(true); };
   const openEdit = (s: Snap) => { setEditing(s); setOpen(true); };
