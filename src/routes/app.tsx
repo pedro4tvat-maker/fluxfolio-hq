@@ -70,6 +70,8 @@ const clientNav: NavEntry[] = [
     icon: Tag,
     children: [
       { to: "/app/executivo", label: "Análise Gerencial", icon: FileBarChart },
+      { to: "/app/historicos", label: "Dados Históricos", icon: NotebookPen },
+
       { to: "/app/precificacao", label: "Precificação e Margem", icon: Tag },
       { to: "/app/relatorios", label: "Relatórios", icon: FileBarChart },
       { to: "/app/documentos", label: "Documentos e Anexos", icon: FolderArchive },
