@@ -550,6 +550,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [view, setView] = useState<"mes" | "semana" | "dia">("mes");
   const [selectedDate, setSelectedDate] = useState<string>(today());
+  const [dayModalDate, setDayModalDate] = useState<string | null>(null);
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
@@ -592,18 +593,33 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
           return (
             <div key={i} className={`bg-card min-h-[100px] p-1.5 group relative ${isToday ? "ring-2 ring-primary ring-inset" : ""}`}>
               <div className="flex items-center justify-between">
-                <div className="text-[11px] text-muted-foreground">{d.getDate()}</div>
+                <button
+                  type="button"
+                  onClick={() => setDayModalDate(key)}
+                  className="text-[11px] text-muted-foreground hover:text-primary hover:underline"
+                  title="Ver todas as atividades do dia"
+                >
+                  {d.getDate()}
+                </button>
                 <button onClick={() => onNewOnDate(key)} className="opacity-0 group-hover:opacity-100 text-[10px] text-primary hover:underline">+ nova</button>
               </div>
               <div className="space-y-0.5 mt-1">
                 {items.slice(0, 3).map((a) => (
-                  <button key={a.id} onClick={() => onSelect(a)}
+                  <button key={a.id} onClick={(e) => { e.stopPropagation(); onSelect(a); }}
                     className={`w-full text-left text-[11px] truncate rounded px-1 py-0.5 border ${colorOf(a)}`}
                     title={`${a.title}${a.company_id ? " — " + (companyMap.get(a.company_id) ?? "") : ""}`}>
                     {a.start_time ? a.start_time.slice(0, 5) + " " : ""}{a.title}
                   </button>
                 ))}
-                {items.length > 3 && <div className="text-[10px] text-muted-foreground">+{items.length - 3}</div>}
+                {items.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setDayModalDate(key)}
+                    className="text-[10px] text-primary hover:underline font-medium"
+                  >
+                    +{items.length - 3} mais
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -706,6 +722,43 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
         <LegendDot c="bg-emerald-100 border-emerald-200" l="Concluída" />
         <LegendDot c="bg-red-200 border-red-300" l="Atrasada" />
       </div>
+      <Dialog open={dayModalDate !== null} onOpenChange={(o) => !o && setDayModalDate(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="capitalize">
+              {dayModalDate ? new Date(dayModalDate + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {dayModalDate && (() => {
+            const items = (byDate.get(dayModalDate) ?? []).slice().sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+            return (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-muted-foreground">{items.length} atividade(s)</div>
+                  <Button size="sm" onClick={() => { const d = dayModalDate; setDayModalDate(null); onNewOnDate(d); }}>
+                    <Plus className="size-3" /> Nova atividade
+                  </Button>
+                </div>
+                {items.length === 0 ? (
+                  <div className="text-muted-foreground text-sm py-6 text-center">Sem atividades neste dia.</div>
+                ) : (
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                    {items.map((a) => (
+                      <button key={a.id} onClick={() => { setDayModalDate(null); onSelect(a); }} className={`w-full text-left rounded-lg border p-3 ${colorOf(a)}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium">{a.start_time ? a.start_time.slice(0, 5) + " · " : ""}{a.title}</div>
+                          {priorityBadge(a.priority)}
+                        </div>
+                        <div className="text-xs mt-1 opacity-80">{a.company_id ? companyMap.get(a.company_id) : "Interna"} · {ACTIVITY_TYPES[a.activity_type]}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
