@@ -722,6 +722,44 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
         <LegendDot c="bg-emerald-100 border-emerald-200" l="Concluída" />
         <LegendDot c="bg-red-200 border-red-300" l="Atrasada" />
       </div>
+      </div>
+      <Dialog open={dayModalDate !== null} onOpenChange={(o) => !o && setDayModalDate(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="capitalize">
+              {dayModalDate ? new Date(dayModalDate + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {dayModalDate && (() => {
+            const items = (byDate.get(dayModalDate) ?? []).slice().sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+            return (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-muted-foreground">{items.length} atividade(s)</div>
+                  <Button size="sm" onClick={() => { const d = dayModalDate; setDayModalDate(null); onNewOnDate(d); }}>
+                    <Plus className="size-3" /> Nova atividade
+                  </Button>
+                </div>
+                {items.length === 0 ? (
+                  <div className="text-muted-foreground text-sm py-6 text-center">Sem atividades neste dia.</div>
+                ) : (
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                    {items.map((a) => (
+                      <button key={a.id} onClick={() => { setDayModalDate(null); onSelect(a); }} className={`w-full text-left rounded-lg border p-3 ${colorOf(a)}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium">{a.start_time ? a.start_time.slice(0, 5) + " · " : ""}{a.title}</div>
+                          {priorityBadge(a.priority)}
+                        </div>
+                        <div className="text-xs mt-1 opacity-80">{a.company_id ? companyMap.get(a.company_id) : "Interna"} · {ACTIVITY_TYPES[a.activity_type]}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
