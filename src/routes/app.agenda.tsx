@@ -550,6 +550,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [view, setView] = useState<"mes" | "semana" | "dia">("mes");
   const [selectedDate, setSelectedDate] = useState<string>(today());
+  const [dayModalDate, setDayModalDate] = useState<string | null>(null);
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
