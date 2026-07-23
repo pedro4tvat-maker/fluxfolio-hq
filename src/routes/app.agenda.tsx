@@ -593,18 +593,33 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
           return (
             <div key={i} className={`bg-card min-h-[100px] p-1.5 group relative ${isToday ? "ring-2 ring-primary ring-inset" : ""}`}>
               <div className="flex items-center justify-between">
-                <div className="text-[11px] text-muted-foreground">{d.getDate()}</div>
+                <button
+                  type="button"
+                  onClick={() => setDayModalDate(key)}
+                  className="text-[11px] text-muted-foreground hover:text-primary hover:underline"
+                  title="Ver todas as atividades do dia"
+                >
+                  {d.getDate()}
+                </button>
                 <button onClick={() => onNewOnDate(key)} className="opacity-0 group-hover:opacity-100 text-[10px] text-primary hover:underline">+ nova</button>
               </div>
               <div className="space-y-0.5 mt-1">
                 {items.slice(0, 3).map((a) => (
-                  <button key={a.id} onClick={() => onSelect(a)}
+                  <button key={a.id} onClick={(e) => { e.stopPropagation(); onSelect(a); }}
                     className={`w-full text-left text-[11px] truncate rounded px-1 py-0.5 border ${colorOf(a)}`}
                     title={`${a.title}${a.company_id ? " — " + (companyMap.get(a.company_id) ?? "") : ""}`}>
                     {a.start_time ? a.start_time.slice(0, 5) + " " : ""}{a.title}
                   </button>
                 ))}
-                {items.length > 3 && <div className="text-[10px] text-muted-foreground">+{items.length - 3}</div>}
+                {items.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setDayModalDate(key)}
+                    className="text-[10px] text-primary hover:underline font-medium"
+                  >
+                    +{items.length - 3} mais
+                  </button>
+                )}
               </div>
             </div>
           );
