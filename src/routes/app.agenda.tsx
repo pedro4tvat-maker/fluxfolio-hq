@@ -722,7 +722,6 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
         <LegendDot c="bg-emerald-100 border-emerald-200" l="Concluída" />
         <LegendDot c="bg-red-200 border-red-300" l="Atrasada" />
       </div>
-      </div>
       <Dialog open={dayModalDate !== null} onOpenChange={(o) => !o && setDayModalDate(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
