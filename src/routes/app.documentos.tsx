@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
+import { downloadFileFromUrl, reserveDownloadTarget } from "@/lib/download-file";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,17 +66,12 @@ function DocumentosPage() {
   }, [items, search, moduleFilter]);
 
   async function download(filePath: string, fileName: string) {
+    const target = reserveDownloadTarget(fileName);
     const { data, error } = await supabase.storage
       .from("attachments")
       .createSignedUrl(filePath, 300, { download: fileName });
     if (error || !data?.signedUrl) { toast.error(error?.message ?? "Não foi possível gerar o link"); return; }
-    const a = document.createElement("a");
-    a.href = data.signedUrl;
-    a.download = fileName;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    await downloadFileFromUrl(data.signedUrl, fileName, target);
   }
 
   async function remove(id: string, filePath: string, name: string) {

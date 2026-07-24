@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { downloadFileFromUrl, reserveDownloadTarget } from "@/lib/download-file";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,11 +120,12 @@ export function AttachmentsPanel({
   }
 
   async function download(a: Attachment) {
+    const target = reserveDownloadTarget(a.file_name);
     const { data, error } = await supabase.storage
       .from("attachments")
       .createSignedUrl(a.file_path, 300, { download: a.file_name });
     if (error || !data?.signedUrl) { toast.error(error?.message ?? "Não foi possível gerar o link"); return; }
-    triggerDownload(data.signedUrl, a.file_name);
+    await downloadFileFromUrl(data.signedUrl, a.file_name, target);
   }
 
   async function remove(a: Attachment) {
@@ -194,16 +196,6 @@ export function AttachmentsPanel({
       </div>
     </div>
   );
-}
-
-function triggerDownload(url: string, fileName: string) {
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
 }
 
 function formatBytes(n: number) {
