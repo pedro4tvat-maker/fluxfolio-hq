@@ -141,7 +141,7 @@ function DocumentosPage() {
                   <td className="px-4 py-2 text-xs">{a.description ?? "—"}</td>
                   <td className="px-4 py-2 text-xs">{new Date(a.created_at).toLocaleDateString("pt-BR")}</td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
-                    <Button variant="ghost" size="sm" onClick={() => download(a.file_path)} title="Baixar"><Download className="size-4" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => download(a.file_path, a.file_name)} title="Baixar"><Download className="size-4" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => remove(a.id, a.file_path, a.file_name)} title="Excluir"><Trash2 className="size-4" /></Button>
                   </td>
                 </tr>
