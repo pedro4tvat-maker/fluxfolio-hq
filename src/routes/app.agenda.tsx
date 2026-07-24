@@ -1020,7 +1020,26 @@ function ActivityDialog({ open, onOpenChange, initial, prefill, companies, onSav
             <Label>Observações</Label>
             <Textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
           </div>
+          <div className="md:col-span-2 border-t pt-4">
+            <Label>Arquivos da atividade</Label>
+            {initial && (form.company_id || initial.company_id) ? (
+              <div className="mt-2">
+                <AttachmentsPanel
+                  companyId={(form.company_id || initial.company_id) as string}
+                  module="activity"
+                  recordId={initial.id}
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                {initial
+                  ? "Vincule uma empresa a esta atividade para anexar arquivos."
+                  : "Salve a atividade para anexar arquivos."}
+              </p>
+            )}
+          </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
