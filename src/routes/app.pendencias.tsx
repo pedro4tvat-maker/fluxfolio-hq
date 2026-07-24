@@ -493,7 +493,7 @@ function ResponsesDialog({ pending, isConsultant, userId, onClose }: {
   async function openAttachment(value: string) {
     // Legacy values may be full URLs; treat those as-is.
     if (/^https?:\/\//i.test(value)) { window.open(value, "_blank"); return; }
-    const { data, error } = await supabase.storage.from("attachments").createSignedUrl(value, 300);
+    const { data, error } = await supabase.storage.from("attachments").createSignedUrl(value, 300, { download: value.split("/").pop() ?? "anexo" });
     if (error) { toast.error(error.message); return; }
     window.open(data.signedUrl, "_blank");
   }
