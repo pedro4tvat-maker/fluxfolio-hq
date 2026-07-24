@@ -44,7 +44,7 @@ export function AttachmentsPanel({
   branchId,
   compact = false,
 }: {
-  companyId: string;
+  companyId?: string | null;
   module: string;
   recordId?: string | null;
   branchId?: string | null;
@@ -56,24 +56,27 @@ export function AttachmentsPanel({
   const [docType, setDocType] = useState<string>("Outros");
   const [desc, setDesc] = useState("");
 
-  const queryKey = ["attachments", companyId, module, recordId ?? null];
+  const scopeId = companyId ?? user?.id ?? null;
+  const queryKey = ["attachments", scopeId, module, recordId ?? null];
 
   const { data: items = [], isLoading } = useQuery({
     queryKey,
-    enabled: !!companyId,
+    enabled: !!scopeId,
     queryFn: async () => {
       let q = supabase
         .from("attachments")
         .select("*")
-        .eq("company_id", companyId)
         .eq("related_module", module)
         .is("deleted_at", null).order("created_at", { ascending: false });
+      if (companyId) q = q.eq("company_id", companyId);
+      else q = q.is("company_id", null).eq("uploaded_by", user!.id);
       if (recordId) q = q.eq("related_record_id", recordId);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as Attachment[];
     },
   });
+
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
