@@ -86,14 +86,15 @@ export function AttachmentsPanel({
     setUploading(true);
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
-      const path = `${companyId}/${module}/${recordId ?? "geral"}/${Date.now()}_${safeName}`;
+      if (!scopeId) { toast.error("Faça login para anexar arquivos"); setUploading(false); return; }
+      const path = `${scopeId}/${module}/${recordId ?? "geral"}/${Date.now()}_${safeName}`;
       const { error: upErr } = await supabase.storage.from("attachments").upload(path, file, {
         contentType: file.type,
         upsert: false,
       });
       if (upErr) throw upErr;
       const { error: insErr } = await supabase.from("attachments").insert({
-        company_id: companyId,
+        company_id: companyId ?? null,
         branch_id: branchId ?? null,
         related_module: module,
         related_record_id: recordId ?? null,
