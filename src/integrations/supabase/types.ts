@@ -148,7 +148,7 @@ export type Database = {
       attachments: {
         Row: {
           branch_id: string | null
-          company_id: string
+          company_id: string | null
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -164,7 +164,7 @@ export type Database = {
         }
         Insert: {
           branch_id?: string | null
-          company_id: string
+          company_id?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -180,7 +180,7 @@ export type Database = {
         }
         Update: {
           branch_id?: string | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
