@@ -124,7 +124,7 @@ export function AttachmentsPanel({
     const { data, error } = await supabase.storage
       .from("attachments")
       .createSignedUrl(a.file_path, 300, { download: a.file_name });
-    if (error || !data?.signedUrl) { toast.error(error?.message ?? "Não foi possível gerar o link"); return; }
+    if (error || !data?.signedUrl) { target.popup?.close(); toast.error(error?.message ?? "Não foi possível gerar o link"); return; }
     await downloadFileFromUrl(data.signedUrl, a.file_name, target);
   }
 

@@ -70,7 +70,7 @@ function DocumentosPage() {
     const { data, error } = await supabase.storage
       .from("attachments")
       .createSignedUrl(filePath, 300, { download: fileName });
-    if (error || !data?.signedUrl) { toast.error(error?.message ?? "Não foi possível gerar o link"); return; }
+    if (error || !data?.signedUrl) { target.popup?.close(); toast.error(error?.message ?? "Não foi possível gerar o link"); return; }
     await downloadFileFromUrl(data.signedUrl, fileName, target);
   }
 
