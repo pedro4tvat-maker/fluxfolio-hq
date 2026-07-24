@@ -119,9 +119,11 @@ export function AttachmentsPanel({
   }
 
   async function download(a: Attachment) {
-    const { data, error } = await supabase.storage.from("attachments").createSignedUrl(a.file_path, 300);
-    if (error) { toast.error(error.message); return; }
-    window.open(data.signedUrl, "_blank");
+    const { data, error } = await supabase.storage
+      .from("attachments")
+      .createSignedUrl(a.file_path, 300, { download: a.file_name });
+    if (error || !data?.signedUrl) { toast.error(error?.message ?? "Não foi possível gerar o link"); return; }
+    triggerDownload(data.signedUrl, a.file_name);
   }
 
   async function remove(a: Attachment) {
@@ -192,6 +194,16 @@ export function AttachmentsPanel({
       </div>
     </div>
   );
+}
+
+function triggerDownload(url: string, fileName: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 function formatBytes(n: number) {
