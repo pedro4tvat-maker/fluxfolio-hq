@@ -7,7 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { PlusCircle, Building2, Pencil, FileBarChart, NotebookPen, Calendar } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { PlusCircle, Building2, Pencil, FileBarChart, NotebookPen, Calendar, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
