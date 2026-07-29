@@ -76,7 +76,11 @@ function ClientesPage() {
   const confirmDelete = async () => {
     if (!deleting) return;
     setRemoving(true);
-    const { error } = await supabase.from("companies").delete().eq("id", deleting.id);
+    const { data: removed, error } = await supabase
+      .from("companies")
+      .delete()
+      .eq("id", deleting.id)
+      .select("id");
     setRemoving(false);
     if (error) {
       toast.error(
@@ -84,6 +88,10 @@ function ClientesPage() {
           ? "Esta empresa possui lançamentos vinculados e não pode ser excluída."
           : error.message,
       );
+      return;
+    }
+    if (!removed || removed.length === 0) {
+      toast.error("Você não tem permissão para excluir esta empresa.");
       return;
     }
     if (localStorage.getItem("sfp:selected_company") === deleting.id) {
