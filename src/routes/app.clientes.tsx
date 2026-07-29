@@ -7,7 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { PlusCircle, Building2, Pencil, FileBarChart, NotebookPen, Calendar } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { PlusCircle, Building2, Pencil, FileBarChart, NotebookPen, Calendar, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
@@ -59,7 +69,32 @@ function ClientesPage() {
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [deleting, setDeleting] = useState<any>(null);
+  const [removing, setRemoving] = useState(false);
   const [form, setForm] = useState({ nome: "", responsavel: "", documento: "", telefone: "", email: "", segmento: "", cidade: "", estado: "" });
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setRemoving(true);
+    const { error } = await supabase.from("companies").delete().eq("id", deleting.id);
+    setRemoving(false);
+    if (error) {
+      toast.error(
+        error.message.includes("foreign key") || error.code === "23503"
+          ? "Esta empresa possui lançamentos vinculados e não pode ser excluída."
+          : error.message,
+      );
+      return;
+    }
+    if (localStorage.getItem("sfp:selected_company") === deleting.id) {
+      localStorage.removeItem("sfp:selected_company");
+    }
+    toast.success("Empresa excluída");
+    setDeleting(null);
+    qc.invalidateQueries({ queryKey: ["companies-list"] });
+    qc.invalidateQueries({ queryKey: ["companies-lite"] });
+    qc.invalidateQueries({ queryKey: ["dashboard-companies"] });
+  };
 
   const startNew = () => { setEditing(null); setForm({ nome: "", responsavel: "", documento: "", telefone: "", email: "", segmento: "", cidade: "", estado: "" }); setOpen(true); };
   const startEdit = (c: any) => { setEditing(c); setForm({ nome: c.nome ?? "", responsavel: c.responsavel ?? "", documento: c.documento ?? "", telefone: c.telefone ?? "", email: c.email ?? "", segmento: c.segmento ?? "", cidade: c.cidade ?? "", estado: c.estado ?? "" }); setOpen(true); };
@@ -193,7 +228,10 @@ function ClientesPage() {
                           <Link to="/app/empresa/$id" params={{ id: c.id }}><PlusCircle className="size-4" /></Link>
                         </Button>
                         {isConsultant && (
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(c)}><Pencil className="size-4" /></Button>
+                          <>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(c)}><Pencil className="size-4" /></Button>
+                            <Button size="icon" variant="ghost" title="Excluir empresa" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleting(c)}><Trash2 className="size-4" /></Button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -204,6 +242,29 @@ function ClientesPage() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir empresa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{deleting?.nome}</strong>? Esta ação não pode ser desfeita.
+              Empresas com lançamentos vinculados não poderão ser excluídas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={removing}
+              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
