@@ -13,25 +13,34 @@ export function useSelectedCompany() {
     queryKey: ["companies-lite", user?.id, isConsultant],
     enabled: !!user && !authLoading,
     queryFn: async (): Promise<CompanyLite[]> => {
-      if (isConsultant) {
-        const { data, error } = await supabase
-          .from("companies")
-          .select("id, nome")
-          .order("nome");
-        if (error) throw error;
-        return data ?? [];
-      }
-      const { data, error } = await supabase
+      const map = new Map<string, CompanyLite>();
+
+      // Empresas visíveis diretamente (RLS já limita a dono / consultor vinculado)
+      const { data: direct, error: directError } = await supabase
+        .from("companies")
+        .select("id, nome")
+        .order("nome");
+      if (directError && directError.code !== "42501") throw directError;
+      for (const c of direct ?? []) map.set(c.id, c);
+
+      // Empresas em que o usuário é membro
+      const { data: memberships } = await supabase
         .from("company_members")
         .select("company_id, companies(id, nome)")
         .eq("user_id", user!.id);
-      if (error) throw error;
-      return (data ?? []).map((item) => ({
-        id: item.company_id,
-        nome: item.companies?.nome ?? item.company_id,
-      }));
+      for (const item of memberships ?? []) {
+        if (!map.has(item.company_id)) {
+          map.set(item.company_id, {
+            id: item.company_id,
+            nome: item.companies?.nome ?? item.company_id,
+          });
+        }
+      }
+
+      return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
     },
   });
+
 
   const [selected, setSelected] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
