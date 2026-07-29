@@ -228,7 +228,10 @@ function ClientesPage() {
                           <Link to="/app/empresa/$id" params={{ id: c.id }}><PlusCircle className="size-4" /></Link>
                         </Button>
                         {isConsultant && (
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(c)}><Pencil className="size-4" /></Button>
+                          <>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(c)}><Pencil className="size-4" /></Button>
+                            <Button size="icon" variant="ghost" title="Excluir empresa" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleting(c)}><Trash2 className="size-4" /></Button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -239,6 +242,29 @@ function ClientesPage() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir empresa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{deleting?.nome}</strong>? Esta ação não pode ser desfeita.
+              Empresas com lançamentos vinculados não poderão ser excluídas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={removing}
+              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
