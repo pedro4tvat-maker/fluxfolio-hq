@@ -35,7 +35,7 @@ type Section = typeof CONSULTORIA_SECTIONS[number]["id"];
 const SECTION_IDS = CONSULTORIA_SECTIONS.map((s) => s.id) as readonly string[];
 
 export const Route = createFileRoute("/app/consultoria")({
-  validateSearch: (s: Record<string, unknown>): { section: Section } => {
+  validateSearch: (s: Record<string, unknown>): { section?: Section } => {
     const v = String(s.section ?? "");
     return { section: (SECTION_IDS.includes(v) ? v : "dashboard") as Section };
   },

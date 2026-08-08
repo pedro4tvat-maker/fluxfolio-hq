@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CONSULTORIA_SECTIONS } from "@/routes/app.consultoria";
 import { AGENDA_SECTIONS } from "@/routes/app.agenda";
+import { COMPANY_AGENDA_SECTIONS } from "@/components/agenda/CompanyAgenda";
 import fepLogo from "@/assets/financas-em-proposito.png.asset.json";
 
 export const Route = createFileRoute("/app")({
@@ -85,6 +86,7 @@ const clientNav: NavEntry[] = [
     children: [
       { to: "/app/contas-pagar", label: "Contas a Pagar", icon: ArrowUpCircle },
       { to: "/app/contas-receber", label: "Contas a Receber", icon: ArrowDownCircle },
+      { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
       { to: "/app/orcamento", label: "Orçamento", icon: Target },
     ],
   },
@@ -164,7 +166,7 @@ function AppLayout() {
                 <Link
                   key={s.id}
                   to={n.to}
-                  search={{ section: s.id }}
+                  search={{ section: s.id } as any}
                   className={cn("block px-3 py-1.5 rounded-md text-[13px] transition-colors", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground")}
                 >
                   {s.label}
@@ -183,7 +185,7 @@ function AppLayout() {
       return renderSubmenu(n, CONSULTORIA_SECTIONS, consultoriaOpen, () => setConsultoriaOpen((v) => !v), "dashboard");
     }
     if (n.to === "/app/agenda") {
-      return renderSubmenu(n, AGENDA_SECTIONS, agendaOpen, () => setAgendaOpen((v) => !v), "calendario");
+      return renderSubmenu(n, (isConsultant ? AGENDA_SECTIONS : COMPANY_AGENDA_SECTIONS) as any, agendaOpen, () => setAgendaOpen((v) => !v), "calendario");
     }
     return (
       <Link key={n.to} to={n.to} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors", active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground")}>

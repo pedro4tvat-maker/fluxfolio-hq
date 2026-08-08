@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
+import { CompanyAgenda } from "@/components/agenda/CompanyAgenda";
 
 
 export const AGENDA_SECTIONS = [
@@ -29,7 +30,7 @@ type AgendaSection = typeof AGENDA_SECTIONS[number]["id"];
 const AGENDA_SECTION_IDS = AGENDA_SECTIONS.map((s) => s.id) as readonly string[];
 
 export const Route = createFileRoute("/app/agenda")({
-  validateSearch: (s: Record<string, unknown>): { section: AgendaSection; company?: string } => {
+  validateSearch: (s: Record<string, unknown>): { section?: AgendaSection; company?: string } => {
     const v = String(s.section ?? "");
     return {
       section: (AGENDA_SECTION_IDS.includes(v) ? v : "calendario") as AgendaSection,
@@ -142,17 +143,12 @@ function isOverdue(a: Activity) {
 
 function AgendaPage() {
   const { isConsultant, loading } = useAuth();
+  const { section } = Route.useSearch();
   if (loading) return <div className="text-muted-foreground">Carregando...</div>;
-  if (!isConsultant) {
-    return (
-      <div className="bg-card border rounded-2xl p-10 text-center max-w-xl mx-auto">
-        <h2 className="font-display font-semibold">Acesso restrito</h2>
-        <p className="text-sm text-muted-foreground mt-1">A Agenda é exclusiva para consultores.</p>
-      </div>
-    );
-  }
+  if (!isConsultant) return <CompanyAgenda section={section ?? "calendario"} />;
   return <Inner />;
 }
+
 
 function useConsultant() {
   return useQuery({
