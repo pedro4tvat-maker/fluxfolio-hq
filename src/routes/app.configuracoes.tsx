@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCNPJ, maskCEP, maskPhone, isValidCNPJ, BR_STATES } from "@/lib/cnpj";
 import { CompanySwitcher } from "@/components/company-switcher";
+import { RecoveryToolsCard } from "@/components/settings/RecoveryToolsCard";
+
 
 export const Route = createFileRoute("/app/configuracoes")({ component: ConfiguracoesRouter });
 
