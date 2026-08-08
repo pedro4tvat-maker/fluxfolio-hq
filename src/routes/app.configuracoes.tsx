@@ -745,6 +745,8 @@ function ExtrasSection({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-6">
+      <RecoveryToolsCard />
+
       {/* Categorias */}
       <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
         <div>
