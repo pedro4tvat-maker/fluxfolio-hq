@@ -706,6 +706,74 @@ export type Database = {
           },
         ]
       }
+      company_activities: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string
+          location: string | null
+          meeting_link: string | null
+          priority: string
+          reminder: string | null
+          responsible: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_date: string
+          activity_type?: string
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          location?: string | null
+          meeting_link?: string | null
+          priority?: string
+          reminder?: string | null
+          responsible?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          location?: string | null
+          meeting_link?: string | null
+          priority?: string
+          reminder?: string | null
+          responsible?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_activities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_journey_checklist: {
         Row: {
           completed_at: string | null
