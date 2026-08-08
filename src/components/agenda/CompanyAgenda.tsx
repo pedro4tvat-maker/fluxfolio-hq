@@ -124,7 +124,7 @@ export function CompanyAgenda({ section }: { section: string }) {
       Object.keys(body).forEach((k) => body[k] === "" && (body[k] = null));
       if (payload.id) {
         const { id, ...rest } = body as Record<string, unknown> & { id: string };
-        const { error } = await supabase.from("company_activities").update(rest).eq("id", id).is("deleted_at", null);
+        const { error } = await supabase.from("company_activities").update(rest as never).eq("id", id).is("deleted_at", null);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("company_activities").insert({ ...body, created_by: user?.id ?? null } as never);
