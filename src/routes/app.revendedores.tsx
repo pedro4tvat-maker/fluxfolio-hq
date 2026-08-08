@@ -740,7 +740,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card label="Enviados" value={totalEnviados.toString()} />
-            <Card label="Vendidos" value={totalVendidos.toString()} />
+            <Card label="Vendidos (vendas do período)" value={totalVendidos.toString()} />
             <Card label="Devolvidos" value={totalDevolvidos.toString()} />
             <Card label="Em posse" value={totalEmPosse.toString()} highlight />
             <Card label="Valor vendido (período)" value={formatMoney(totalVendidoValor)} />
@@ -748,8 +748,27 @@ function SettlementTab({ companyId }: { companyId: string }) {
             <Card label="Líquido para empresa" value={formatMoney(liquido)} highlight />
           </div>
 
+          {(defasagem !== 0 || vendasSemMovimentoPeriodo > 0) && (
+            <div className="border rounded-lg p-3 text-xs text-warning space-y-1">
+              {defasagem !== 0 && (
+                <p>
+                  Defasagem de datas: {Math.abs(defasagem)} unidade(s) das vendas do período tiveram a baixa de estoque registrada
+                  {defasagem > 0 ? " fora deste período" : " dentro deste período, mas pertencem a vendas de outro período"}.
+                  As unidades "Vendidos" seguem as vendas; "Em posse" segue a movimentação física.
+                </p>
+              )}
+              {vendasSemMovimentoPeriodo > 0 && (
+                <p>{vendasSemMovimentoPeriodo} venda(s) do período não têm baixa de estoque vinculada (serviços, fretes ou lançamentos manuais).</p>
+              )}
+            </div>
+          )}
+
           <div>
             <h3 className="text-sm font-semibold mb-2">Produtos no centro do revendedor</h3>
+            <p className="text-xs text-muted-foreground mb-2">
+              "Vendidos" e "Valor vendido" seguem as vendas do período (vínculo venda → baixa de estoque). "Enviados", "Devolvidos",
+              "Transf./Saídas" e "Em posse" seguem a movimentação física ocorrida no período.
+            </p>
             <div className="border rounded-lg">
               <Table>
                 <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Enviados</TableHead><TableHead className="text-right">Vendidos</TableHead><TableHead className="text-right">Devolvidos</TableHead><TableHead className="text-right">Transf./Saídas</TableHead><TableHead className="text-right">Em posse</TableHead><TableHead className="text-right">Valor vendido</TableHead></TableRow></TableHeader>
@@ -762,7 +781,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
                         <TableCell className="text-right">{p.vendidos}</TableCell>
                         <TableCell className="text-right">{p.devolvidos}</TableCell>
                         <TableCell className="text-right">{p.transferidos}</TableCell>
-                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidos - p.devolvidos - p.transferidos}</TableCell>
+                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidosMov - p.devolvidos - p.transferidos}</TableCell>
                         <TableCell className="text-right">{formatMoney(p.valorVendido)}</TableCell>
                       </TableRow>
                     ))}
@@ -770,6 +789,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
               </Table>
             </div>
           </div>
+
 
           <div>
             <h3 className="text-sm font-semibold mb-2">Vendas atribuídas ao revendedor</h3>
