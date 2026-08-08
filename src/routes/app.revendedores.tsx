@@ -524,41 +524,101 @@ function SettlementTab({ companyId }: { companyId: string }) {
     qc.invalidateQueries({ queryKey: ["reseller-commissions"] });
   }
 
+  // ===== Unidades vendidas ligadas às VENDAS do período (não à data do movimento) =====
+  const saleKeys = useMemo(
+    () => commissions.map((c) => ({ id: c.id, tipo: c.kind === "À vista" ? "vista" : "prazo", valor: c.valor })),
+    [commissions],
+  );
+
+  const { data: soldLinked } = useQuery({
+    queryKey: ["reseller-sold-linked", companyId, saleKeys.map((s) => s.id).join(",")],
+    enabled: saleKeys.length > 0,
+    queryFn: async () => {
+      const ids = saleKeys.map((s) => s.id);
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
+      const rows: Array<{ product_id: string; quantidade: number; related_sale_id: string; related_sale_type: string; products: { nome: string } | null }> = [];
+      for (const ch of chunks) {
+        const { data } = await supabase
+          .from("stock_movements")
+          .select("product_id, quantidade, related_sale_id, related_sale_type, products(nome)")
+          .eq("company_id", companyId)
+          .eq("tipo", "saida")
+          .eq("motivo", "Venda")
+          .is("deleted_at", null)
+          .in("related_sale_id", ch);
+        rows.push(...((data ?? []) as any[]));
+      }
+      const valorByKey = new Map(saleKeys.map((s) => [`${s.id}|${s.tipo}`, s.valor]));
+      const qtyBySale = new Map<string, number>();
+      for (const r of rows) {
+        const k = `${r.related_sale_id}|${r.related_sale_type}`;
+        if (!valorByKey.has(k)) continue;
+        qtyBySale.set(k, (qtyBySale.get(k) ?? 0) + (Number(r.quantidade) || 0));
+      }
+      const byProduct = new Map<string, { nome: string; vendidos: number; valorVendido: number }>();
+      let total = 0;
+      for (const r of rows) {
+        const k = `${r.related_sale_id}|${r.related_sale_type}`;
+        const valor = valorByKey.get(k);
+        if (valor === undefined) continue;
+        const q = Number(r.quantidade) || 0;
+        const totalQ = qtyBySale.get(k) || 0;
+        const cur = byProduct.get(r.product_id) ?? { nome: r.products?.nome ?? "?", vendidos: 0, valorVendido: 0 };
+        cur.vendidos += q;
+        cur.valorVendido += totalQ > 0 ? (valor * q) / totalQ : 0;
+        byProduct.set(r.product_id, cur);
+        total += q;
+      }
+      return { byProduct, total, salesComMovimento: qtyBySale.size };
+    },
+  });
+
   const resumoProdutos = useMemo(() => {
-    const map = new Map<string, { nome: string; enviados: number; vendidos: number; devolvidos: number; transferidos: number; valorVendido: number }>();
+    const map = new Map<string, { nome: string; enviados: number; vendidos: number; vendidosMov: number; devolvidos: number; transferidos: number; valorVendido: number }>();
+    const blank = (nome: string) => ({ nome, enviados: 0, vendidos: 0, vendidosMov: 0, devolvidos: 0, transferidos: 0, valorVendido: 0 });
     for (const m of movs) {
       const key = m.product_id;
-      const cur = map.get(key) ?? { nome: m.products?.nome ?? "?", enviados: 0, vendidos: 0, devolvidos: 0, transferidos: 0, valorVendido: 0 };
+      const cur = map.get(key) ?? blank(m.products?.nome ?? "?");
       const q = Number(m.quantidade) || 0;
       const motivo = (m.motivo ?? "").toLowerCase();
       if (m.tipo === "entrada") cur.enviados += q;
       else if (m.tipo === "saida") {
         if (motivo.startsWith("devolu")) cur.devolvidos += q;
         else if (motivo.startsWith("transfer")) cur.transferidos += q;
-        else if ((m.motivo ?? "") === "Venda") {
-          cur.vendidos += q;
-          cur.valorVendido += q * Number(m.products?.preco_venda ?? 0);
-        } else {
+        else if ((m.motivo ?? "") === "Venda") cur.vendidosMov += q;
+        else {
           // outras saídas (ajustes, baixas) reduzem o saldo do centro
           cur.transferidos += q;
         }
       }
       map.set(key, cur);
     }
-    // mantém somente produtos com qualquer movimentação no centro
+    // vendidos/valor vêm das vendas do período (vínculo venda → movimento)
+    for (const [pid, v] of soldLinked?.byProduct ?? new Map()) {
+      const cur = map.get(pid) ?? blank(v.nome);
+      cur.nome = cur.nome === "?" ? v.nome : cur.nome;
+      cur.vendidos += v.vendidos;
+      cur.valorVendido += v.valorVendido;
+      map.set(pid, cur);
+    }
     return Array.from(map.values())
-      .filter((p) => p.enviados || p.vendidos || p.devolvidos || p.transferidos)
+      .filter((p) => p.enviados || p.vendidos || p.vendidosMov || p.devolvidos || p.transferidos)
       .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [movs]);
+  }, [movs, soldLinked]);
 
   const totalEnviados = resumoProdutos.reduce((a, b) => a + b.enviados, 0);
   const totalVendidos = resumoProdutos.reduce((a, b) => a + b.vendidos, 0);
+  const totalVendidosMov = resumoProdutos.reduce((a, b) => a + b.vendidosMov, 0);
   const totalDevolvidos = resumoProdutos.reduce((a, b) => a + b.devolvidos, 0);
   const totalTransferidos = resumoProdutos.reduce((a, b) => a + b.transferidos, 0);
-  const totalEmPosse = totalEnviados - totalVendidos - totalDevolvidos - totalTransferidos;
+  const totalEmPosse = totalEnviados - totalVendidosMov - totalDevolvidos - totalTransferidos;
+  const defasagem = totalVendidos - totalVendidosMov;
+  const vendasSemMovimentoPeriodo = saleKeys.length - (soldLinked?.salesComMovimento ?? 0);
   const totalVendidoValor = commissions.reduce((a, c) => a + c.valor, 0);
   const totalComissao = commissions.reduce((a, c) => a + c.comissao, 0);
   const liquido = totalVendidoValor - totalComissao;
+
 
   return (
     <div className="space-y-4">
