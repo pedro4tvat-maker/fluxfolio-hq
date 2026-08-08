@@ -142,17 +142,12 @@ function isOverdue(a: Activity) {
 
 function AgendaPage() {
   const { isConsultant, loading } = useAuth();
+  const { section } = Route.useSearch();
   if (loading) return <div className="text-muted-foreground">Carregando...</div>;
-  if (!isConsultant) {
-    return (
-      <div className="bg-card border rounded-2xl p-10 text-center max-w-xl mx-auto">
-        <h2 className="font-display font-semibold">Acesso restrito</h2>
-        <p className="text-sm text-muted-foreground mt-1">A Agenda é exclusiva para consultores.</p>
-      </div>
-    );
-  }
+  if (!isConsultant) return <CompanyAgenda section={section ?? "calendario"} />;
   return <Inner />;
 }
+
 
 function useConsultant() {
   return useQuery({
