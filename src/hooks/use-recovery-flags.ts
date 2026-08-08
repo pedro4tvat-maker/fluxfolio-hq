@@ -1,15 +1,45 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "./use-selected-company";
 
+export type RecoveryToolsMode = "auto" | "show" | "hide";
+
+const MODE_KEY = (companyId: string) => `sfp:recovery_tools:${companyId}`;
+const MODE_EVENT = "sfp:recovery_tools_changed";
+
+export function getRecoveryToolsMode(companyId: string | null): RecoveryToolsMode {
+  if (typeof window === "undefined" || !companyId) return "auto";
+  const v = localStorage.getItem(MODE_KEY(companyId));
+  return v === "show" || v === "hide" ? v : "auto";
+}
+
+export function setRecoveryToolsMode(companyId: string, mode: RecoveryToolsMode) {
+  localStorage.setItem(MODE_KEY(companyId), mode);
+  window.dispatchEvent(new CustomEvent(MODE_EVENT));
+}
+
 /**
  * Retorna sinalizações que indicam se as telas de recuperação
- * (Reconstrução de Vendas / Correção de OS) fazem sentido para
- * a empresa atualmente selecionada. Usuários que nunca tiveram
- * problemas de dados não devem ver essas páginas.
+ * (Reconstrução de Vendas / Correção de OS) devem aparecer.
+ * Modo híbrido: detecção automática de pendências + preferência
+ * manual por empresa (auto / sempre visível / sempre oculto).
  */
 export function useRecoveryFlags() {
   const { selected } = useSelectedCompany();
+
+  const [mode, setModeState] = useState<RecoveryToolsMode>(() => getRecoveryToolsMode(selected));
+
+  useEffect(() => {
+    setModeState(getRecoveryToolsMode(selected));
+    const sync = () => setModeState(getRecoveryToolsMode(selected));
+    window.addEventListener(MODE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(MODE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [selected]);
 
   const { data } = useQuery({
     queryKey: ["recovery-flags", selected],
@@ -35,14 +65,32 @@ export function useRecoveryFlags() {
       const pendingOsFix = renumber.count ?? 0;
 
       return {
-        showReconstrucao: pendingReconstruction > 0,
-        showCorrecaoOs: pendingOsFix > 0 || pendingReconstruction > 0,
+        pendingReconstruction,
+        pendingOsFix,
+        autoReconstrucao: pendingReconstruction > 0,
+        autoCorrecaoOs: pendingOsFix > 0 || pendingReconstruction > 0,
       };
     },
   });
 
+  const autoReconstrucao = !!data?.autoReconstrucao;
+  const autoCorrecaoOs = !!data?.autoCorrecaoOs;
+  const pendingCount = (data?.pendingReconstruction ?? 0) + (data?.pendingOsFix ?? 0);
+
+  const apply = (auto: boolean) => (mode === "show" ? true : mode === "hide" ? false : auto);
+
   return {
-    showReconstrucao: !!data?.showReconstrucao,
-    showCorrecaoOs: !!data?.showCorrecaoOs,
+    showReconstrucao: apply(autoReconstrucao),
+    showCorrecaoOs: apply(autoCorrecaoOs),
+    mode,
+    setMode: (m: RecoveryToolsMode) => {
+      if (!selected) return;
+      setRecoveryToolsMode(selected, m);
+      setModeState(m);
+    },
+    hasPending: pendingCount > 0,
+    pendingCount,
+    pendingReconstruction: data?.pendingReconstruction ?? 0,
+    pendingOsFix: data?.pendingOsFix ?? 0,
   };
 }
