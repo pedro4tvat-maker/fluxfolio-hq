@@ -961,21 +961,30 @@ function TransferDialog({ companyId, locations }: { companyId: string; locations
 // ============= Exportar PDF (via janela de impressão) =============
 
 type SettlementExport = {
-  resellerNome: string; dateFrom: string; dateTo: string;
+  resellerNome: string; dateFrom: string; dateTo: string; dateBasis: string;
   totals: { totalEnviados: number; totalVendidos: number; totalDevolvidos: number; totalEmPosse: number; totalVendidoValor: number; totalComissao: number; liquido: number };
   produtos: Array<{ nome: string; enviados: number; vendidos: number; devolvidos: number; valorVendido: number }>;
   commissions: Array<{ id: string; valor: number; comissao: number; data: string; descricao: string; kind: string }>;
+  conferencia: {
+    atribuidasQtd: number;
+    atribuidasTotal: number;
+    orphans: Array<{ id: string; data: string; os: string; descricao: string; valor: number }>;
+    semMovimento: Array<{ id: string; data: string; kind: string; os: string; descricao: string; valor: number }>;
+  };
 };
 
 function exportSettlementPDF(s: SettlementExport) {
   const fmt = (n: number) => formatMoney(n);
   const rowsProd = s.produtos.map((p) => `<tr><td>${p.nome}</td><td style="text-align:right">${p.enviados}</td><td style="text-align:right">${p.vendidos}</td><td style="text-align:right">${p.devolvidos}</td><td style="text-align:right"><b>${p.enviados - p.vendidos - p.devolvidos}</b></td><td style="text-align:right">${fmt(p.valorVendido)}</td></tr>`).join("");
   const rowsCom = s.commissions.map((c) => `<tr><td>${c.data}</td><td>${c.kind}</td><td>${c.descricao}</td><td style="text-align:right">${fmt(c.valor)}</td><td style="text-align:right">${fmt(c.comissao)}</td></tr>`).join("");
+  const orphansTotal = s.conferencia.orphans.reduce((a, o) => a + o.valor, 0);
+  const rowsOrphans = s.conferencia.orphans.map((o) => `<tr><td>${o.data}</td><td>${o.os}</td><td>${o.descricao}</td><td style="text-align:right">${fmt(o.valor)}</td></tr>`).join("");
+  const rowsSemMov = s.conferencia.semMovimento.map((o) => `<tr><td>${o.data}</td><td>${o.kind}</td><td>${o.os}</td><td>${o.descricao}</td><td style="text-align:right">${fmt(o.valor)}</td></tr>`).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Prestação de contas - ${s.resellerNome}</title>
-  <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}h2{margin:24px 0 8px;font-size:14px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:6px 8px}th{background:#f5f5f5;text-align:left}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.card{border:1px solid #ddd;border-radius:6px;padding:8px}.card .l{font-size:10px;color:#666}.card .v{font-size:16px;font-weight:700}</style>
+  <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}h2{margin:24px 0 8px;font-size:14px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:6px 8px}th{background:#f5f5f5;text-align:left}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.card{border:1px solid #ddd;border-radius:6px;padding:8px}.card .l{font-size:10px;color:#666}.card .v{font-size:16px;font-weight:700}.warn{color:#a33;font-size:12px;margin:4px 0}</style>
   </head><body>
   <h1>Prestação de Contas</h1>
-  <div>Revendedor: <b>${s.resellerNome}</b> · Período: ${s.dateFrom} a ${s.dateTo}</div>
+  <div>Revendedor: <b>${s.resellerNome}</b> · Período: ${s.dateFrom} a ${s.dateTo} · Base da data: ${s.dateBasis}</div>
   <div class="cards">
     <div class="card"><div class="l">Enviados</div><div class="v">${s.totals.totalEnviados}</div></div>
     <div class="card"><div class="l">Vendidos</div><div class="v">${s.totals.totalVendidos}</div></div>
@@ -985,10 +994,21 @@ function exportSettlementPDF(s: SettlementExport) {
     <div class="card"><div class="l">Comissão</div><div class="v">${fmt(s.totals.totalComissao)}</div></div>
     <div class="card"><div class="l">Líquido empresa</div><div class="v">${fmt(s.totals.liquido)}</div></div>
   </div>
+  <h2>Conferência de integridade (histórico completo)</h2>
+  <div style="font-size:12px">Vendas atribuídas ao revendedor: <b>${s.conferencia.atribuidasQtd}</b> · Total <b>${fmt(s.conferencia.atribuidasTotal)}</b></div>
+  ${s.conferencia.orphans.length
+    ? `<div class="warn">${s.conferencia.orphans.length} venda(s) saíram do estoque do revendedor sem atribuição — total oculto ${fmt(orphansTotal)}</div>
+       <table><thead><tr><th>Data</th><th>OS</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead><tbody>${rowsOrphans}</tbody></table>`
+    : `<div style="font-size:12px;color:#2a6">Todas as vendas com saída do estoque estão atribuídas ao revendedor.</div>`}
+  ${s.conferencia.semMovimento.length
+    ? `<div class="warn">${s.conferencia.semMovimento.length} venda(s) atribuídas sem baixa de estoque no centro do revendedor (conferir)</div>
+       <table><thead><tr><th>Data</th><th>Tipo</th><th>OS</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead><tbody>${rowsSemMov}</tbody></table>`
+    : ""}
   <h2>Produtos no centro do revendedor</h2>
   <table><thead><tr><th>Produto</th><th style="text-align:right">Enviados</th><th style="text-align:right">Vendidos</th><th style="text-align:right">Devolvidos</th><th style="text-align:right">Em posse</th><th style="text-align:right">Valor vendido</th></tr></thead><tbody>${rowsProd || '<tr><td colspan="6" style="text-align:center;color:#666">Sem movimentações</td></tr>'}</tbody></table>
   <h2>Vendas atribuídas</h2>
   <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th style="text-align:right">Comissão</th></tr></thead><tbody>${rowsCom || '<tr><td colspan="5" style="text-align:center;color:#666">Sem vendas</td></tr>'}</tbody></table>
+
   <script>window.onload=()=>{window.print();}</script>
   </body></html>`;
   const w = window.open("", "_blank");
