@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
+import { CompanyAgenda } from "@/components/agenda/CompanyAgenda";
 
 
 export const AGENDA_SECTIONS = [
