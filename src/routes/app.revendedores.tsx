@@ -1043,7 +1043,7 @@ function TransferDialog({ companyId, locations }: { companyId: string; locations
 type SettlementExport = {
   resellerNome: string; dateFrom: string; dateTo: string; dateBasis: string;
   totals: { totalEnviados: number; totalVendidos: number; totalDevolvidos: number; totalEmPosse: number; totalVendidoValor: number; totalComissao: number; liquido: number };
-  produtos: Array<{ nome: string; enviados: number; vendidos: number; devolvidos: number; valorVendido: number }>;
+  produtos: Array<{ nome: string; enviados: number; vendidos: number; vendidosMov: number; devolvidos: number; transferidos: number; valorVendido: number }>;
   commissions: Array<{ id: string; valor: number; comissao: number; data: string; descricao: string; kind: string }>;
   conferencia: {
     atribuidasQtd: number;
@@ -1055,7 +1055,8 @@ type SettlementExport = {
 
 function exportSettlementPDF(s: SettlementExport) {
   const fmt = (n: number) => formatMoney(n);
-  const rowsProd = s.produtos.map((p) => `<tr><td>${p.nome}</td><td style="text-align:right">${p.enviados}</td><td style="text-align:right">${p.vendidos}</td><td style="text-align:right">${p.devolvidos}</td><td style="text-align:right"><b>${p.enviados - p.vendidos - p.devolvidos}</b></td><td style="text-align:right">${fmt(p.valorVendido)}</td></tr>`).join("");
+  const rowsProd = s.produtos.map((p) => `<tr><td>${p.nome}</td><td style="text-align:right">${p.enviados}</td><td style="text-align:right">${p.vendidos}</td><td style="text-align:right">${p.devolvidos}</td><td style="text-align:right">${p.transferidos}</td><td style="text-align:right"><b>${p.enviados - p.vendidosMov - p.devolvidos - p.transferidos}</b></td><td style="text-align:right">${fmt(p.valorVendido)}</td></tr>`).join("");
+
   const rowsCom = s.commissions.map((c) => `<tr><td>${c.data}</td><td>${c.kind}</td><td>${c.descricao}</td><td style="text-align:right">${fmt(c.valor)}</td><td style="text-align:right">${fmt(c.comissao)}</td></tr>`).join("");
   const orphansTotal = s.conferencia.orphans.reduce((a, o) => a + o.valor, 0);
   const rowsOrphans = s.conferencia.orphans.map((o) => `<tr><td>${o.data}</td><td>${o.os}</td><td>${o.descricao}</td><td style="text-align:right">${fmt(o.valor)}</td></tr>`).join("");
