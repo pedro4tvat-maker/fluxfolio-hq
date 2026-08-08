@@ -524,41 +524,101 @@ function SettlementTab({ companyId }: { companyId: string }) {
     qc.invalidateQueries({ queryKey: ["reseller-commissions"] });
   }
 
+  // ===== Unidades vendidas ligadas às VENDAS do período (não à data do movimento) =====
+  const saleKeys = useMemo(
+    () => commissions.map((c) => ({ id: c.id, tipo: c.kind === "À vista" ? "vista" : "prazo", valor: c.valor })),
+    [commissions],
+  );
+
+  const { data: soldLinked } = useQuery({
+    queryKey: ["reseller-sold-linked", companyId, saleKeys.map((s) => s.id).join(",")],
+    enabled: saleKeys.length > 0,
+    queryFn: async () => {
+      const ids = saleKeys.map((s) => s.id);
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
+      const rows: Array<{ product_id: string; quantidade: number; related_sale_id: string; related_sale_type: string; products: { nome: string } | null }> = [];
+      for (const ch of chunks) {
+        const { data } = await supabase
+          .from("stock_movements")
+          .select("product_id, quantidade, related_sale_id, related_sale_type, products(nome)")
+          .eq("company_id", companyId)
+          .eq("tipo", "saida")
+          .eq("motivo", "Venda")
+          .is("deleted_at", null)
+          .in("related_sale_id", ch);
+        rows.push(...((data ?? []) as any[]));
+      }
+      const valorByKey = new Map(saleKeys.map((s) => [`${s.id}|${s.tipo}`, s.valor]));
+      const qtyBySale = new Map<string, number>();
+      for (const r of rows) {
+        const k = `${r.related_sale_id}|${r.related_sale_type}`;
+        if (!valorByKey.has(k)) continue;
+        qtyBySale.set(k, (qtyBySale.get(k) ?? 0) + (Number(r.quantidade) || 0));
+      }
+      const byProduct = new Map<string, { nome: string; vendidos: number; valorVendido: number }>();
+      let total = 0;
+      for (const r of rows) {
+        const k = `${r.related_sale_id}|${r.related_sale_type}`;
+        const valor = valorByKey.get(k);
+        if (valor === undefined) continue;
+        const q = Number(r.quantidade) || 0;
+        const totalQ = qtyBySale.get(k) || 0;
+        const cur = byProduct.get(r.product_id) ?? { nome: r.products?.nome ?? "?", vendidos: 0, valorVendido: 0 };
+        cur.vendidos += q;
+        cur.valorVendido += totalQ > 0 ? (valor * q) / totalQ : 0;
+        byProduct.set(r.product_id, cur);
+        total += q;
+      }
+      return { byProduct, total, salesComMovimento: qtyBySale.size };
+    },
+  });
+
   const resumoProdutos = useMemo(() => {
-    const map = new Map<string, { nome: string; enviados: number; vendidos: number; devolvidos: number; transferidos: number; valorVendido: number }>();
+    const map = new Map<string, { nome: string; enviados: number; vendidos: number; vendidosMov: number; devolvidos: number; transferidos: number; valorVendido: number }>();
+    const blank = (nome: string) => ({ nome, enviados: 0, vendidos: 0, vendidosMov: 0, devolvidos: 0, transferidos: 0, valorVendido: 0 });
     for (const m of movs) {
       const key = m.product_id;
-      const cur = map.get(key) ?? { nome: m.products?.nome ?? "?", enviados: 0, vendidos: 0, devolvidos: 0, transferidos: 0, valorVendido: 0 };
+      const cur = map.get(key) ?? blank(m.products?.nome ?? "?");
       const q = Number(m.quantidade) || 0;
       const motivo = (m.motivo ?? "").toLowerCase();
       if (m.tipo === "entrada") cur.enviados += q;
       else if (m.tipo === "saida") {
         if (motivo.startsWith("devolu")) cur.devolvidos += q;
         else if (motivo.startsWith("transfer")) cur.transferidos += q;
-        else if ((m.motivo ?? "") === "Venda") {
-          cur.vendidos += q;
-          cur.valorVendido += q * Number(m.products?.preco_venda ?? 0);
-        } else {
+        else if ((m.motivo ?? "") === "Venda") cur.vendidosMov += q;
+        else {
           // outras saídas (ajustes, baixas) reduzem o saldo do centro
           cur.transferidos += q;
         }
       }
       map.set(key, cur);
     }
-    // mantém somente produtos com qualquer movimentação no centro
+    // vendidos/valor vêm das vendas do período (vínculo venda → movimento)
+    for (const [pid, v] of soldLinked?.byProduct ?? new Map()) {
+      const cur = map.get(pid) ?? blank(v.nome);
+      cur.nome = cur.nome === "?" ? v.nome : cur.nome;
+      cur.vendidos += v.vendidos;
+      cur.valorVendido += v.valorVendido;
+      map.set(pid, cur);
+    }
     return Array.from(map.values())
-      .filter((p) => p.enviados || p.vendidos || p.devolvidos || p.transferidos)
+      .filter((p) => p.enviados || p.vendidos || p.vendidosMov || p.devolvidos || p.transferidos)
       .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [movs]);
+  }, [movs, soldLinked]);
 
   const totalEnviados = resumoProdutos.reduce((a, b) => a + b.enviados, 0);
   const totalVendidos = resumoProdutos.reduce((a, b) => a + b.vendidos, 0);
+  const totalVendidosMov = resumoProdutos.reduce((a, b) => a + b.vendidosMov, 0);
   const totalDevolvidos = resumoProdutos.reduce((a, b) => a + b.devolvidos, 0);
   const totalTransferidos = resumoProdutos.reduce((a, b) => a + b.transferidos, 0);
-  const totalEmPosse = totalEnviados - totalVendidos - totalDevolvidos - totalTransferidos;
+  const totalEmPosse = totalEnviados - totalVendidosMov - totalDevolvidos - totalTransferidos;
+  const defasagem = totalVendidos - totalVendidosMov;
+  const vendasSemMovimentoPeriodo = saleKeys.length - (soldLinked?.salesComMovimento ?? 0);
   const totalVendidoValor = commissions.reduce((a, c) => a + c.valor, 0);
   const totalComissao = commissions.reduce((a, c) => a + c.comissao, 0);
   const liquido = totalVendidoValor - totalComissao;
+
 
   return (
     <div className="space-y-4">
@@ -680,7 +740,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card label="Enviados" value={totalEnviados.toString()} />
-            <Card label="Vendidos" value={totalVendidos.toString()} />
+            <Card label="Vendidos (vendas do período)" value={totalVendidos.toString()} />
             <Card label="Devolvidos" value={totalDevolvidos.toString()} />
             <Card label="Em posse" value={totalEmPosse.toString()} highlight />
             <Card label="Valor vendido (período)" value={formatMoney(totalVendidoValor)} />
@@ -688,8 +748,27 @@ function SettlementTab({ companyId }: { companyId: string }) {
             <Card label="Líquido para empresa" value={formatMoney(liquido)} highlight />
           </div>
 
+          {(defasagem !== 0 || vendasSemMovimentoPeriodo > 0) && (
+            <div className="border rounded-lg p-3 text-xs text-warning space-y-1">
+              {defasagem !== 0 && (
+                <p>
+                  Defasagem de datas: {Math.abs(defasagem)} unidade(s) das vendas do período tiveram a baixa de estoque registrada
+                  {defasagem > 0 ? " fora deste período" : " dentro deste período, mas pertencem a vendas de outro período"}.
+                  As unidades "Vendidos" seguem as vendas; "Em posse" segue a movimentação física.
+                </p>
+              )}
+              {vendasSemMovimentoPeriodo > 0 && (
+                <p>{vendasSemMovimentoPeriodo} venda(s) do período não têm baixa de estoque vinculada (serviços, fretes ou lançamentos manuais).</p>
+              )}
+            </div>
+          )}
+
           <div>
             <h3 className="text-sm font-semibold mb-2">Produtos no centro do revendedor</h3>
+            <p className="text-xs text-muted-foreground mb-2">
+              "Vendidos" e "Valor vendido" seguem as vendas do período (vínculo venda → baixa de estoque). "Enviados", "Devolvidos",
+              "Transf./Saídas" e "Em posse" seguem a movimentação física ocorrida no período.
+            </p>
             <div className="border rounded-lg">
               <Table>
                 <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Enviados</TableHead><TableHead className="text-right">Vendidos</TableHead><TableHead className="text-right">Devolvidos</TableHead><TableHead className="text-right">Transf./Saídas</TableHead><TableHead className="text-right">Em posse</TableHead><TableHead className="text-right">Valor vendido</TableHead></TableRow></TableHeader>
@@ -702,7 +781,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
                         <TableCell className="text-right">{p.vendidos}</TableCell>
                         <TableCell className="text-right">{p.devolvidos}</TableCell>
                         <TableCell className="text-right">{p.transferidos}</TableCell>
-                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidos - p.devolvidos - p.transferidos}</TableCell>
+                        <TableCell className="text-right font-semibold">{p.enviados - p.vendidosMov - p.devolvidos - p.transferidos}</TableCell>
                         <TableCell className="text-right">{formatMoney(p.valorVendido)}</TableCell>
                       </TableRow>
                     ))}
@@ -710,6 +789,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
               </Table>
             </div>
           </div>
+
 
           <div>
             <h3 className="text-sm font-semibold mb-2">Vendas atribuídas ao revendedor</h3>
@@ -963,7 +1043,7 @@ function TransferDialog({ companyId, locations }: { companyId: string; locations
 type SettlementExport = {
   resellerNome: string; dateFrom: string; dateTo: string; dateBasis: string;
   totals: { totalEnviados: number; totalVendidos: number; totalDevolvidos: number; totalEmPosse: number; totalVendidoValor: number; totalComissao: number; liquido: number };
-  produtos: Array<{ nome: string; enviados: number; vendidos: number; devolvidos: number; valorVendido: number }>;
+  produtos: Array<{ nome: string; enviados: number; vendidos: number; vendidosMov: number; devolvidos: number; transferidos: number; valorVendido: number }>;
   commissions: Array<{ id: string; valor: number; comissao: number; data: string; descricao: string; kind: string }>;
   conferencia: {
     atribuidasQtd: number;
@@ -975,7 +1055,8 @@ type SettlementExport = {
 
 function exportSettlementPDF(s: SettlementExport) {
   const fmt = (n: number) => formatMoney(n);
-  const rowsProd = s.produtos.map((p) => `<tr><td>${p.nome}</td><td style="text-align:right">${p.enviados}</td><td style="text-align:right">${p.vendidos}</td><td style="text-align:right">${p.devolvidos}</td><td style="text-align:right"><b>${p.enviados - p.vendidos - p.devolvidos}</b></td><td style="text-align:right">${fmt(p.valorVendido)}</td></tr>`).join("");
+  const rowsProd = s.produtos.map((p) => `<tr><td>${p.nome}</td><td style="text-align:right">${p.enviados}</td><td style="text-align:right">${p.vendidos}</td><td style="text-align:right">${p.devolvidos}</td><td style="text-align:right">${p.transferidos}</td><td style="text-align:right"><b>${p.enviados - p.vendidosMov - p.devolvidos - p.transferidos}</b></td><td style="text-align:right">${fmt(p.valorVendido)}</td></tr>`).join("");
+
   const rowsCom = s.commissions.map((c) => `<tr><td>${c.data}</td><td>${c.kind}</td><td>${c.descricao}</td><td style="text-align:right">${fmt(c.valor)}</td><td style="text-align:right">${fmt(c.comissao)}</td></tr>`).join("");
   const orphansTotal = s.conferencia.orphans.reduce((a, o) => a + o.valor, 0);
   const rowsOrphans = s.conferencia.orphans.map((o) => `<tr><td>${o.data}</td><td>${o.os}</td><td>${o.descricao}</td><td style="text-align:right">${fmt(o.valor)}</td></tr>`).join("");
@@ -1005,7 +1086,9 @@ function exportSettlementPDF(s: SettlementExport) {
        <table><thead><tr><th>Data</th><th>Tipo</th><th>OS</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead><tbody>${rowsSemMov}</tbody></table>`
     : ""}
   <h2>Produtos no centro do revendedor</h2>
-  <table><thead><tr><th>Produto</th><th style="text-align:right">Enviados</th><th style="text-align:right">Vendidos</th><th style="text-align:right">Devolvidos</th><th style="text-align:right">Em posse</th><th style="text-align:right">Valor vendido</th></tr></thead><tbody>${rowsProd || '<tr><td colspan="6" style="text-align:center;color:#666">Sem movimentações</td></tr>'}</tbody></table>
+  <div style="font-size:11px;color:#666;margin-bottom:6px">"Vendidos" e "Valor vendido" seguem as vendas do período (vínculo venda → baixa de estoque). "Enviados", "Devolvidos", "Transf./Saídas" e "Em posse" seguem a movimentação física do período.</div>
+  <table><thead><tr><th>Produto</th><th style="text-align:right">Enviados</th><th style="text-align:right">Vendidos</th><th style="text-align:right">Devolvidos</th><th style="text-align:right">Transf./Saídas</th><th style="text-align:right">Em posse</th><th style="text-align:right">Valor vendido</th></tr></thead><tbody>${rowsProd || '<tr><td colspan="7" style="text-align:center;color:#666">Sem movimentações</td></tr>'}</tbody></table>
+
   <h2>Vendas atribuídas</h2>
   <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th style="text-align:right">Comissão</th></tr></thead><tbody>${rowsCom || '<tr><td colspan="5" style="text-align:center;color:#666">Sem vendas</td></tr>'}</tbody></table>
 
