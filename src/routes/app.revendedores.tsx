@@ -1086,7 +1086,9 @@ function exportSettlementPDF(s: SettlementExport) {
        <table><thead><tr><th>Data</th><th>Tipo</th><th>OS</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead><tbody>${rowsSemMov}</tbody></table>`
     : ""}
   <h2>Produtos no centro do revendedor</h2>
-  <table><thead><tr><th>Produto</th><th style="text-align:right">Enviados</th><th style="text-align:right">Vendidos</th><th style="text-align:right">Devolvidos</th><th style="text-align:right">Em posse</th><th style="text-align:right">Valor vendido</th></tr></thead><tbody>${rowsProd || '<tr><td colspan="6" style="text-align:center;color:#666">Sem movimentações</td></tr>'}</tbody></table>
+  <div style="font-size:11px;color:#666;margin-bottom:6px">"Vendidos" e "Valor vendido" seguem as vendas do período (vínculo venda → baixa de estoque). "Enviados", "Devolvidos", "Transf./Saídas" e "Em posse" seguem a movimentação física do período.</div>
+  <table><thead><tr><th>Produto</th><th style="text-align:right">Enviados</th><th style="text-align:right">Vendidos</th><th style="text-align:right">Devolvidos</th><th style="text-align:right">Transf./Saídas</th><th style="text-align:right">Em posse</th><th style="text-align:right">Valor vendido</th></tr></thead><tbody>${rowsProd || '<tr><td colspan="7" style="text-align:center;color:#666">Sem movimentações</td></tr>'}</tbody></table>
+
   <h2>Vendas atribuídas</h2>
   <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th style="text-align:right">Comissão</th></tr></thead><tbody>${rowsCom || '<tr><td colspan="5" style="text-align:center;color:#666">Sem vendas</td></tr>'}</tbody></table>
 
