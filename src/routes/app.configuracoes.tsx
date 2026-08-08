@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCNPJ, maskCEP, maskPhone, isValidCNPJ, BR_STATES } from "@/lib/cnpj";
 import { CompanySwitcher } from "@/components/company-switcher";
+import { RecoveryToolsCard } from "@/components/settings/RecoveryToolsCard";
+
 
 export const Route = createFileRoute("/app/configuracoes")({ component: ConfiguracoesRouter });
 
@@ -745,6 +747,8 @@ function ExtrasSection({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-6">
+      <RecoveryToolsCard />
+
       {/* Categorias */}
       <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
         <div>
