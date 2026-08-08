@@ -360,12 +360,32 @@ function ResellersTab({ companyId }: { companyId: string }) {
 
 // ============= Prestação de Contas =============
 
+type PeriodPreset = "mes" | "90d" | "ano" | "tudo";
+
+function periodRange(preset: PeriodPreset): { from: string; to: string } {
+  const now = new Date();
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const to = iso(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  if (preset === "mes") return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to };
+  if (preset === "90d") return { from: iso(new Date(Date.now() - 90 * 86400000)), to };
+  if (preset === "ano") return { from: iso(new Date(now.getFullYear(), 0, 1)), to };
+  return { from: "1900-01-01", to: "2999-12-31" };
+}
+
 function SettlementTab({ companyId }: { companyId: string }) {
-  const today = new Date().toISOString().slice(0, 10);
-  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const qc = useQueryClient();
+  const initial = periodRange("mes");
   const [resellerId, setResellerId] = useState<string>("");
-  const [dateFrom, setDateFrom] = useState(monthAgo);
-  const [dateTo, setDateTo] = useState(today);
+  const [dateFrom, setDateFrom] = useState(initial.from);
+  const [dateTo, setDateTo] = useState(initial.to);
+  const [dateBasis, setDateBasis] = useState<"venda" | "vencimento">("venda");
+  const [fixing, setFixing] = useState<string | null>(null);
+
+  const applyPreset = (p: PeriodPreset) => {
+    const r = periodRange(p);
+    setDateFrom(r.from);
+    setDateTo(r.to);
+  };
 
   const { data: resellers = [] } = useQuery({
     queryKey: ["resellers-settlement", companyId],
@@ -400,19 +420,109 @@ function SettlementTab({ companyId }: { companyId: string }) {
   });
 
   const { data: commissions = [] } = useQuery({
-    queryKey: ["reseller-commissions", companyId, resellerId, dateFrom, dateTo],
+    queryKey: ["reseller-commissions", companyId, resellerId, dateFrom, dateTo, dateBasis],
     enabled: !!resellerId,
     queryFn: async () => {
+      const recQuery = supabase
+        .from("receivables")
+        .select("id, valor, commission_value, vencimento, created_at, descricao")
+        .eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null);
+      const recFiltered = dateBasis === "venda"
+        ? recQuery.gte("created_at", `${dateFrom}T00:00:00`).lte("created_at", `${dateTo}T23:59:59`)
+        : recQuery.gte("vencimento", dateFrom).lte("vencimento", dateTo);
+
       const [tx, rec] = await Promise.all([
         supabase.from("transactions").select("id, valor, commission_value, data, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null).gte("data", dateFrom).lte("data", dateTo),
-        supabase.from("receivables").select("id, valor, commission_value, vencimento, descricao").eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null).gte("vencimento", dateFrom).lte("vencimento", dateTo),
+        recFiltered,
       ]);
       return [
-        ...(tx.data ?? []).map((t) => ({ id: t.id, valor: Number(t.valor) || 0, comissao: Number(t.commission_value) || 0, data: t.data, descricao: t.descricao, kind: "À vista" })),
-        ...(rec.data ?? []).map((r) => ({ id: r.id, valor: Number(r.valor) || 0, comissao: Number(r.commission_value) || 0, data: r.vencimento, descricao: r.descricao, kind: "A prazo" })),
-      ];
+        ...(tx.data ?? []).map((t) => ({ id: t.id, valor: Number(t.valor) || 0, comissao: Number(t.commission_value) || 0, data: t.data, descricao: t.descricao ?? "", kind: "À vista" })),
+        ...((rec.data ?? []) as any[]).map((r) => ({
+          id: r.id, valor: Number(r.valor) || 0, comissao: Number(r.commission_value) || 0,
+          data: dateBasis === "venda" ? String(r.created_at).slice(0, 10) : r.vencimento,
+          descricao: r.descricao ?? "", kind: "A prazo",
+        })),
+      ].sort((a, b) => a.data.localeCompare(b.data));
     },
   });
+
+  // ===== Conferência de integridade (não depende do período) =====
+  const { data: audit } = useQuery({
+    queryKey: ["reseller-audit", companyId, resellerId, locationId],
+    enabled: !!resellerId && !!locationId,
+    queryFn: async () => {
+      const { data: movRows } = await supabase
+        .from("stock_movements")
+        .select("related_sale_id, related_sale_type")
+        .eq("company_id", companyId)
+        .eq("stock_location_id", locationId!)
+        .eq("tipo", "saida")
+        .is("deleted_at", null)
+        .not("related_sale_id", "is", null);
+
+      const vistaIds = Array.from(new Set((movRows ?? []).filter((m: any) => m.related_sale_type === "vista").map((m: any) => m.related_sale_id as string)));
+      const prazoIds = Array.from(new Set((movRows ?? []).filter((m: any) => m.related_sale_type === "prazo").map((m: any) => m.related_sale_id as string)));
+
+      const [txAll, recAll, txMine, recMine] = await Promise.all([
+        vistaIds.length
+          ? supabase.from("transactions").select("id, data, os_code, descricao, valor, reseller_id").in("id", vistaIds).is("deleted_at", null)
+          : Promise.resolve({ data: [] as any[] }),
+        prazoIds.length
+          ? supabase.from("receivables").select("id, vencimento, created_at, os_code, descricao, valor, reseller_id").in("id", prazoIds).is("deleted_at", null)
+          : Promise.resolve({ data: [] as any[] }),
+        supabase.from("transactions").select("id, data, os_code, descricao, valor").eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null),
+        supabase.from("receivables").select("id, vencimento, created_at, os_code, descricao, valor").eq("company_id", companyId).eq("reseller_id", resellerId).is("deleted_at", null),
+      ]);
+
+      const orphans = [
+        ...((txAll.data ?? []) as any[]).filter((t) => t.reseller_id !== resellerId).map((t) => ({
+          id: t.id as string, kind: "vista" as const, data: t.data as string,
+          os: (t.os_code as string) ?? "-", descricao: (t.descricao as string) ?? "", valor: Number(t.valor) || 0,
+        })),
+        ...((recAll.data ?? []) as any[]).filter((r) => r.reseller_id !== resellerId).map((r) => ({
+          id: r.id as string, kind: "prazo" as const, data: String(r.created_at).slice(0, 10),
+          os: (r.os_code as string) ?? "-", descricao: (r.descricao as string) ?? "", valor: Number(r.valor) || 0,
+        })),
+      ].sort((a, b) => a.data.localeCompare(b.data));
+
+      const vistaSet = new Set(vistaIds);
+      const prazoSet = new Set(prazoIds);
+      const semMovimento = [
+        ...((txMine.data ?? []) as any[]).filter((t) => !vistaSet.has(t.id)).map((t) => ({
+          id: t.id as string, kind: "À vista", data: t.data as string, os: (t.os_code as string) ?? "-",
+          descricao: (t.descricao as string) ?? "", valor: Number(t.valor) || 0,
+        })),
+        ...((recMine.data ?? []) as any[]).filter((r) => !prazoSet.has(r.id)).map((r) => ({
+          id: r.id as string, kind: "A prazo", data: String(r.created_at).slice(0, 10), os: (r.os_code as string) ?? "-",
+          descricao: (r.descricao as string) ?? "", valor: Number(r.valor) || 0,
+        })),
+      ].sort((a, b) => a.data.localeCompare(b.data));
+
+      const atribuidasTotal =
+        ((txMine.data ?? []) as any[]).reduce((a, t) => a + (Number(t.valor) || 0), 0) +
+        ((recMine.data ?? []) as any[]).reduce((a, r) => a + (Number(r.valor) || 0), 0);
+      const atribuidasQtd = ((txMine.data ?? []) as any[]).length + ((recMine.data ?? []) as any[]).length;
+
+      return { orphans, semMovimento, atribuidasTotal, atribuidasQtd };
+    },
+  });
+
+  const orphans = audit?.orphans ?? [];
+  const semMovimento = audit?.semMovimento ?? [];
+  const orphansTotal = orphans.reduce((a, o) => a + o.valor, 0);
+
+  async function attachToReseller(o: { id: string; kind: "vista" | "prazo"; valor: number }) {
+    if (!reseller) return;
+    setFixing(o.id);
+    const commission = Number(((o.valor * Number(reseller.commission_pct || 0)) / 100).toFixed(2));
+    const table = o.kind === "vista" ? "transactions" : "receivables";
+    const { error } = await supabase.from(table as any).update({ reseller_id: reseller.id, commission_value: commission }).eq("id", o.id);
+    setFixing(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Venda atribuída a ${reseller.nome} · comissão ${formatMoney(commission)}`);
+    qc.invalidateQueries({ queryKey: ["reseller-audit", companyId, resellerId, locationId] });
+    qc.invalidateQueries({ queryKey: ["reseller-commissions"] });
+  }
 
   const resumoProdutos = useMemo(() => {
     const map = new Map<string, { nome: string; enviados: number; vendidos: number; devolvidos: number; transferidos: number; valorVendido: number }>();
@@ -452,7 +562,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid md:grid-cols-3 gap-3">
+      <div className="grid md:grid-cols-4 gap-3">
         <div>
           <Label>Revendedor</Label>
           <Select value={resellerId || "__none__"} onValueChange={(v) => setResellerId(v === "__none__" ? "" : v)}>
@@ -465,6 +575,23 @@ function SettlementTab({ companyId }: { companyId: string }) {
         </div>
         <div><Label>De</Label><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} /></div>
         <div><Label>Até</Label><Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} /></div>
+        <div>
+          <Label>Base da data (a prazo)</Label>
+          <Select value={dateBasis} onValueChange={(v) => setDateBasis(v as "venda" | "vencimento")}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="venda">Data da venda</SelectItem>
+              <SelectItem value="vencimento">Vencimento</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={() => applyPreset("mes")}>Mês atual</Button>
+        <Button variant="outline" size="sm" onClick={() => applyPreset("90d")}>Últimos 90 dias</Button>
+        <Button variant="outline" size="sm" onClick={() => applyPreset("ano")}>Ano</Button>
+        <Button variant="outline" size="sm" onClick={() => applyPreset("tudo")}>Tudo</Button>
       </div>
 
       {!reseller ? (
@@ -476,10 +603,81 @@ function SettlementTab({ companyId }: { companyId: string }) {
           <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => exportSettlementPDF({
               resellerNome: reseller.nome, dateFrom, dateTo,
+              dateBasis: dateBasis === "venda" ? "Data da venda" : "Vencimento",
               totals: { totalEnviados, totalVendidos, totalDevolvidos, totalEmPosse, totalVendidoValor, totalComissao, liquido },
               produtos: resumoProdutos, commissions,
+              conferencia: {
+                atribuidasQtd: audit?.atribuidasQtd ?? 0,
+                atribuidasTotal: audit?.atribuidasTotal ?? 0,
+                orphans, semMovimento,
+              },
             })}>Exportar PDF</Button>
           </div>
+
+          {/* Conferência de integridade */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-baseline justify-between flex-wrap gap-2">
+              <h3 className="text-sm font-semibold">Conferência de integridade (histórico completo)</h3>
+              <span className="text-xs text-muted-foreground">
+                {audit?.atribuidasQtd ?? 0} vendas atribuídas · {formatMoney(audit?.atribuidasTotal ?? 0)}
+              </span>
+            </div>
+
+            {orphans.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Todas as vendas com saída do estoque deste revendedor estão atribuídas a ele.</p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-destructive font-medium">
+                  {orphans.length} venda(s) saíram do estoque deste revendedor sem estar atribuídas a ele — total oculto de {formatMoney(orphansTotal)}.
+                </p>
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead /></TableRow></TableHeader>
+                    <TableBody>
+                      {orphans.map((o) => (
+                        <TableRow key={o.id}>
+                          <TableCell>{o.data}</TableCell>
+                          <TableCell>{o.os}</TableCell>
+                          <TableCell className="truncate max-w-[320px]">{o.descricao}</TableCell>
+                          <TableCell className="text-right">{formatMoney(o.valor)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button size="sm" variant="outline" disabled={fixing === o.id} onClick={() => attachToReseller(o)}>
+                              {fixing === o.id ? "Atribuindo..." : "Atribuir ao revendedor"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {semMovimento.length > 0 && (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-warning font-medium">
+                  {semMovimento.length} venda(s) atribuídas sem baixa de estoque no centro deste revendedor (conferir)
+                </summary>
+                <div className="border rounded-lg mt-2">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {semMovimento.map((s) => (
+                        <TableRow key={s.id}>
+                          <TableCell>{s.data}</TableCell>
+                          <TableCell>{s.kind}</TableCell>
+                          <TableCell>{s.os}</TableCell>
+                          <TableCell className="truncate max-w-[320px]">{s.descricao}</TableCell>
+                          <TableCell className="text-right">{formatMoney(s.valor)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </details>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card label="Enviados" value={totalEnviados.toString()} />
             <Card label="Vendidos" value={totalVendidos.toString()} />
@@ -538,6 +736,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
     </div>
   );
 }
+
 
 function Card({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
@@ -762,21 +961,30 @@ function TransferDialog({ companyId, locations }: { companyId: string; locations
 // ============= Exportar PDF (via janela de impressão) =============
 
 type SettlementExport = {
-  resellerNome: string; dateFrom: string; dateTo: string;
+  resellerNome: string; dateFrom: string; dateTo: string; dateBasis: string;
   totals: { totalEnviados: number; totalVendidos: number; totalDevolvidos: number; totalEmPosse: number; totalVendidoValor: number; totalComissao: number; liquido: number };
   produtos: Array<{ nome: string; enviados: number; vendidos: number; devolvidos: number; valorVendido: number }>;
   commissions: Array<{ id: string; valor: number; comissao: number; data: string; descricao: string; kind: string }>;
+  conferencia: {
+    atribuidasQtd: number;
+    atribuidasTotal: number;
+    orphans: Array<{ id: string; data: string; os: string; descricao: string; valor: number }>;
+    semMovimento: Array<{ id: string; data: string; kind: string; os: string; descricao: string; valor: number }>;
+  };
 };
 
 function exportSettlementPDF(s: SettlementExport) {
   const fmt = (n: number) => formatMoney(n);
   const rowsProd = s.produtos.map((p) => `<tr><td>${p.nome}</td><td style="text-align:right">${p.enviados}</td><td style="text-align:right">${p.vendidos}</td><td style="text-align:right">${p.devolvidos}</td><td style="text-align:right"><b>${p.enviados - p.vendidos - p.devolvidos}</b></td><td style="text-align:right">${fmt(p.valorVendido)}</td></tr>`).join("");
   const rowsCom = s.commissions.map((c) => `<tr><td>${c.data}</td><td>${c.kind}</td><td>${c.descricao}</td><td style="text-align:right">${fmt(c.valor)}</td><td style="text-align:right">${fmt(c.comissao)}</td></tr>`).join("");
+  const orphansTotal = s.conferencia.orphans.reduce((a, o) => a + o.valor, 0);
+  const rowsOrphans = s.conferencia.orphans.map((o) => `<tr><td>${o.data}</td><td>${o.os}</td><td>${o.descricao}</td><td style="text-align:right">${fmt(o.valor)}</td></tr>`).join("");
+  const rowsSemMov = s.conferencia.semMovimento.map((o) => `<tr><td>${o.data}</td><td>${o.kind}</td><td>${o.os}</td><td>${o.descricao}</td><td style="text-align:right">${fmt(o.valor)}</td></tr>`).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Prestação de contas - ${s.resellerNome}</title>
-  <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}h2{margin:24px 0 8px;font-size:14px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:6px 8px}th{background:#f5f5f5;text-align:left}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.card{border:1px solid #ddd;border-radius:6px;padding:8px}.card .l{font-size:10px;color:#666}.card .v{font-size:16px;font-weight:700}</style>
+  <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}h2{margin:24px 0 8px;font-size:14px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:6px 8px}th{background:#f5f5f5;text-align:left}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.card{border:1px solid #ddd;border-radius:6px;padding:8px}.card .l{font-size:10px;color:#666}.card .v{font-size:16px;font-weight:700}.warn{color:#a33;font-size:12px;margin:4px 0}</style>
   </head><body>
   <h1>Prestação de Contas</h1>
-  <div>Revendedor: <b>${s.resellerNome}</b> · Período: ${s.dateFrom} a ${s.dateTo}</div>
+  <div>Revendedor: <b>${s.resellerNome}</b> · Período: ${s.dateFrom} a ${s.dateTo} · Base da data: ${s.dateBasis}</div>
   <div class="cards">
     <div class="card"><div class="l">Enviados</div><div class="v">${s.totals.totalEnviados}</div></div>
     <div class="card"><div class="l">Vendidos</div><div class="v">${s.totals.totalVendidos}</div></div>
@@ -786,10 +994,21 @@ function exportSettlementPDF(s: SettlementExport) {
     <div class="card"><div class="l">Comissão</div><div class="v">${fmt(s.totals.totalComissao)}</div></div>
     <div class="card"><div class="l">Líquido empresa</div><div class="v">${fmt(s.totals.liquido)}</div></div>
   </div>
+  <h2>Conferência de integridade (histórico completo)</h2>
+  <div style="font-size:12px">Vendas atribuídas ao revendedor: <b>${s.conferencia.atribuidasQtd}</b> · Total <b>${fmt(s.conferencia.atribuidasTotal)}</b></div>
+  ${s.conferencia.orphans.length
+    ? `<div class="warn">${s.conferencia.orphans.length} venda(s) saíram do estoque do revendedor sem atribuição — total oculto ${fmt(orphansTotal)}</div>
+       <table><thead><tr><th>Data</th><th>OS</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead><tbody>${rowsOrphans}</tbody></table>`
+    : `<div style="font-size:12px;color:#2a6">Todas as vendas com saída do estoque estão atribuídas ao revendedor.</div>`}
+  ${s.conferencia.semMovimento.length
+    ? `<div class="warn">${s.conferencia.semMovimento.length} venda(s) atribuídas sem baixa de estoque no centro do revendedor (conferir)</div>
+       <table><thead><tr><th>Data</th><th>Tipo</th><th>OS</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead><tbody>${rowsSemMov}</tbody></table>`
+    : ""}
   <h2>Produtos no centro do revendedor</h2>
   <table><thead><tr><th>Produto</th><th style="text-align:right">Enviados</th><th style="text-align:right">Vendidos</th><th style="text-align:right">Devolvidos</th><th style="text-align:right">Em posse</th><th style="text-align:right">Valor vendido</th></tr></thead><tbody>${rowsProd || '<tr><td colspan="6" style="text-align:center;color:#666">Sem movimentações</td></tr>'}</tbody></table>
   <h2>Vendas atribuídas</h2>
   <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th style="text-align:right">Comissão</th></tr></thead><tbody>${rowsCom || '<tr><td colspan="5" style="text-align:center;color:#666">Sem vendas</td></tr>'}</tbody></table>
+
   <script>window.onload=()=>{window.print();}</script>
   </body></html>`;
   const w = window.open("", "_blank");
