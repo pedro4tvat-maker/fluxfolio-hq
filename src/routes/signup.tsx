@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { maskCNPJ, maskCEP, maskPhone, isValidCNPJ, maskCPF, isValidCPF, BR_STATES } from "@/lib/cnpj";
 
 export const Route = createFileRoute("/signup")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { invite?: string } => ({
     invite: typeof s.invite === "string" ? s.invite : undefined,
   }),
   head: () => ({ meta: [{ title: "Criar conta — SISTEMAFP PJ" }] }),

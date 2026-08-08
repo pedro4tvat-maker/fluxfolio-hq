@@ -29,7 +29,7 @@ type AgendaSection = typeof AGENDA_SECTIONS[number]["id"];
 const AGENDA_SECTION_IDS = AGENDA_SECTIONS.map((s) => s.id) as readonly string[];
 
 export const Route = createFileRoute("/app/agenda")({
-  validateSearch: (s: Record<string, unknown>): { section: AgendaSection; company?: string } => {
+  validateSearch: (s: Record<string, unknown>): { section?: AgendaSection; company?: string } => {
     const v = String(s.section ?? "");
     return {
       section: (AGENDA_SECTION_IDS.includes(v) ? v : "calendario") as AgendaSection,

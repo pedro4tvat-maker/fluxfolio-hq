@@ -164,7 +164,7 @@ function AppLayout() {
                 <Link
                   key={s.id}
                   to={n.to}
-                  search={{ section: s.id }}
+                  search={{ section: s.id } as any}
                   className={cn("block px-3 py-1.5 rounded-md text-[13px] transition-colors", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground")}
                 >
                   {s.label}
