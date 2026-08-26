@@ -27,7 +27,12 @@ export type Category = {
   is_fixed_cost: boolean;
   is_variable_cost: boolean;
   is_financial_expense: boolean;
+  /** Aporte de sócio, empréstimo recebido ou outra entrada que não é venda/serviço. */
+  is_non_operating: boolean;
+  /** Transferência entre contas da própria empresa (não é receita nem despesa). */
+  is_internal_transfer: boolean;
 };
+
 
 
 export type Payable = {
