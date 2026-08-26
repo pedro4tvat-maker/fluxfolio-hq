@@ -684,12 +684,21 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   // Categoria: criar / excluir
   const [catNome, setCatNome] = useState("");
   const [catTipo, setCatTipo] = useState<"entrada" | "saida">("saida");
+  const [catNaoOperacional, setCatNaoOperacional] = useState(false);
+  const [catTransferencia, setCatTransferencia] = useState(false);
   const createCategory = useMutation({
     mutationFn: async () => {
       if (!catNome.trim()) throw new Error("Informe o nome da categoria");
-      const { error } = await supabase.from("categories").insert({ company_id: companyId, nome: catNome.trim(), tipo: catTipo });
+      const { error } = await supabase.from("categories").insert({
+        company_id: companyId,
+        nome: catNome.trim(),
+        tipo: catTipo,
+        is_non_operating: catNaoOperacional,
+        is_internal_transfer: catTransferencia,
+      });
       if (error) throw error;
     },
+
     onSuccess: () => {
       toast.success("Categoria criada");
       setCatNome("");
