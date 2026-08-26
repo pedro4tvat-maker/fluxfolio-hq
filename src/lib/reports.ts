@@ -418,7 +418,7 @@ export function buildFluxoRealizado(data: ReportData, period: Period) {
   });
 
   return {
-    summary: { saldoInicial, entradas, saidas, saldoFinal, resultado: entradas - saidas },
+    summary: { saldoInicial, entradas, saidas, saldoFinal, resultado: entradas - saidas, faturamento, entradasNaoOperacionais },
     entradasPorCategoria: byCat("entrada"),
     saidasPorCategoria: byCat("saida"),
     formasPagamento: Array.from(formasPag.entries()).map(([Forma, Valor]) => ({ Forma, Valor })),
