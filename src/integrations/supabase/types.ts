@@ -430,6 +430,8 @@ export type Database = {
           is_default: boolean | null
           is_financial_expense: boolean | null
           is_fixed_cost: boolean | null
+          is_internal_transfer: boolean
+          is_non_operating: boolean
           is_variable_cost: boolean | null
           kpi_classification: string | null
           management_group: string | null
@@ -462,6 +464,8 @@ export type Database = {
           is_default?: boolean | null
           is_financial_expense?: boolean | null
           is_fixed_cost?: boolean | null
+          is_internal_transfer?: boolean
+          is_non_operating?: boolean
           is_variable_cost?: boolean | null
           kpi_classification?: string | null
           management_group?: string | null
@@ -494,6 +498,8 @@ export type Database = {
           is_default?: boolean | null
           is_financial_expense?: boolean | null
           is_fixed_cost?: boolean | null
+          is_internal_transfer?: boolean
+          is_non_operating?: boolean
           is_variable_cost?: boolean | null
           kpi_classification?: string | null
           management_group?: string | null
