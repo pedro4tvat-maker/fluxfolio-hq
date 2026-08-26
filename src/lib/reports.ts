@@ -140,7 +140,7 @@ export async function fetchReportData(
         .lte("data", period.end),
       branchId,
     )),
-    supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense").eq("company_id", companyId).is("deleted_at", null),
+    supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense, is_non_operating, is_internal_transfer").eq("company_id", companyId).is("deleted_at", null),
     applyCC(applyBranch(
       supabase
         .from("payables")
