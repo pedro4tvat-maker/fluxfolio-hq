@@ -702,7 +702,10 @@ function ExtrasSection({ companyId }: { companyId: string }) {
     onSuccess: () => {
       toast.success("Categoria criada");
       setCatNome("");
+      setCatNaoOperacional(false);
+      setCatTransferencia(false);
       qc.invalidateQueries({ queryKey: ["categories-full", companyId] });
+
       qc.invalidateQueries({ queryKey: ["categories", companyId] });
     },
     onError: (e: any) => toast.error(e.message),
