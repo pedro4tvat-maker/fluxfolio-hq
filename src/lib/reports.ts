@@ -392,7 +392,15 @@ export function buildFluxoRealizado(data: ReportData, period: Period) {
   const entradas = realized.filter((t) => t.tipo === "entrada").reduce((s, t) => s + t.valor, 0);
   const saidas = realized.filter((t) => t.tipo === "saida").reduce((s, t) => s + t.valor, 0);
   const saldoFinal = saldoInicial + entradas - saidas;
+  const catFull = buildCategoryMap(data.categories);
+  // Faturamento do período: só entradas operacionais (exclui aportes/empréstimos
+  // e transferências internas, que continuam somando no saldo de caixa).
+  const faturamento = realized
+    .filter((t) => t.tipo === "entrada" && !isNonRevenueTx(t, catFull))
+    .reduce((s, t) => s + t.valor, 0);
+  const entradasNaoOperacionais = entradas - faturamento;
   const catMap = new Map(data.categories.map((c) => [c.id, c.nome]));
+
 
   const byCat = (tipo: "entrada" | "saida") => {
     const m = new Map<string, number>();
