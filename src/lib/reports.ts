@@ -280,13 +280,33 @@ function toBucket(raw: string | null | undefined): DreBucket | null {
   return ALIAS_TO_BUCKET.get(slug(raw)) ?? null;
 }
 
+/**
+ * Retorna true quando a transação NÃO deve contar como faturamento/receita:
+ * aportes de sócio, empréstimos recebidos (is_non_operating) e transferências
+ * internas entre contas da própria empresa (is_internal_transfer).
+ * Essas transações continuam afetando o saldo das contas normalmente.
+ */
+export function isNonRevenueTx(
+  t: { categoria_id: string | null },
+  catMap: Map<string, Category>,
+): boolean {
+  const cat = catMap.get(t.categoria_id ?? "");
+  if (!cat) return false;
+  return !!cat.is_non_operating || !!cat.is_internal_transfer;
+}
+
+export function buildCategoryMap(categories: Category[]) {
+  return new Map(categories.map((c) => [c.id, c]));
+}
+
 export function buildDRE(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
-  const catMap = new Map(data.categories.map((c) => [c.id, c]));
+  const catMap = buildCategoryMap(data.categories);
 
   const bucketOf = (t: Tx): string | null => {
     const cat = catMap.get(t.categoria_id ?? "");
     if (!cat) return null;
+    if (cat.is_non_operating || cat.is_internal_transfer) return null;
     if (cat.is_deduction) return "impostos";
     if (cat.is_variable_cost) return "custos_variaveis";
     if (cat.is_fixed_cost) return "custos_fixos";
@@ -294,9 +314,13 @@ export function buildDRE(data: ReportData, period: Period) {
     return null;
   };
 
+  // Receita Bruta = apenas entradas operacionais (exclui aportes, empréstimos
+  // recebidos e transferências entre contas da própria empresa).
   const receitaBruta = realized
-    .filter((t) => t.tipo === "entrada")
+    .filter((t) => t.tipo === "entrada" && !isNonRevenueTx(t, catMap))
     .reduce((s, t) => s + t.valor, 0);
+
+
 
   const deducoes = realized
     .filter((t) => bucketOf(t) === "impostos")
