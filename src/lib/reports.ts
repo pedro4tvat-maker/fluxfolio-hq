@@ -27,7 +27,12 @@ export type Category = {
   is_fixed_cost: boolean;
   is_variable_cost: boolean;
   is_financial_expense: boolean;
+  /** Aporte de sócio, empréstimo recebido ou outra entrada que não é venda/serviço. */
+  is_non_operating: boolean;
+  /** Transferência entre contas da própria empresa (não é receita nem despesa). */
+  is_internal_transfer: boolean;
 };
+
 
 
 export type Payable = {
@@ -135,7 +140,7 @@ export async function fetchReportData(
         .lte("data", period.end),
       branchId,
     )),
-    supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense").eq("company_id", companyId).is("deleted_at", null),
+    supabase.from("categories").select("id, nome, tipo, kpi_classification, is_deduction, is_fixed_cost, is_variable_cost, is_financial_expense, is_non_operating, is_internal_transfer").eq("company_id", companyId).is("deleted_at", null),
     applyCC(applyBranch(
       supabase
         .from("payables")
@@ -275,13 +280,33 @@ function toBucket(raw: string | null | undefined): DreBucket | null {
   return ALIAS_TO_BUCKET.get(slug(raw)) ?? null;
 }
 
+/**
+ * Retorna true quando a transação NÃO deve contar como faturamento/receita:
+ * aportes de sócio, empréstimos recebidos (is_non_operating) e transferências
+ * internas entre contas da própria empresa (is_internal_transfer).
+ * Essas transações continuam afetando o saldo das contas normalmente.
+ */
+export function isNonRevenueTx(
+  t: { categoria_id: string | null },
+  catMap: Map<string, Category>,
+): boolean {
+  const cat = catMap.get(t.categoria_id ?? "");
+  if (!cat) return false;
+  return !!cat.is_non_operating || !!cat.is_internal_transfer;
+}
+
+export function buildCategoryMap(categories: Category[]) {
+  return new Map(categories.map((c) => [c.id, c]));
+}
+
 export function buildDRE(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
-  const catMap = new Map(data.categories.map((c) => [c.id, c]));
+  const catMap = buildCategoryMap(data.categories);
 
   const bucketOf = (t: Tx): string | null => {
     const cat = catMap.get(t.categoria_id ?? "");
     if (!cat) return null;
+    if (cat.is_non_operating || cat.is_internal_transfer) return null;
     if (cat.is_deduction) return "impostos";
     if (cat.is_variable_cost) return "custos_variaveis";
     if (cat.is_fixed_cost) return "custos_fixos";
@@ -289,9 +314,13 @@ export function buildDRE(data: ReportData, period: Period) {
     return null;
   };
 
+  // Receita Bruta = apenas entradas operacionais (exclui aportes, empréstimos
+  // recebidos e transferências entre contas da própria empresa).
   const receitaBruta = realized
-    .filter((t) => t.tipo === "entrada")
+    .filter((t) => t.tipo === "entrada" && !isNonRevenueTx(t, catMap))
     .reduce((s, t) => s + t.valor, 0);
+
+
 
   const deducoes = realized
     .filter((t) => bucketOf(t) === "impostos")
@@ -363,7 +392,15 @@ export function buildFluxoRealizado(data: ReportData, period: Period) {
   const entradas = realized.filter((t) => t.tipo === "entrada").reduce((s, t) => s + t.valor, 0);
   const saidas = realized.filter((t) => t.tipo === "saida").reduce((s, t) => s + t.valor, 0);
   const saldoFinal = saldoInicial + entradas - saidas;
+  const catFull = buildCategoryMap(data.categories);
+  // Faturamento do período: só entradas operacionais (exclui aportes/empréstimos
+  // e transferências internas, que continuam somando no saldo de caixa).
+  const faturamento = realized
+    .filter((t) => t.tipo === "entrada" && !isNonRevenueTx(t, catFull))
+    .reduce((s, t) => s + t.valor, 0);
+  const entradasNaoOperacionais = entradas - faturamento;
   const catMap = new Map(data.categories.map((c) => [c.id, c.nome]));
+
 
   const byCat = (tipo: "entrada" | "saida") => {
     const m = new Map<string, number>();
@@ -381,7 +418,7 @@ export function buildFluxoRealizado(data: ReportData, period: Period) {
   });
 
   return {
-    summary: { saldoInicial, entradas, saidas, saldoFinal, resultado: entradas - saidas },
+    summary: { saldoInicial, entradas, saidas, saldoFinal, resultado: entradas - saidas, faturamento, entradasNaoOperacionais },
     entradasPorCategoria: byCat("entrada"),
     saidasPorCategoria: byCat("saida"),
     formasPagamento: Array.from(formasPag.entries()).map(([Forma, Valor]) => ({ Forma, Valor })),
@@ -454,7 +491,13 @@ export function buildMargemContribuicao(data: ReportData, period: Period) {
   // e não do cadastro (products.preco_venda), evitando valores subvalorizados.
   const vendasVistaIds = new Set(
     data.transactions
-      .filter((t) => t.status === "realizado" && t.tipo === "entrada" && inPeriod(t.data, period))
+      .filter(
+        (t) =>
+          t.status === "realizado" &&
+          t.tipo === "entrada" &&
+          inPeriod(t.data, period) &&
+          !isNonRevenueTx(t, buildCategoryMap(data.categories)),
+      )
       .map((t) => t.id),
   );
   const vendasPrazoIds = new Set(
@@ -689,7 +732,8 @@ export function buildVendasMargem(data: ReportData, period: Period) {
     (t) =>
       t.status === "realizado" &&
       t.tipo === "entrada" &&
-      inPeriod(t.data, period),
+      inPeriod(t.data, period) &&
+      !isNonRevenueTx(t, buildCategoryMap(data.categories)),
   );
   const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
   const vendaIdsVista = new Set(vendasVista.map((v) => v.id));
@@ -839,7 +883,11 @@ export type Inconsistencia = {
 export function buildInconsistencias(data: ReportData, period: Period): Inconsistencia[] {
   const out: Inconsistencia[] = [];
   const vendasVista = data.transactions.filter(
-    (t) => t.status === "realizado" && t.tipo === "entrada" && inPeriod(t.data, period),
+    (t) =>
+      t.status === "realizado" &&
+      t.tipo === "entrada" &&
+      inPeriod(t.data, period) &&
+      !isNonRevenueTx(t, buildCategoryMap(data.categories)),
   );
   const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
   const itensPorVenda = new Map<string, SaleItemReport[]>();

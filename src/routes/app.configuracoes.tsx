@@ -684,16 +684,28 @@ function ExtrasSection({ companyId }: { companyId: string }) {
   // Categoria: criar / excluir
   const [catNome, setCatNome] = useState("");
   const [catTipo, setCatTipo] = useState<"entrada" | "saida">("saida");
+  const [catNaoOperacional, setCatNaoOperacional] = useState(false);
+  const [catTransferencia, setCatTransferencia] = useState(false);
   const createCategory = useMutation({
     mutationFn: async () => {
       if (!catNome.trim()) throw new Error("Informe o nome da categoria");
-      const { error } = await supabase.from("categories").insert({ company_id: companyId, nome: catNome.trim(), tipo: catTipo });
+      const { error } = await supabase.from("categories").insert({
+        company_id: companyId,
+        nome: catNome.trim(),
+        tipo: catTipo,
+        is_non_operating: catNaoOperacional,
+        is_internal_transfer: catTransferencia,
+      });
       if (error) throw error;
     },
+
     onSuccess: () => {
       toast.success("Categoria criada");
       setCatNome("");
+      setCatNaoOperacional(false);
+      setCatTransferencia(false);
       qc.invalidateQueries({ queryKey: ["categories-full", companyId] });
+
       qc.invalidateQueries({ queryKey: ["categories", companyId] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -776,6 +788,42 @@ function ExtrasSection({ companyId }: { companyId: string }) {
           </Button>
         </div>
 
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="flex items-start gap-2 rounded-xl border p-3 cursor-pointer hover:bg-muted/30">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={catNaoOperacional}
+              onChange={(e) => setCatNaoOperacional(e.target.checked)}
+            />
+            <span className="text-sm">
+              <span className="font-medium">Entrada não operacional</span>
+              <span className="block text-xs text-muted-foreground">
+                Aporte, empréstimo recebido ou outra entrada que não é venda/serviço
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 rounded-xl border p-3 cursor-pointer hover:bg-muted/30">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={catTransferencia}
+              onChange={(e) => setCatTransferencia(e.target.checked)}
+            />
+            <span className="text-sm">
+              <span className="font-medium">Transferência entre contas</span>
+              <span className="block text-xs text-muted-foreground">
+                Transferência entre contas da própria empresa (não é receita nem despesa)
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Categorias marcadas como <strong>não operacional</strong> ou <strong>transferência entre contas</strong> continuam
+          movimentando o saldo das contas, mas não entram no faturamento nem na Receita Bruta da DRE.
+        </p>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -786,6 +834,8 @@ function ExtrasSection({ companyId }: { companyId: string }) {
                 <th className="py-2 px-3 font-medium text-center">Fixo</th>
                 <th className="py-2 px-3 font-medium text-center">Dedução/Imp.</th>
                 <th className="py-2 px-3 font-medium text-center">Financeira</th>
+                <th className="py-2 px-3 font-medium text-center" title="Aporte, empréstimo recebido ou outra entrada que não é venda/serviço">Não operacional</th>
+                <th className="py-2 px-3 font-medium text-center" title="Transferência entre contas da própria empresa (não é receita nem despesa)">Transf. entre contas</th>
                 <th className="py-2 px-3 font-medium text-center w-10"></th>
               </tr>
             </thead>
@@ -810,6 +860,23 @@ function ExtrasSection({ companyId }: { companyId: string }) {
                   <td className="py-3 px-3 text-center">
                     <input type="checkbox" checked={!!c.is_financial_expense} onChange={(e) => toggle.mutate({ id: c.id, field: "is_financial_expense", value: e.target.checked })} />
                   </td>
+                  <td className="py-3 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      aria-label="Entrada não operacional (aporte, empréstimo recebido)"
+                      checked={!!(c as any).is_non_operating}
+                      onChange={(e) => toggle.mutate({ id: c.id, field: "is_non_operating", value: e.target.checked })}
+                    />
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      aria-label="Transferência entre contas da própria empresa"
+                      checked={!!(c as any).is_internal_transfer}
+                      onChange={(e) => toggle.mutate({ id: c.id, field: "is_internal_transfer", value: e.target.checked })}
+                    />
+                  </td>
+
                   <td className="py-3 px-3 text-center">
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Excluir categoria "${c.nome}"? Lançamentos vinculados ficarão sem categoria.`)) deleteCategory.mutate(c.id); }}>
                       <Trash2 className="size-4 text-destructive" />
