@@ -491,7 +491,13 @@ export function buildMargemContribuicao(data: ReportData, period: Period) {
   // e não do cadastro (products.preco_venda), evitando valores subvalorizados.
   const vendasVistaIds = new Set(
     data.transactions
-      .filter((t) => t.status === "realizado" && t.tipo === "entrada" && inPeriod(t.data, period))
+      .filter(
+        (t) =>
+          t.status === "realizado" &&
+          t.tipo === "entrada" &&
+          inPeriod(t.data, period) &&
+          !isNonRevenueTx(t, buildCategoryMap(data.categories)),
+      )
       .map((t) => t.id),
   );
   const vendasPrazoIds = new Set(
@@ -726,7 +732,8 @@ export function buildVendasMargem(data: ReportData, period: Period) {
     (t) =>
       t.status === "realizado" &&
       t.tipo === "entrada" &&
-      inPeriod(t.data, period),
+      inPeriod(t.data, period) &&
+      !isNonRevenueTx(t, buildCategoryMap(data.categories)),
   );
   const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
   const vendaIdsVista = new Set(vendasVista.map((v) => v.id));
@@ -876,7 +883,11 @@ export type Inconsistencia = {
 export function buildInconsistencias(data: ReportData, period: Period): Inconsistencia[] {
   const out: Inconsistencia[] = [];
   const vendasVista = data.transactions.filter(
-    (t) => t.status === "realizado" && t.tipo === "entrada" && inPeriod(t.data, period),
+    (t) =>
+      t.status === "realizado" &&
+      t.tipo === "entrada" &&
+      inPeriod(t.data, period) &&
+      !isNonRevenueTx(t, buildCategoryMap(data.categories)),
   );
   const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
   const itensPorVenda = new Map<string, SaleItemReport[]>();
