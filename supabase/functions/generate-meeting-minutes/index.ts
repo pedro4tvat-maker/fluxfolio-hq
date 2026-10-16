@@ -133,8 +133,7 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
       return response.content
         .filter((b) => b.type === "text")
         .map((b) => (b as { text: string }).text)
-        .join("
-")
+        .join("\n")
         .trim();
     };
 
@@ -173,9 +172,7 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
       // One retry with a more forceful instruction if placeholders are detected
       const retry = await generate(
         userPrompt +
-          "
-
-IMPORTANTE: não inclua linhas-modelo como 'Decisão — Responsável — Prazo'. " +
+          "\n\nIMPORTANTE: não inclua linhas-modelo como 'Decisão — Responsável — Prazo'. " +
           "Preencha os dados reais ou indique 'Nenhum' ou 'A definir'.",
       ).catch(() => null);
       if (retry) content = retry;
