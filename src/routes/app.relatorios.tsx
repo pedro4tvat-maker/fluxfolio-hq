@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -115,6 +115,7 @@ function Relatorios() {
   // período anterior automático
   const prevPeriod = useMemo(() => {
     const d = new Date(inicio);
+    if (!isFullDate(inicio) || !isFullDate(fim)) return { start: inicio, end: fim };
     const days = Math.round((new Date(fim).getTime() - d.getTime()) / 86400000) + 1;
     const prevEnd = new Date(d);
     prevEnd.setDate(prevEnd.getDate() - 1);
@@ -225,10 +226,10 @@ function Relatorios() {
           </Field>
         )}
         <Field label="Data inicial">
-          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background" />
+          <DateInput value={inicio} onCommit={setInicio} />
         </Field>
         <Field label="Data final">
-          <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background" />
+          <DateInput value={fim} onCommit={setFim} />
         </Field>
         <Field label="Centro de custo">
           <select
@@ -309,6 +310,27 @@ function formatDateBR(d: string) {
   if (!d) return "";
   const [y, m, day] = d.split("-");
   return `${day}/${m}/${y}`;
+}
+
+// Enquanto a data é digitada o input passa por valores vazios ou com ano "0002";
+// só aceita a data completa para não quebrar os cálculos de período.
+const isFullDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && Number(v.slice(0, 4)) >= 2000 && !Number.isNaN(new Date(v).getTime());
+
+// Guarda o que está sendo digitado e só repassa a data ao relatório quando completa.
+function DateInput({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  return (
+    <input
+      type="date"
+      value={draft}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        if (isFullDate(e.target.value)) onCommit(e.target.value);
+      }}
+      className="rounded-lg border px-3 py-2 text-sm bg-background"
+    />
+  );
 }
 
 // Linhas como "Margem Líquida (%)" trazem percentual, não valor em reais.
