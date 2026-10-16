@@ -338,8 +338,10 @@ export function buildDRE(data: ReportData, period: Period) {
     .filter((t) => bucketOf(t) === "custos_fixos")
     .reduce((s, t) => s + t.valor, 0);
 
+  // Saídas não operacionais (pagamento de empréstimo, retirada de sócio) e
+  // transferências internas não são despesa: ficam fora da DRE, como nas entradas.
   const despesasOperacionais = realized
-    .filter((t) => t.tipo === "saida" && !bucketOf(t))
+    .filter((t) => t.tipo === "saida" && !bucketOf(t) && !isNonRevenueTx(t, catMap))
     .reduce((s, t) => s + t.valor, 0);
 
   const ebitda = margemContribuicao - custosFixos - despesasOperacionais;
@@ -350,7 +352,7 @@ export function buildDRE(data: ReportData, period: Period) {
 
   const lucroLiquido = ebitda - despesasFinanceiras;
   const margemLiquida = receitaLiquida > 0 ? (lucroLiquido / receitaLiquida) * 100 : 0;
-  const semClassificacao = data.categories.filter((c) => c.tipo === "saida" && !c.is_variable_cost && !c.is_fixed_cost && !c.is_deduction && !c.is_financial_expense).length;
+  const semClassificacao = data.categories.filter((c) => c.tipo === "saida" && !c.is_variable_cost && !c.is_fixed_cost && !c.is_deduction && !c.is_financial_expense && !c.is_non_operating && !c.is_internal_transfer).length;
 
   return {
     rows: [
