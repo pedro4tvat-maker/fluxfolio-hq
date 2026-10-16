@@ -25,6 +25,8 @@ serve(async (req) => {
       raw_notes,
       next_meeting_date,
       attachments_summary,
+      agenda_text,
+      previous_action_plan,
     } = body ?? {};
 
     if (!Deno.env.get("ANTHROPIC_API_KEY")) {
@@ -34,86 +36,92 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `Você é um assistente especializado em atas de reunião para consultoria financeira empresarial. Sua função é transformar um relato livre, informal e possivelmente incompleto em uma ata profissional, clara, organizada e editável.
+    const fmtDate = (d?: string) => {
+      const m = typeof d === "string" ? d.match(/^(\d{4})-(\d{2})-(\d{2})/) : null;
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : (d || "Não informado");
+    };
+    const fmtTime = (t?: string) => (typeof t === "string" && t ? t.slice(0, 5) : "Não informado");
+    const lista = Array.isArray(participants) && participants.length ? participants.join(", ") : "Não informado";
 
-REGRAS OBRIGATÓRIAS:
-1. NUNCA copie o relato bruto. Interprete, organize e reescreva em linguagem formal, objetiva e consultiva.
-2. Preencha TODAS as 10 seções da ata. Nenhuma pode ficar vazia ou conter apenas hífen.
-3. Quando faltar informação, use frases completas como "Não informado", "A definir", "Nenhuma decisão formal adicional foi registrada nesta reunião" ou "Não foram identificadas pendências específicas além dos próximos passos descritos".
-4. JAMAIS escreva linhas-modelo como "Decisão — Responsável — Prazo" ou "Pendência — Responsável — Prazo — Status". Escreva os dados reais.
-5. Não invente valores, nomes, datas ou decisões que não estejam no relato.
-6. Identifique no relato: temas (vira pauta), combinações (viram decisões), necessidades futuras (viram pendências/próximos passos) e compromissos (viram plano de ação).
-7. Use Markdown puro. Tom profissional, pronto para compartilhar com o cliente.`;
+    // Mesmo modelo de ata do gerador oficial (gerar_ata.py): 9 seções. O cabeçalho
+    // (logo, nº da ata, empresa, CNPJ) e as assinaturas são desenhados no PDF.
+    const systemPrompt = `Você redige atas de reunião de consultoria financeira empresarial. Transforma um relato livre, informal e às vezes incompleto do consultor numa ata formal, objetiva e pronta para o cliente assinar.
 
-    const userPrompt = `DADOS RECEBIDOS:
+Regras:
+- Reescreva o relato em linguagem formal e consultiva; nunca copie trechos informais.
+- Não invente nomes, valores, datas, decisões ou responsáveis que não estejam nos dados. Quando faltar, escreva "Não informado" ou "A definir".
+- Siga exatamente o formato pedido: as 9 seções, nesta ordem, com os mesmos títulos, tabelas e listas. Nada antes da seção 1 e nada depois da seção 9.
+- Use datas no formato DD/MM/AAAA.
+- Responda só com a ata em Markdown, sem comentários.`;
+
+    const userPrompt = `DADOS DA REUNIÃO
 Empresa: ${company_name || "Não informado"}
 CNPJ: ${company_cnpj || "Não informado"}
-Data da reunião: ${meeting_date || "Não informado"}
-Horário: ${meeting_time || "Não informado"}
+Data: ${fmtDate(meeting_date)}
+Horário: ${fmtTime(meeting_time)}
 Tipo de reunião: ${meeting_type || "Não informado"}
-Participantes: ${Array.isArray(participants) && participants.length ? participants.join(", ") : "Não informado"}
-Consultor responsável: ${consultant_name || "Não informado"}
-Próxima reunião: ${next_meeting_date || "A definir"}
-Anexos/Documentos: ${attachments_summary || "Nenhum"}
+Participantes informados: ${lista}
+Consultor responsável (redator da ata): ${consultant_name || "Não informado"}
+Pauta informada: ${agenda_text || "Não informada (deduza do relato)"}
+Próxima reunião: ${next_meeting_date ? fmtDate(next_meeting_date) : "A definir"}
+Anexos/documentos: ${attachments_summary || "Nenhum"}
+
+PLANO DE AÇÃO DA ATA ANTERIOR DESTA EMPRESA (para a seção 7):
+${previous_action_plan || "Nenhuma ata anterior: esta é a primeira reunião registrada."}
 
 RELATO LIVRE DO CONSULTOR:
 ${raw_notes}
 
-Gere a ata EXATAMENTE neste formato, em Markdown, preenchendo todas as 10 seções:
-
-# ATA DE REUNIÃO — CONSULTORIA FINANCEIRA
-## [Título profissional inferido do relato]
+FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos, tabelas e marcações):
 
 ## 1. Identificação da reunião
-- **Empresa:** ${company_name || "Não informado"}
-- **CNPJ:** ${company_cnpj || "Não informado"}
-- **Data:** ${meeting_date || "Não informado"}
-- **Horário:** ${meeting_time || "Não informado"}
-- **Tipo de reunião:** ${meeting_type || "Não informado"}
-- **Participantes:** ${Array.isArray(participants) && participants.length ? participants.join(", ") : "Não informado"}
-- **Consultor responsável:** ${consultant_name || "Não informado"}
+- **Data:** ${fmtDate(meeting_date)}
+- **Horário:** ${fmtTime(meeting_time)}
+- **Modalidade:** [Presencial / Online (ferramenta) / Não informado — deduza do relato]
+- **Tipo:** ${meeting_type || "Não informado"}
 
-## 2. Objetivo da reunião
-(Um parágrafo profissional explicando o propósito principal da reunião, inferido do relato.)
+## 2. Participantes
+| Nome | Função | Organização |
+|---|---|---|
+| [uma linha por participante; o consultor responsável primeiro, com função "Consultor Financeiro" e a organização dele; função ou organização desconhecida: "Não informado"] | | |
 
-## 3. Pauta tratada
-(Liste de 3 a 8 itens da pauta identificados no relato, em bullets.)
+**Ausentes:** [quem foi citado como ausente, ou "Não houve ausências."]
 
-## 4. Resumo executivo
-(1 a 3 parágrafos profissionais destacando contexto, assuntos principais e direcionamento. NÃO copie o relato bruto — reescreva em linguagem executiva.)
+**Redação da ata:** ${consultant_name || "Não informado"}
 
-## 5. Pontos discutidos
-(Tópicos detalhados, cada um com **Título** em negrito seguido de descrição reescrita formalmente.)
+## 3. Pauta
+1. [item da pauta]
+2. [item da pauta]
 
-## 6. Decisões tomadas
-(Para cada decisão use o formato:
-- **Decisão:** [descrição]
-  - **Responsável:** [nome ou "A definir"]
-  - **Prazo:** [data ou "A definir"]
+## 4. Assuntos discutidos
+### 4.1 [Título do assunto]
+[Um ou dois parágrafos formais sobre o que foi tratado neste assunto.]
 
-Se não houver decisões: "Nenhuma decisão formal adicional foi registrada nesta reunião.")
+### 4.2 [Título do assunto]
+[...]
 
-## 7. Pendências identificadas
-(Para cada pendência use:
-- **Pendência:** [descrição]
-  - **Responsável:** [nome ou "A definir"]
-  - **Prazo:** [data ou "A definir"]
-  - **Status:** Pendente
+## 5. Decisões tomadas
+1. [Decisão, citando em negrito quem ficou responsável, ex.: **Carlos (Gerente)** será responsável por:]
+   - [detalhe da decisão, quando houver]
+[Se não houve decisão formal: "Nenhuma decisão formal foi registrada nesta reunião."]
 
-Se não houver: "Não foram identificadas pendências específicas além dos próximos passos descritos.")
+## 6. Plano de ação
+| Nº | Ação | Responsável | Prazo | Status |
+|---|---|---|---|---|
+| 1 | [ação concreta] | [nome] | [DD/MM/AAAA ou A definir] | Pendente |
 
-## 8. Plano de ação e próximos passos
-(Para cada ação:
-- **Ação:** [descrição]
-  - **Responsável:** [nome ou "A definir"]
-  - **Data prevista:** [data ou "A definir"]
-  - **Observação:** [contexto curto ou "—"])
+## 7. Pendências da reunião anterior
+[Se houver ata anterior: tabela | Ação | Responsável | Status | com cada ação do plano anterior e o status que o relato indicar (Concluída, Em andamento, Pendente ou Não mencionada). Se não houver: "Não se aplica: esta foi a primeira reunião registrada."]
 
-## 9. Encaminhamentos para o SISTEMAFP PJ
-(Indique quais módulos do sistema deverão ser usados/atualizados a partir desta reunião: fluxo de caixa, estoque, vendas, precificação, DRE, relatórios, BPO, documentos, plano de ação, etc.)
+## 8. Próxima reunião
+- **Data:** ${next_meeting_date ? fmtDate(next_meeting_date) : "A definir"}
+- **Horário:** [horário, se informado no relato, ou A definir]
 
-## 10. Observações finais
-(Fechamento profissional, objetivo, adequado para ata formal compartilhada com o cliente.)`;
+**Pauta prevista:**
+1. [item previsto para a próxima reunião]
+
+## 9. Encerramento
+Nada mais havendo a tratar, a reunião foi encerrada e a presente ata foi lavrada por ${consultant_name || "[consultor]"}, para ciência e concordância dos participantes.`;
 
     const client = new Anthropic();
 
@@ -162,18 +170,14 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
     }
 
     // Security check to avoid returning empty or placeholder content
-    const placeholders = [
-      "Decisão — Responsável — Prazo",
-      "Pendência — Responsável — Prazo",
-      "Ação — Responsável — Data prevista"
-    ];
+    const placeholders = ["[ação concreta]", "[Título do assunto]", "[item da pauta]", "[nome]"];
 
     if (placeholders.some(p => content!.includes(p))) {
       // One retry with a more forceful instruction if placeholders are detected
       const retry = await generate(
         userPrompt +
-          "\n\nIMPORTANTE: não inclua linhas-modelo como 'Decisão — Responsável — Prazo'. " +
-          "Preencha os dados reais ou indique 'Nenhum' ou 'A definir'.",
+          "\n\nIMPORTANTE: não deixe textos entre colchetes do modelo. " +
+          "Substitua todos pelos dados reais ou por 'Não informado' / 'A definir'.",
       ).catch(() => null);
       if (retry) content = retry;
     }

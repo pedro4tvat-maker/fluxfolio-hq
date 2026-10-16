@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { maskCNPJ, maskCEP, maskPhone, isValidCNPJ, BR_STATES } from "@/lib/cnpj";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { RecoveryToolsCard } from "@/components/settings/RecoveryToolsCard";
+import { AtaBrandCard } from "@/components/settings/AtaBrandCard";
 
 
 export const Route = createFileRoute("/app/configuracoes")({ component: ConfiguracoesRouter });
@@ -135,6 +136,8 @@ function ConsultantSettingsPage() {
         </div>
         <div className="flex justify-end"><Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar alterações"}</Button></div>
       </div>
+
+      <AtaBrandCard consultant={data as any} />
 
       <div className="bg-card border rounded-2xl p-6 shadow-card space-y-3">
         <h3 className="font-display font-semibold">Acesso da conta</h3>

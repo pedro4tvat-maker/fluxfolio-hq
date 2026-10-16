@@ -20,6 +20,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { openAtaPdf, DEFAULT_BRAND, type AtaBrand } from "@/lib/ata-pdf";
 import {
   Plus, Sparkles, Pencil, Copy, Trash2, FileDown, Share2, NotebookPen,
   CheckCircle2, ListPlus, Inbox, Filter,
@@ -73,36 +74,47 @@ type Minute = {
   finalized_at: string | null;
 };
 
-const defaultTemplate = (empresa: string) => `# Ata de Reunião — ${empresa}
+const defaultTemplate = (_empresa: string) => `## 1. Identificação da reunião
+- **Data:**
+- **Horário:**
+- **Modalidade:**
+- **Tipo:**
 
-## 1. Dados da reunião
-- Empresa:
-- Data:
-- Horário:
-- Tipo:
-- Participantes:
-- Consultor responsável:
+## 2. Participantes
+| Nome | Função | Organização |
+|---|---|---|
+| | | |
 
-## 2. Pauta
--
+**Ausentes:** Não houve ausências.
 
-## 3. Resumo da reunião
+**Redação da ata:**
 
+## 3. Pauta
+1.
 
-## 4. Pontos discutidos
--
+## 4. Assuntos discutidos
+### 4.1
 
 ## 5. Decisões tomadas
-- Decisão — Responsável — Prazo
+1.
 
-## 6. Pendências
-- Pendência — Responsável — Prazo — Status
+## 6. Plano de ação
+| Nº | Ação | Responsável | Prazo | Status |
+|---|---|---|---|---|
+| 1 | | | | Pendente |
 
-## 7. Próximos passos
-- Ação — Responsável — Data prevista
+## 7. Pendências da reunião anterior
+Não se aplica: esta foi a primeira reunião registrada.
 
-## 8. Observações finais
--
+## 8. Próxima reunião
+- **Data:**
+- **Horário:**
+
+**Pauta prevista:**
+1.
+
+## 9. Encerramento
+Nada mais havendo a tratar, a reunião foi encerrada e a presente ata foi lavrada para ciência e concordância dos participantes.
 `;
 
 function statusBadge(s: string) {
@@ -185,6 +197,17 @@ function AtasPage() {
   }, [minutes, filters]);
 
   const companyName = (id: string) => companies.find((c: any) => c.id === id)?.nome ?? "—";
+  const companyCnpj = (id: string) => companies.find((c: any) => c.id === id)?.cnpj ?? null;
+
+  // "Ata nº 003/2026": ordem da ata entre as da mesma empresa no mesmo ano.
+  const ataNumero = (m: Minute) => {
+    const ano = m.meeting_date.slice(0, 4);
+    const doAno = minutes
+      .filter((x) => x.company_id === m.company_id && x.meeting_date.slice(0, 4) === ano)
+      .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date) || a.created_at.localeCompare(b.created_at));
+    const n = Math.max(1, doAno.findIndex((x) => x.id === m.id) + 1);
+    return `Ata nº ${String(n).padStart(3, "0")}/${ano}`;
+  };
 
   const delMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -367,7 +390,7 @@ function AtasPage() {
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="ghost" onClick={() => { setEditing(m); setOpenForm(true); }} title="Editar"><Pencil className="size-4" /></Button>
                         <Button size="sm" variant="ghost" onClick={() => duplicate.mutate(m)} title="Duplicar"><Copy className="size-4" /></Button>
-                        <Button size="sm" variant="ghost" onClick={() => exportPdf(m, companyName(m.company_id))} title="Exportar"><FileDown className="size-4" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => exportPdf(m, companyName(m.company_id), companyCnpj(m.company_id), ataNumero(m))} title="Exportar"><FileDown className="size-4" /></Button>
                         <Button size="sm" variant="ghost" onClick={() => shareToggle.mutate(m)} title="Compartilhar"><Share2 className="size-4" /></Button>
                         <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir esta ata?")) delMutation.mutate(m.id); }} title="Excluir"><Trash2 className="size-4 text-destructive" /></Button>
                       </div>
@@ -474,6 +497,19 @@ function MinuteFormDialog({
     try {
       const company = companies.find((c: any) => c.id === form.company_id);
       const companyName = company?.nome ?? "";
+
+      let prevQuery = sb.from("meeting_minutes")
+        .select("id, meeting_date, final_content, generated_content")
+        .eq("company_id", form.company_id).is("deleted_at", null)
+        .lte("meeting_date", form.meeting_date)
+        .order("meeting_date", { ascending: false }).order("created_at", { ascending: false }).limit(1);
+      if (editing?.id) prevQuery = prevQuery.neq("id", editing.id);
+      const { data: prev } = await prevQuery;
+      const prevText: string = prev?.[0]?.final_content || prev?.[0]?.generated_content || "";
+      const plano = prevText.match(/##\s*6\.?\s*Plano de a[çc][ãa]o[^\n]*\n([\s\S]*?)(?=\n##\s|$)/i)?.[1]?.trim();
+      const previous_action_plan = prev?.[0]
+        ? `Ata de ${prev[0].meeting_date}:\n${plano || prevText.slice(0, 3000)}`
+        : "";
       const { data, error } = await supabase.functions.invoke("generate-meeting-minutes", {
         body: {
           company_name: companyName,
@@ -486,6 +522,8 @@ function MinuteFormDialog({
           consultant_name: consultantName || "Não informado",
           next_meeting_date: form.next_meeting_date,
           attachments_summary: form.attachments_summary,
+          agenda_text: form.agenda_text,
+          previous_action_plan,
         },
       });
 
@@ -505,11 +543,7 @@ function MinuteFormDialog({
       }
 
       // Final validation on client side for placeholders
-      const placeholders = [
-        "Decisão — Responsável — Prazo",
-        "Pendência — Responsável — Prazo — Status",
-        "Ação — Responsável — Data prevista"
-      ];
+      const placeholders = ["[ação concreta]", "[Título do assunto]", "[item da pauta]", "[nome]"];
       
       const hasPlaceholders = placeholders.some(p => data.content.includes(p));
       if (hasPlaceholders) {
@@ -793,23 +827,23 @@ function TaskGeneratorDialog({ minute, consultantId, onClose }: {
   );
 }
 
-function exportPdf(m: Minute, companyName: string) {
-  // Simple printable view (fallback PDF: prints to PDF via browser)
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${m.title}</title>
-<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#1a1a1a}
-h1{font-size:20px;margin-bottom:4px}.meta{color:#666;font-size:13px;margin-bottom:24px}
-pre{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6}
-hr{border:none;border-top:1px solid #e5e5e5;margin:24px 0}</style></head>
-<body>
-<h1>${m.title}</h1>
-<div class="meta">Empresa: ${companyName} · Data: ${m.meeting_date}${m.meeting_time ? " · " + m.meeting_time : ""}</div>
-<hr/>
-<pre>${(m.final_content || m.generated_content || "").replace(/</g, "&lt;")}</pre>
-<hr/>
-<div class="meta">Emitido em ${new Date().toLocaleString("pt-BR")}</div>
-<script>window.onload=()=>window.print()</script>
-</body></html>`;
+async function exportPdf(m: Minute, companyName: string, cnpj: string | null, numero: string) {
+  const content = m.final_content || m.generated_content || "";
+  if (!content.trim()) { toast.error("A ata está vazia."); return; }
+  // Abre a janela antes do await para o navegador não bloquear o pop-up.
   const w = window.open("", "_blank");
-  if (w) { w.document.write(html); w.document.close(); }
-  else toast.error("Permita pop-ups para exportar PDF");
+  if (!w) { toast.error("Permita pop-ups para exportar PDF"); return; }
+  let brand: AtaBrand = DEFAULT_BRAND;
+  const { data } = await sb.rpc("consultant_branding", { _consultant_id: m.consultant_id });
+  const b = (data ?? [])[0];
+  if (b) {
+    brand = {
+      nome: b.consultancy_name || DEFAULT_BRAND.nome,
+      logoUrl: b.logo_url,
+      primaria: b.brand_primary || DEFAULT_BRAND.primaria,
+      escura: b.brand_dark || DEFAULT_BRAND.escura,
+      clara: b.brand_light || DEFAULT_BRAND.clara,
+    };
+  }
+  openAtaPdf(content, { numero, empresa: companyName, cnpj, brand }, w);
 }
