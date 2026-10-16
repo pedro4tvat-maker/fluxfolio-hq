@@ -1,0 +1,10 @@
+// Cloudflare Workers - hospedagem do SISTEMA FP.
+// Só valores públicos aqui. Segredos (ANTHROPIC_API_KEY) vão com `wrangler secret put`.
+{
+  "name": "sistema-fp",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "SUPABASE_URL": "https://lzqwuffiiebpfzoqtzuo.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_mBmGv1apxETXxdi1b-BqDg_7rBG7viP"
+  }
+}
