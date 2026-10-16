@@ -23,7 +23,7 @@ import {
   ArrowDownCircle,
   Layers,
 } from "lucide-react";
-import logoAsset from "@/assets/sistemafp-logo.png.asset.json";
+import logoAsset from "@/assets/sistemafp-logo.jpg";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
@@ -69,7 +69,7 @@ function LandingPage() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-9 w-auto" />
+            <img src={logoAsset} alt="SISTEMAFP PJ" className="h-9 w-auto" />
             <span className="font-display font-bold text-xl">SISTEMAFP PJ</span>
           </Link>
 

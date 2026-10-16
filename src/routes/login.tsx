@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import logoAsset from "@/assets/sistemafp-logo.png.asset.json";
+import logoAsset from "@/assets/sistemafp-logo.jpg";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar — SISTEMAFP PJ" }] }),
@@ -67,7 +67,7 @@ function LoginPage() {
     <div className="min-h-screen grid md:grid-cols-2 bg-background">
       <div className="hidden md:flex flex-col justify-between p-12 bg-secondary text-foreground border-r border-border">
         <div className="flex items-center gap-3">
-          <img src={logoAsset.url} alt="SistemaFP PJ" className="h-12 w-auto object-contain" />
+          <img src={logoAsset} alt="SistemaFP PJ" className="h-12 w-auto object-contain" />
         </div>
         <div className="space-y-3">
           <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">Finanças em Propósito</p>
@@ -86,7 +86,7 @@ function LoginPage() {
       <div className="flex items-center justify-center p-6 md:p-12">
         <form onSubmit={showReset ? onResetPassword : onSubmit} className="w-full max-w-sm space-y-6">
           <div className="md:hidden flex items-center gap-2">
-            <img src={logoAsset.url} alt="SISTEMAFP PJ" className="h-8" />
+            <img src={logoAsset} alt="SISTEMAFP PJ" className="h-8" />
           </div>
           <div>
             <h2 className="text-2xl font-display font-bold">
