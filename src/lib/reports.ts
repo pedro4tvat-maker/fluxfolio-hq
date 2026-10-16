@@ -303,7 +303,11 @@ export function buildDRE(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
   const catMap = buildCategoryMap(data.categories);
 
+  // Só saídas viram dedução/custo/despesa. Uma entrada numa categoria marcada
+  // como custo (ex.: "Vendas" com custo variável ligado por engano) é receita,
+  // e não pode ser descontada de novo como custo.
   const bucketOf = (t: Tx): string | null => {
+    if (t.tipo !== "saida") return null;
     const cat = catMap.get(t.categoria_id ?? "");
     if (!cat) return null;
     if (cat.is_non_operating || cat.is_internal_transfer) return null;

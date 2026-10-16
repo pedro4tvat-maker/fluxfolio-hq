@@ -311,24 +311,30 @@ function formatDateBR(d: string) {
   return `${day}/${m}/${y}`;
 }
 
+// Linhas como "Margem Líquida (%)" trazem percentual, não valor em reais.
+const isPercentRow = (r: Record<string, unknown>) =>
+  Object.values(r).some((x) => typeof x === "string" && x.includes("(%)"));
+
 function buildReportHTML({ title, empresa, periodo, rows }: { title: string; empresa: string; periodo: string; rows: Record<string, unknown>[] }) {
   const headers = Object.keys(rows[0] ?? {});
   const isMoneyCol = (h: string) => /valor|saldo|total|orçado|realizado|diferença|atual|anterior|preço|custo|margem|ebitda|receita|lucro|entradas|saídas|resultado|a pagar|a receber/i.test(h);
   const isNumberCol = (h: string) => rows.some((r) => typeof r[h] === "number");
   const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-  const fmt = (v: unknown, h: string) => {
+  const fmt = (v: unknown, h: string, percent = false) => {
     if (v == null || v === "") return "—";
+    if (typeof v === "number" && percent) return `${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
     if (typeof v === "number") return isMoneyCol(h) ? brl.format(v) : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
     return String(v);
   };
   const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
   const thead = headers.map((h) => `<th style="text-align:${isNumberCol(h) ? "right" : "left"}">${esc(h)}</th>`).join("");
   const tbody = rows.map((r) => {
+    const percentRow = isPercentRow(r);
     const tds = headers.map((h) => {
       const v = r[h];
       const align = isNumberCol(h) ? "right" : "left";
       const negative = typeof v === "number" && v < 0;
-      return `<td style="text-align:${align};${negative ? "color:#b91c1c;" : ""}${isNumberCol(h) ? "font-variant-numeric:tabular-nums;" : ""}">${esc(fmt(v, h))}</td>`;
+      return `<td style="text-align:${align};${negative ? "color:#b91c1c;" : ""}${isNumberCol(h) ? "font-variant-numeric:tabular-nums;" : ""}">${esc(fmt(v, h, percentRow))}</td>`;
     }).join("");
     return `<tr>${tds}</tr>`;
   }).join("");
@@ -403,9 +409,10 @@ function Table({ rows, moneyCols = [] as string[] }: { rows: Record<string, unkn
               {headers.map((h) => {
                 const v = r[h];
                 const isMoney = moneyCols.includes(h) || (typeof v === "number" && /valor|saldo|total|orçado|realizado|diferença|atual|anterior|preço|custo|margem|ebitda|receita|lucro|entradas|saídas|resultado|a pagar|a receber/i.test(h));
+                const percent = typeof v === "number" && isPercentRow(r);
                 return (
                   <td key={h} className={`py-2 pr-4 ${isMoney ? "font-mono text-right" : ""}`}>
-                    {typeof v === "number" && isMoney ? <Money v={v} /> : typeof v === "number" ? v.toLocaleString("pt-BR") : String(v ?? "")}
+                    {percent ? `${(v as number).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%` : typeof v === "number" && isMoney ? <Money v={v} /> : typeof v === "number" ? v.toLocaleString("pt-BR") : String(v ?? "")}
                   </td>
                 );
               })}
