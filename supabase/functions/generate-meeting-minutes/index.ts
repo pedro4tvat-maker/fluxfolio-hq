@@ -1,6 +1,7 @@
 // Edge function: generate-meeting-minutes
-// Uses Lovable AI Gateway to turn raw notes into a structured meeting minute.
+// Uses Claude (Anthropic API) to turn raw notes into a structured meeting minute.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Anthropic from "npm:@anthropic-ai/sdk@0.135.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,8 +27,7 @@ serve(async (req) => {
       attachments_summary,
     } = body ?? {};
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    if (!Deno.env.get("ANTHROPIC_API_KEY")) {
       return new Response(
         JSON.stringify({ error: "AI não configurada", status: "no_api_key" }),
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -115,44 +115,52 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
 ## 10. Observações finais
 (Fechamento profissional, objetivo, adequado para ata formal compartilhada com o cliente.)`;
 
-    const fetchAI = async () => {
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.3,
-          max_tokens: 4096,
-        }),
+    const client = new Anthropic();
+
+    // fallbacks "default": se o modelo recusar, a API refaz a chamada no modelo
+    // reserva recomendado pela Anthropic.
+    const generate = async (prompt: string) => {
+      const response = await client.beta.messages.create({
+        model: "claude-opus-5-5",
+        max_tokens: 16000,
+        output_config: { effort: "medium" },
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        system: systemPrompt,
+        messages: [{ role: "user", content: prompt }],
       });
-      return aiResp;
+      if (response.stop_reason === "refusal") return null;
+      return response.content
+        .filter((b) => b.type === "text")
+        .map((b) => (b as { text: string }).text)
+        .join("
+")
+        .trim();
     };
 
-    let aiResp = await fetchAI();
-    
-    if (!aiResp.ok) {
-       const errorText = await aiResp.text();
-       console.error("AI Gateway Error:", aiResp.status, errorText);
-       const friendly = aiResp.status === 402
-         ? "Créditos de IA esgotados. Adicione saldo em Settings → Workspace → Plans & Credits."
-         : aiResp.status === 429
-           ? "Limite de requisições atingido. Aguarde alguns instantes e tente novamente."
-           : "Erro ao gerar ata com IA.";
-       return new Response(
-         JSON.stringify({ error: friendly, status: aiResp.status, content: null }),
-         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-       );
+    let content: string | null;
+    try {
+      content = await generate(userPrompt);
+    } catch (err) {
+      console.error("Anthropic API error:", err);
+      const friendly = err instanceof Anthropic.RateLimitError
+        ? "Limite de requisições atingido. Aguarde alguns instantes e tente novamente."
+        : err instanceof Anthropic.AuthenticationError
+          ? "Chave da IA inválida. Verifique ANTHROPIC_API_KEY nos secrets do Supabase."
+          : "Erro ao gerar ata com IA.";
+      const status = err instanceof Anthropic.APIError ? err.status : 500;
+      return new Response(
+        JSON.stringify({ error: friendly, status, content: null }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const json = await aiResp.json();
-    let content = json?.choices?.[0]?.message?.content ?? "";
+    if (content === null) {
+      return new Response(
+        JSON.stringify({ error: "A IA não conseguiu gerar a ata para este relato.", status: "refusal", content: null }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // Security check to avoid returning empty or placeholder content
     const placeholders = [
@@ -161,31 +169,16 @@ Se não houver: "Não foram identificadas pendências específicas além dos pr�
       "Ação — Responsável — Data prevista"
     ];
 
-    if (placeholders.some(p => content.includes(p))) {
-      // One retry with a more forceful prompt if placeholders are detected
-      const retryResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-            { role: "assistant", content: content },
-            { role: "user", content: "Você incluiu placeholders de exemplo (como 'Decisão — Responsável — Prazo'). Por favor, refaça a ata removendo essas linhas e preenchendo os dados reais ou indicando 'Nenhum' ou 'A definir'." }
-          ],
-          temperature: 0.1,
-          max_tokens: 4096,
-        }),
-      });
-      
-      if (retryResp.ok) {
-        const retryJson = await retryResp.json();
-        content = retryJson?.choices?.[0]?.message?.content ?? content;
-      }
+    if (placeholders.some(p => content!.includes(p))) {
+      // One retry with a more forceful instruction if placeholders are detected
+      const retry = await generate(
+        userPrompt +
+          "
+
+IMPORTANTE: não inclua linhas-modelo como 'Decisão — Responsável — Prazo'. " +
+          "Preencha os dados reais ou indique 'Nenhum' ou 'A definir'.",
+      ).catch(() => null);
+      if (retry) content = retry;
     }
 
     return new Response(JSON.stringify({ content }), {
