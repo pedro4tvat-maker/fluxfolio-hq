@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { getAnthropicKey } from "@/lib/anthropic-key.server";
 
 const inputSchema = z.object({
   empresa: z.string(),
@@ -23,8 +24,9 @@ export const generateExecutiveAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data }) => {
-    if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada");
-    const client = new Anthropic();
+    const apiKey = getAnthropicKey();
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
+    const client = new Anthropic({ apiKey });
 
     const userPrompt =
       `Empresa: ${data.empresa}\nPeríodo analisado: ${data.periodo}\n\n` +
