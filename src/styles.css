@@ -11,6 +11,8 @@
 @theme inline {
   --font-sans: "Inter", system-ui, sans-serif;
   --font-display: "Sora", "Inter", sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-hand: "Caveat", "Comic Sans MS", cursive;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

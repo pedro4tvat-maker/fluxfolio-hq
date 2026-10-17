@@ -1,28 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  BarChart3,
-  Boxes,
-  Calculator,
-  CheckCircle2,
-  ChevronDown,
-  ClipboardList,
-  CreditCard,
-  FileText,
-  HandCoins,
-  LineChart,
-  MessageCircle,
-  NotebookPen,
-  ShoppingCart,
-  Sparkles,
-  Store,
-  UserCheck,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight, MessageCircle, Plus } from "lucide-react";
 import logoAsset from "@/assets/sistemafp-icone.png";
 import fepLogo from "@/assets/financas-em-proposito.png";
 
@@ -30,11 +9,26 @@ import fepLogo from "@/assets/financas-em-proposito.png";
 const WHATSAPP = "5577981427618";
 const waLink = (msg: string) => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
 const MSG_PADRAO = "Olá! Vi o site do SISTEMAFP PJ e quero saber mais sobre o sistema.";
+const MSG_CONTRATAR = "Olá! Quero contratar o SISTEMAFP PJ. Pode me explicar como funciona a implantação?";
 
 const PRECO = "R$ 89,90";
 
 // Depoimentos autorizados pelos clientes. A seção só aparece quando houver algum.
 const DEPOIMENTOS: { nome: string; empresa: string; texto: string }[] = [];
+
+// Paleta própria da página (papel, tinta, oliva e um toque de café)
+const C = {
+  papel: "#F4F1E8",
+  papelEscuro: "#EAE5D6",
+  tinta: "#1E2318",
+  tintaSuave: "#55594B",
+  oliva: "#4E6B2E",
+  olivaEscuro: "#2C3A1B",
+  musgo: "#DCE4C4",
+  cafe: "#B5733A",
+  bilhete: "#F6E7A6",
+  linha: "#D3CDB9",
+};
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
@@ -50,53 +44,57 @@ export const Route = createFileRoute("/")({
         content:
           "Sistema financeiro para pequenas empresas: caixa, contas, vendas, estoque e relatórios, com análise em linguagem simples e acompanhamento da Finanças em Propósito.",
       },
-      { property: "og:title", content: "SISTEMAFP PJ — Gestão financeira com acompanhamento" },
-      {
-        property: "og:description",
-        content: "Organize o financeiro da sua empresa e entenda seus números, com um consultor ao seu lado.",
-      },
+      { property: "og:title", content: "SISTEMAFP PJ — O dinheiro entra. Para onde ele vai?" },
+      { property: "og:description", content: "Organize o financeiro da sua empresa e entenda seus números, com um consultor ao seu lado." },
     ],
   }),
   component: LandingPage,
 });
 
-function WhatsButton({ children, msg = MSG_PADRAO, className = "", size = "lg" as const, variant }: {
-  children: React.ReactNode; msg?: string; className?: string; size?: "lg" | "default" | "sm"; variant?: "outline";
-}) {
-  return (
-    <Button asChild size={size} variant={variant} className={className}>
-      <a href={waLink(msg)} target="_blank" rel="noopener noreferrer">
-        <MessageCircle className="size-5" /> {children}
-      </a>
-    </Button>
-  );
-}
-
 const FUNCOES = [
-  { icon: Wallet, title: "Fluxo de caixa", desc: "Entradas e saídas organizadas por conta e categoria, com saldo do dia." },
-  { icon: CreditCard, title: "Contas a pagar e a receber", desc: "Vencimentos, atrasos e clientes devendo, tudo à vista." },
-  { icon: ShoppingCart, title: "Vendas", desc: "Registro das vendas à vista e a prazo, por cliente e por produto." },
-  { icon: Boxes, title: "Estoque", desc: "Entradas, saídas e alerta de produto zerado ou abaixo do mínimo." },
-  { icon: Calculator, title: "Precificação", desc: "Calcule o preço de venda a partir do custo e da margem que você quer." },
-  { icon: BarChart3, title: "DRE e relatórios", desc: "Resultado do mês e do ano montados a partir dos seus lançamentos." },
-  { icon: Store, title: "Revendedores", desc: "Controle do que está com cada revendedor e do que já foi acertado." },
-  { icon: FileText, title: "Importação de extrato", desc: "Traga o extrato do banco (OFX) ou planilhas sem digitar tudo de novo." },
+  ["Fluxo de caixa", "Entradas e saídas por conta e categoria, com o saldo do dia."],
+  ["Contas a pagar e a receber", "Vencimentos, atrasos e quem está devendo, tudo à vista."],
+  ["Vendas", "À vista e a prazo, por cliente e por produto."],
+  ["Estoque", "Entradas, saídas e aviso de produto acabando."],
+  ["Precificação", "Preço de venda calculado a partir do custo e da margem."],
+  ["DRE e relatórios", "O resultado do mês e do ano, montado com os seus lançamentos."],
+  ["Revendedores", "O que está com cada revendedor e o que já foi acertado."],
+  ["Extrato do banco", "Importe o extrato (OFX) ou planilhas, sem redigitar."],
 ];
 
 const PASSOS = [
-  { n: "1", icon: UserCheck, title: "Implantação com o consultor", desc: "Configuramos o sistema do jeito da sua empresa: contas, categorias e produtos." },
-  { n: "2", icon: ClipboardList, title: "Você lança no dia a dia", desc: "Vendas, despesas e recebimentos, em poucos cliques, no computador ou no celular." },
-  { n: "3", icon: LineChart, title: "Acompanhamento mensal", desc: "Seu consultor analisa os números com você e define os próximos passos." },
+  ["Implantação", "O consultor configura o sistema do jeito da sua empresa: contas, categorias e produtos."],
+  ["Dia a dia", "Você lança vendas, despesas e recebimentos em poucos cliques, no computador ou no celular."],
+  ["Acompanhamento", "Todo mês, os números viram uma análise clara, e vocês decidem juntos o próximo passo."],
 ];
 
 const FAQ = [
-  { q: "Preciso entender de finanças para usar?", a: "Não. O sistema foi pensado para o dono do negócio, e a análise mostra os números em linguagem simples, explicando o que cada um significa para a sua empresa." },
-  { q: "Funciona no celular?", a: "Sim. Você acessa pelo navegador do celular ou do computador, e pode instalar como aplicativo na tela inicial." },
-  { q: "Meus dados ficam seguros?", a: "Cada empresa só enxerga os próprios dados, e o consultor só acessa as empresas que autorizarem o vínculo. Os dados ficam em servidores profissionais na nuvem, com acesso protegido por senha." },
-  { q: "Para que tipo de empresa ele serve?", a: "Principalmente pequenas empresas que vendem produtos e controlam estoque: comércio, pequena indústria, alimentação, revenda, agro e serviços com venda de produtos." },
-  { q: "O sistema emite nota fiscal?", a: "Não. O SISTEMAFP PJ cuida da gestão financeira e dos resultados; a nota fiscal continua no emissor que você já usa." },
-  { q: "Como faço para começar?", a: "Chame no WhatsApp. Conversamos sobre a sua empresa, combinamos a implantação (contratada à parte) e você já começa a usar." },
+  ["Preciso entender de finanças para usar?", "Não. O sistema foi pensado para o dono do negócio, e a análise explica cada número em linguagem simples: o que ele significa e o que fazer com ele."],
+  ["Funciona no celular?", "Sim. Você acessa pelo navegador do celular ou do computador, e pode instalar como aplicativo na tela inicial."],
+  ["Meus dados ficam seguros?", "Cada empresa só enxerga os próprios dados, e o consultor só acessa as empresas que autorizarem o vínculo. Os dados ficam em servidores profissionais na nuvem, com acesso protegido por senha."],
+  ["Para que tipo de empresa ele serve?", "Principalmente pequenas empresas que vendem produtos e controlam estoque: comércio, pequena indústria, alimentação, revenda, agro e serviços que também vendem produtos."],
+  ["O sistema emite nota fiscal?", "Não. O SISTEMAFP PJ cuida da gestão financeira e dos resultados; a nota fiscal continua no emissor que você já usa."],
+  ["Como faço para começar?", "Chame no WhatsApp. Conversamos sobre a sua empresa, combinamos a implantação (contratada à parte) e você já começa a usar."],
 ];
+
+function CtaWhats({ children, msg = MSG_PADRAO, claro = false, className = "" }: { children: React.ReactNode; msg?: string; claro?: boolean; className?: string }) {
+  return (
+    <a
+      href={waLink(msg)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`group inline-flex items-center justify-center gap-2.5 rounded-md px-6 py-3.5 text-[15px] font-semibold transition-transform hover:-translate-y-0.5 ${className}`}
+      style={claro ? { background: C.papel, color: C.olivaEscuro } : { background: C.olivaEscuro, color: C.papel }}
+    >
+      <MessageCircle className="size-[18px]" /> {children}
+      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+    </a>
+  );
+}
+
+function Rotulo({ children, cor = C.cafe }: { children: React.ReactNode; cor?: string }) {
+  return <div className="text-[12px] font-semibold uppercase tracking-[0.18em] mb-4" style={{ color: cor }}>{children}</div>;
+}
 
 function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
@@ -109,269 +107,296 @@ function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen overflow-x-hidden" style={{ background: C.papel, color: C.tinta }}>
       {/* TOPO */}
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/90 backdrop-blur shadow-sm" : "bg-transparent"}`}>
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
-          <Link to="/" className="flex items-center gap-2 min-w-0">
-            <img src={logoAsset} alt="" className="h-9 w-auto shrink-0" />
-            <span className="font-display font-bold text-lg sm:text-xl truncate">SISTEMAFP PJ</span>
+      <header
+        className="sticky top-0 z-50 transition-colors duration-300"
+        style={{ background: scrolled ? "rgba(244,241,232,0.92)" : "transparent", backdropFilter: scrolled ? "blur(8px)" : undefined, borderBottom: `1px solid ${scrolled ? C.linha : "transparent"}` }}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3.5">
+          <Link to="/" className="flex items-center gap-2.5 min-w-0">
+            <img src={logoAsset} alt="" className="h-8 w-auto shrink-0" />
+            <span className="font-display font-bold tracking-tight truncate">SISTEMAFP PJ</span>
           </Link>
-          <nav className="hidden items-center gap-6 text-sm font-medium lg:flex">
-            <a href="#como-funciona" className="hover:text-primary transition-colors">Como funciona</a>
-            <a href="#funcoes" className="hover:text-primary transition-colors">O que faz</a>
-            <a href="#plano" className="hover:text-primary transition-colors">Plano</a>
-            <a href="#duvidas" className="hover:text-primary transition-colors">Dúvidas</a>
+          <nav className="hidden items-center gap-7 text-sm lg:flex" style={{ color: C.tintaSuave }}>
+            <a href="#como-funciona" className="hover:underline underline-offset-4">Como funciona</a>
+            <a href="#o-que-faz" className="hover:underline underline-offset-4">O que faz</a>
+            <a href="#plano" className="hover:underline underline-offset-4">Plano</a>
+            <a href="#duvidas" className="hover:underline underline-offset-4">Dúvidas</a>
           </nav>
-          <div className="flex items-center gap-1 sm:gap-3">
-            <Button asChild variant="ghost" className="px-2 sm:px-4 text-sm">
-              <Link to="/login">Entrar</Link>
-            </Button>
-            <WhatsButton size="default" className="h-9 px-3 sm:px-4 text-sm">
-              <span className="hidden sm:inline">Fale com a gente</span><span className="sm:hidden">Contato</span>
-            </WhatsButton>
+          <div className="flex items-center gap-4 text-sm font-semibold">
+            <Link to="/login" className="hover:underline underline-offset-4" style={{ color: C.tintaSuave }}>Entrar</Link>
+            <a href={waLink(MSG_PADRAO)} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-flex items-center gap-1 border-b-2 pb-0.5" style={{ borderColor: C.oliva, color: C.olivaEscuro }}>
+              Falar no WhatsApp <ArrowUpRight className="size-4" />
+            </a>
           </div>
         </div>
       </header>
 
       {/* HERO */}
-      <section className="relative pt-14 sm:pt-20 pb-20 sm:pb-28 overflow-hidden">
-        <div className="mx-auto max-w-4xl text-center px-4 sm:px-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wide mb-6">
-            <Sparkles className="size-4" /> Sistema + acompanhamento de consultor
-          </div>
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
-            Saiba quanto sua empresa <span className="text-primary">realmente ganha</span>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-16 pb-24 sm:pb-28 grid lg:grid-cols-12 gap-14 lg:gap-8 items-center">
+        <div className="lg:col-span-7">
+          <Rotulo>Finanças em Propósito apresenta</Rotulo>
+          <h1 className="font-serif text-[44px] leading-[1.02] sm:text-[60px] lg:text-[66px] font-semibold tracking-[-0.02em]">
+            O dinheiro entra.
+            <br />
+            <em className="font-normal" style={{ color: C.oliva }}>Mas para onde ele vai?</em>
           </h1>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            O SISTEMAFP PJ organiza caixa, contas, vendas e estoque num só lugar, e um consultor da
-            Finanças em Propósito acompanha seus números com você, em linguagem simples.
+          <p className="mt-7 text-lg sm:text-xl max-w-xl leading-relaxed" style={{ color: C.tintaSuave }}>
+            O SISTEMAFP PJ junta caixa, contas, vendas e estoque num lugar só. E um consultor
+            acompanha seus números com você, explicando cada um como numa conversa.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <WhatsButton className="h-14 px-8 text-lg w-full sm:w-auto">Quero conhecer</WhatsButton>
-            <Button asChild size="lg" variant="outline" className="h-14 px-8 text-lg w-full sm:w-auto">
-              <a href="#como-funciona">Como funciona <ArrowRight className="size-5" /></a>
-            </Button>
+          <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-5">
+            <CtaWhats>Quero conhecer o sistema</CtaWhats>
+            <a href="#como-funciona" className="text-[15px] font-semibold underline underline-offset-4 decoration-2" style={{ color: C.tinta, textDecorationColor: C.cafe }}>
+              Ver como funciona
+            </a>
           </div>
-          <p className="text-sm text-muted-foreground mt-6">Sistema a partir de {PRECO}/mês · Implantação contratada à parte</p>
+          <p className="mt-8 text-sm" style={{ color: C.tintaSuave }}>
+            Sistema a partir de <strong style={{ color: C.tinta }}>{PRECO}/mês</strong> · implantação contratada à parte
+          </p>
+        </div>
+
+        {/* Folha de relatório + bilhete do consultor (exemplo ilustrativo) */}
+        <div className="lg:col-span-5 relative mx-auto w-full max-w-md lg:max-w-none">
+          <div className="absolute inset-0 translate-x-3 translate-y-3 rotate-[2deg] rounded-sm" style={{ background: C.papelEscuro }} />
+          <div className="relative bg-white rounded-sm shadow-[0_18px_40px_-20px_rgba(30,35,24,0.45)] -rotate-[1.5deg] p-6 sm:p-7">
+            <div className="flex items-baseline justify-between border-b pb-3 mb-4" style={{ borderColor: C.linha }}>
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.16em]" style={{ color: C.tintaSuave }}>Análise de outubro</div>
+                <div className="font-serif text-xl font-semibold">Torrefação Exemplo</div>
+              </div>
+              <span className="text-[10px]" style={{ color: C.tintaSuave }}>exemplo</span>
+            </div>
+            <dl className="grid grid-cols-3 gap-3 mb-5">
+              {[["Vendas", "42.800"], ["Lucro", "9.150"], ["Atrasados", "6.300"]].map(([l, v]) => (
+                <div key={l}>
+                  <dt className="text-[10px] uppercase tracking-wider" style={{ color: C.tintaSuave }}>{l}</dt>
+                  <dd className="font-serif text-lg sm:text-xl font-semibold tabular-nums">R$ {v}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="space-y-3 text-[13.5px] leading-relaxed" style={{ color: C.tintaSuave }}>
+              <p><strong style={{ color: C.tinta }}>Resumo.</strong> A empresa ficou com <strong style={{ color: C.oliva }}>R$ 21 de sobra a cada R$ 100</strong> vendidos. Um bom mês.</p>
+              <p><strong style={{ color: C.tinta }}>Atenção.</strong> R$ 6.300 de clientes estão atrasados: é dinheiro vendido que ainda não entrou no caixa.</p>
+            </div>
+            <div className="mt-5 flex items-end gap-1.5 h-14" aria-hidden>
+              {[38, 52, 45, 61, 57, 72, 66, 84].map((h, i) => (
+                <div key={i} className="flex-1 rounded-t-[2px]" style={{ height: `${h}%`, background: i === 7 ? C.oliva : C.musgo }} />
+              ))}
+            </div>
+          </div>
+          {/* bilhete */}
+          <div
+            className="absolute -bottom-12 -left-2 sm:-left-8 rotate-[-5deg] w-52 px-4 pt-4 pb-3 shadow-[0_10px_20px_-10px_rgba(30,35,24,0.5)]"
+            style={{ background: C.bilhete }}
+          >
+            <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-14 h-5 rotate-2 opacity-70" style={{ background: "rgba(255,255,255,0.7)" }} />
+            <p className="font-hand text-[22px] leading-[1.1]" style={{ color: "#3b3a2a" }}>
+              Cobrar os 3 maiores devedores até sexta!
+            </p>
+            <p className="font-hand text-lg mt-1 text-right" style={{ color: C.oliva }}>— seu consultor</p>
+          </div>
         </div>
       </section>
 
-      {/* PARA QUEM É */}
-      <section className="py-16 sm:py-20 bg-muted/30 border-y">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 grid lg:grid-cols-2 gap-10 items-center">
-          <div>
-            <h2 className="text-3xl font-display font-bold mb-4">Feito para o dono de pequena empresa</h2>
-            <p className="text-muted-foreground text-lg">
-              Se você vende produtos, controla estoque e sente que o dinheiro entra mas não sabe para onde vai,
-              o SISTEMAFP PJ foi pensado para você.
-            </p>
-          </div>
-          <ul className="grid sm:grid-cols-2 gap-3">
-            {["Comércio e lojas", "Pequenas indústrias", "Alimentação e marmitarias", "Torrefações e agro", "Revendas", "Óticas e varejo especializado"].map((t) => (
-              <li key={t} className="flex items-center gap-3 bg-card border rounded-2xl px-4 py-3">
-                <CheckCircle2 className="size-5 text-primary shrink-0" /> <span className="font-medium">{t}</span>
-              </li>
+      {/* ANTES / DEPOIS */}
+      <section className="border-y" style={{ borderColor: C.linha, background: C.papelEscuro }}>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-12 flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+          <p className="text-sm uppercase tracking-[0.16em] font-semibold shrink-0" style={{ color: C.tintaSuave }}>Hoje está em</p>
+          <ul className="flex flex-wrap gap-x-6 gap-y-1 font-serif text-xl sm:text-2xl" style={{ color: C.tintaSuave }}>
+            {["caderno", "planilha", "mensagem no WhatsApp", "na cabeça"].map((t) => (
+              <li key={t} className="line-through decoration-2" style={{ textDecorationColor: C.cafe }}>{t}</li>
             ))}
           </ul>
+          <p className="font-serif text-2xl sm:text-[28px] italic md:ml-auto shrink-0" style={{ color: C.oliva }}>→ num lugar só.</p>
         </div>
       </section>
 
       {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="py-20 sm:py-24 scroll-mt-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-3xl font-display font-bold text-center mb-3">Como funciona</h2>
-          <p className="text-center text-muted-foreground mb-12">Você não fica sozinho com o sistema.</p>
-          <div className="grid md:grid-cols-3 gap-6">
-            {PASSOS.map((p) => (
-              <div key={p.n} className="bg-card p-7 rounded-3xl border shadow-sm relative">
-                <div className="absolute -top-4 left-7 size-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-bold">{p.n}</div>
-                <p.icon className="size-7 text-primary mb-4 mt-2" />
-                <h3 className="text-lg font-display font-semibold mb-2">{p.title}</h3>
-                <p className="text-muted-foreground">{p.desc}</p>
+      <section id="como-funciona" className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 scroll-mt-16">
+        <div className="grid lg:grid-cols-12 gap-10">
+          <div className="lg:col-span-4">
+            <Rotulo>Como funciona</Rotulo>
+            <h2 className="font-serif text-4xl sm:text-5xl font-semibold leading-[1.05] tracking-[-0.01em]">Você não fica sozinho com o sistema.</h2>
+          </div>
+          <ol className="lg:col-span-8 lg:pl-8">
+            {PASSOS.map(([t, d], i) => (
+              <li key={t} className="grid grid-cols-[64px_1fr] sm:grid-cols-[96px_1fr] gap-4 py-7 border-t first:border-t-0 first:pt-0" style={{ borderColor: C.linha }}>
+                <span className="font-serif text-5xl sm:text-6xl leading-none italic" style={{ color: C.cafe }}>{String(i + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3 className="font-serif text-2xl font-semibold mb-1.5">{t}</h3>
+                  <p className="text-[17px] leading-relaxed" style={{ color: C.tintaSuave }}>{d}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* DIFERENCIAL */}
+      <section style={{ background: C.olivaEscuro, color: C.papel }}>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28">
+          <Rotulo cor={C.bilhete}>O que muda na prática</Rotulo>
+          <h2 className="font-serif text-4xl sm:text-6xl font-semibold leading-[1.03] tracking-[-0.015em] max-w-4xl">
+            Números explicados <em className="font-normal" style={{ color: C.musgo }}>como numa conversa</em>, e alguém do seu lado para decidir.
+          </h2>
+          <div className="mt-14 grid md:grid-cols-3 gap-10 md:gap-0">
+            {[
+              ["Análise com inteligência artificial", "O sistema lê seus números e escreve o que está indo bem, o que merece atenção e o que fazer. Sem palavras difíceis."],
+              ["Empresário e consultor juntos", "Você lança, o consultor acompanha. Ninguém precisa trocar planilha por e-mail ou mandar foto do caderno."],
+              ["Reuniões que viram ata", "Cada conversa vira uma ata com decisões e plano de ação, para nada se perder entre um mês e outro."],
+            ].map(([t, d], i) => (
+              <div key={t} className={`md:px-8 ${i > 0 ? "md:border-l" : "md:pl-0"}`} style={{ borderColor: "rgba(244,241,232,0.2)" }}>
+                <h3 className="font-serif text-2xl font-semibold mb-3">{t}</h3>
+                <p className="leading-relaxed opacity-80">{d}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* DIFERENCIAL: ANÁLISE + CONSULTOR */}
-      <section id="diferencial" className="py-20 sm:py-24 bg-primary/5 border-y">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider mb-5">
-              O diferencial
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-display font-bold mb-6">Números explicados como numa conversa</h2>
-            <ul className="space-y-5">
-              {[
-                { icon: Sparkles, t: "Análise com inteligência artificial", d: "O sistema lê seus números e escreve o que está indo bem, o que merece atenção e o que fazer, sem palavras difíceis." },
-                { icon: Users, t: "Empresário e consultor no mesmo lugar", d: "Você lança, o consultor acompanha. Ninguém precisa ficar trocando planilha por e-mail." },
-                { icon: NotebookPen, t: "Reuniões registradas em ata", d: "Cada reunião vira uma ata com decisões e plano de ação, para nada se perder." },
-              ].map((i) => (
-                <li key={i.t} className="flex gap-4">
-                  <div className="size-10 rounded-xl bg-primary/15 grid place-items-center shrink-0"><i.icon className="size-5 text-primary" /></div>
-                  <div>
-                    <h3 className="font-semibold">{i.t}</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{i.d}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Exemplo ilustrativo da análise (dados fictícios) */}
-          <div className="bg-card border rounded-3xl shadow-xl p-5 sm:p-7">
-            <div className="flex items-center justify-between mb-4">
-              <div className="font-display font-semibold">Análise do mês</div>
-              <span className="text-[11px] text-muted-foreground">Exemplo ilustrativo</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 mb-5">
-              {[{ l: "Vendas", v: "R$ 42.800" }, { l: "Lucro", v: "R$ 9.150" }, { l: "A receber", v: "R$ 6.300" }].map((k) => (
-                <div key={k.l} className="rounded-xl border p-3">
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{k.l}</div>
-                  <div className="font-semibold text-sm sm:text-base mt-0.5">{k.v}</div>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-3 text-sm">
-              <div>
-                <div className="font-semibold text-primary flex items-center gap-2"><span className="w-1 h-4 rounded-full bg-primary" />Resumo</div>
-                <p className="text-muted-foreground mt-1">
-                  A empresa vendeu <strong className="text-foreground">R$ 42.800</strong> e ficou com <strong className="text-foreground">R$ 21 de sobra a cada R$ 100</strong> vendidos.
-                </p>
-              </div>
-              <div>
-                <div className="font-semibold text-primary flex items-center gap-2"><span className="w-1 h-4 rounded-full bg-primary" />O que merece atenção</div>
-                <p className="text-muted-foreground mt-1">R$ 6.300 de clientes estão com pagamento atrasado (dinheiro vendido que ainda não entrou no caixa).</p>
-              </div>
-              <div>
-                <div className="font-semibold text-primary flex items-center gap-2"><span className="w-1 h-4 rounded-full bg-primary" />Próximo passo</div>
-                <p className="text-muted-foreground mt-1">Esta semana: cobrar os três maiores devedores.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* PARA QUEM */}
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-24">
+        <Rotulo>Para quem é</Rotulo>
+        <p className="font-serif text-3xl sm:text-[42px] leading-[1.25] max-w-5xl">
+          Para o dono de{" "}
+          {["loja", "pequena indústria", "marmitaria", "torrefação", "revenda", "ótica"].map((s, i, a) => (
+            <span key={s}>
+              <span className="italic" style={{ color: C.oliva, backgroundImage: `linear-gradient(transparent 62%, ${C.musgo} 62%)` }}>{s}</span>
+              {i < a.length - 2 ? ", " : i === a.length - 2 ? " ou " : ""}
+            </span>
+          ))}{" "}
+          que vende bem, mas no fim do mês não sabe direito quanto sobrou.
+        </p>
       </section>
 
-      {/* FUNÇÕES */}
-      <section id="funcoes" className="py-20 sm:py-24 scroll-mt-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <h2 className="text-3xl font-display font-bold text-center mb-3">O que o sistema faz</h2>
-          <p className="text-center text-muted-foreground mb-12">Tudo o que o financeiro de uma pequena empresa precisa, num só lugar.</p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {FUNCOES.map((f) => (
-              <div key={f.title} className="bg-card p-6 rounded-3xl border shadow-sm">
-                <div className="size-11 rounded-2xl bg-primary/10 grid place-items-center mb-4">
-                  <f.icon className="size-5 text-primary" />
-                </div>
-                <h3 className="font-display font-semibold mb-1.5">{f.title}</h3>
-                <p className="text-sm text-muted-foreground">{f.desc}</p>
+      {/* O QUE FAZ */}
+      <section id="o-que-faz" className="border-t scroll-mt-16" style={{ borderColor: C.linha }}>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-24 grid lg:grid-cols-12 gap-10">
+          <div className="lg:col-span-4">
+            <Rotulo>O que o sistema faz</Rotulo>
+            <h2 className="font-serif text-4xl font-semibold leading-[1.08]">O financeiro inteiro de uma pequena empresa.</h2>
+          </div>
+          <dl className="lg:col-span-8 grid sm:grid-cols-2 gap-x-10">
+            {FUNCOES.map(([t, d]) => (
+              <div key={t} className="py-5 border-t" style={{ borderColor: C.linha }}>
+                <dt className="font-semibold text-[17px]">{t}</dt>
+                <dd className="mt-1 leading-relaxed" style={{ color: C.tintaSuave }}>{d}</dd>
               </div>
             ))}
-          </div>
+          </dl>
         </div>
       </section>
 
       {/* DEPOIMENTOS (só aparece quando houver depoimentos autorizados) */}
       {DEPOIMENTOS.length > 0 && (
-        <section className="py-20 bg-muted/30 border-y">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 className="text-3xl font-display font-bold text-center mb-12">Quem usa, recomenda</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {DEPOIMENTOS.map((d) => (
-                <figure key={d.nome} className="bg-card border rounded-3xl p-6 shadow-sm">
-                  <blockquote className="text-foreground/90">“{d.texto}”</blockquote>
-                  <figcaption className="mt-4 text-sm"><strong>{d.nome}</strong> · {d.empresa}</figcaption>
-                </figure>
-              ))}
-            </div>
+        <section className="border-t" style={{ borderColor: C.linha, background: C.papelEscuro }}>
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 py-20 grid md:grid-cols-2 gap-12">
+            {DEPOIMENTOS.map((d) => (
+              <figure key={d.nome}>
+                <blockquote className="font-serif text-2xl leading-snug italic">“{d.texto}”</blockquote>
+                <figcaption className="mt-4 text-sm" style={{ color: C.tintaSuave }}><strong style={{ color: C.tinta }}>{d.nome}</strong> · {d.empresa}</figcaption>
+              </figure>
+            ))}
           </div>
         </section>
       )}
 
-      {/* PLANO */}
-      <section id="plano" className="py-20 sm:py-24 bg-muted/30 border-y scroll-mt-16">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <h2 className="text-3xl font-display font-bold text-center mb-12">Um plano, sem surpresa</h2>
-          <div className="bg-card border-2 border-primary rounded-3xl shadow-xl p-7 sm:p-10">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
-              <div>
-                <h3 className="text-xl font-display font-bold">SISTEMAFP PJ</h3>
-                <p className="text-muted-foreground text-sm mt-1">Para pequenas empresas que querem organizar o financeiro.</p>
+      {/* PLANO — em formato de recibo */}
+      <section id="plano" className="border-t scroll-mt-16" style={{ borderColor: C.linha, background: C.papelEscuro }}>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 grid lg:grid-cols-12 gap-12 items-center">
+          <div className="lg:col-span-5">
+            <Rotulo>Plano</Rotulo>
+            <h2 className="font-serif text-4xl sm:text-5xl font-semibold leading-[1.05]">Um preço só. Sem letra miúda.</h2>
+            <p className="mt-5 text-lg leading-relaxed" style={{ color: C.tintaSuave }}>
+              Todas as funções do sistema, atualizações incluídas. A implantação e o acompanhamento com o consultor
+              são combinados conforme a necessidade da sua empresa.
+            </p>
+          </div>
+          <div className="lg:col-span-7">
+            <div className="relative bg-white mx-auto max-w-lg px-7 sm:px-9 pt-9 pb-8 shadow-[0_18px_40px_-24px_rgba(30,35,24,0.5)] rotate-[0.6deg]">
+              {/* serrilhado do recibo */}
+              <div className="absolute -bottom-2 left-0 right-0 h-3" style={{ background: "radial-gradient(circle at 8px 0, transparent 6px, white 6.5px) 0 0 / 16px 12px repeat-x" }} />
+              <div className="text-center border-b border-dashed pb-5 mb-5" style={{ borderColor: C.linha }}>
+                <div className="font-display font-bold tracking-tight">SISTEMAFP PJ</div>
+                <div className="text-xs uppercase tracking-[0.2em] mt-1" style={{ color: C.tintaSuave }}>sua conta mensal</div>
               </div>
-              <div className="sm:text-right">
-                <span className="text-sm text-muted-foreground">a partir de</span>
-                <div className="text-4xl font-bold text-primary">{PRECO}<span className="text-base font-normal text-muted-foreground">/mês</span></div>
+              <ul className="space-y-3 font-mono text-[14px]">
+                {([
+                  ["Sistema completo", `${PRECO}/mês`, true],
+                  ["Análise com IA", "incluída", false],
+                  ["Atualizações", "incluídas", false],
+                  ["Implantação", "à parte", false],
+                  ["Acompanhamento", "opcional", false],
+                ] as const).map(([l, v, destaque]) => (
+                  <li key={l} className="flex items-baseline gap-2">
+                    <span>{l}</span>
+                    <span className="flex-1 border-b border-dotted -translate-y-1" style={{ borderColor: C.tintaSuave }} />
+                    <span className={destaque ? "font-bold" : ""} style={{ color: destaque ? C.oliva : C.tintaSuave }}>{v}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-dashed mt-6 pt-6" style={{ borderColor: C.linha }}>
+                <CtaWhats msg={MSG_CONTRATAR} className="w-full">Quero contratar</CtaWhats>
+                <p className="text-center text-xs mt-3" style={{ color: C.tintaSuave }}>Você fala direto com o consultor.</p>
               </div>
             </div>
-            <ul className="grid sm:grid-cols-2 gap-3 mb-8">
-              {["Caixa, contas a pagar e a receber", "Vendas, estoque e precificação", "DRE e relatórios do mês e do ano", "Análise com IA em linguagem simples", "Atualizações e melhorias incluídas", "Acesso pelo computador e celular"].map((i) => (
-                <li key={i} className="flex items-center gap-2 text-sm"><CheckCircle2 className="size-4 text-primary shrink-0" /> {i}</li>
-              ))}
-            </ul>
-            <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4 text-sm mb-8 flex gap-3">
-              <HandCoins className="size-5 text-primary shrink-0 mt-0.5" />
-              <p><strong className="text-foreground">Implantação à parte:</strong> o consultor configura o sistema do jeito da sua empresa. Quer também reuniões de acompanhamento e plano de ação? Chame no WhatsApp e montamos a proposta ideal para o seu negócio.</p>
-            </div>
-            <WhatsButton className="w-full h-12 text-base" msg="Olá! Quero contratar o SISTEMAFP PJ. Pode me explicar como funciona a implantação?">
-              Quero contratar
-            </WhatsButton>
           </div>
         </div>
       </section>
 
       {/* DÚVIDAS */}
-      <section id="duvidas" className="py-20 sm:py-24 scroll-mt-16">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <h2 className="text-3xl font-display font-bold text-center mb-10">Dúvidas frequentes</h2>
-          <div className="space-y-3">
-            {FAQ.map((f, i) => (
-              <div key={f.q} className="bg-card border rounded-2xl">
-                <button
-                  type="button"
-                  onClick={() => setFaqAberto(faqAberto === i ? null : i)}
-                  className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 font-semibold"
-                  aria-expanded={faqAberto === i}
-                >
-                  {f.q}
-                  <ChevronDown className={`size-5 shrink-0 text-muted-foreground transition-transform ${faqAberto === i ? "rotate-180" : ""}`} />
-                </button>
-                {faqAberto === i && <p className="px-5 pb-5 -mt-1 text-muted-foreground">{f.a}</p>}
-              </div>
-            ))}
-          </div>
+      <section id="duvidas" className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 grid lg:grid-cols-12 gap-10 scroll-mt-16">
+        <div className="lg:col-span-4">
+          <Rotulo>Dúvidas</Rotulo>
+          <h2 className="font-serif text-4xl font-semibold leading-[1.08]">Perguntas que todo dono faz.</h2>
+        </div>
+        <div className="lg:col-span-8">
+          {FAQ.map(([q, a], i) => (
+            <div key={q} className="border-t last:border-b" style={{ borderColor: C.linha }}>
+              <button
+                type="button"
+                onClick={() => setFaqAberto(faqAberto === i ? null : i)}
+                className="w-full flex items-center justify-between gap-6 text-left py-5 font-serif text-xl sm:text-2xl"
+                aria-expanded={faqAberto === i}
+              >
+                {q}
+                <Plus className={`size-5 shrink-0 transition-transform ${faqAberto === i ? "rotate-45" : ""}`} style={{ color: C.cafe }} />
+              </button>
+              {faqAberto === i && <p className="pb-6 -mt-1 text-[17px] leading-relaxed max-w-2xl" style={{ color: C.tintaSuave }}>{a}</p>}
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* CHAMADA FINAL */}
-      <section className="pb-20 sm:pb-24">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="rounded-[32px] bg-primary text-primary-foreground p-8 sm:p-12 text-center">
-            <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4">Vamos organizar o financeiro da sua empresa?</h2>
-            <p className="opacity-90 mb-8 max-w-xl mx-auto">Conte como é o seu negócio e mostramos o sistema funcionando.</p>
-            <Button asChild size="lg" className="h-14 px-8 text-lg bg-white text-primary hover:bg-white/90">
-              <a href={waLink(MSG_PADRAO)} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-5" /> Falar no WhatsApp</a>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* RODAPÉ */}
-      <footer className="border-t py-10 bg-card">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-muted-foreground">
-          <div className="flex items-center gap-3">
-            <img src={fepLogo} alt="Finanças em Propósito" className="h-12 w-auto" />
-            <div>
-              <div className="font-semibold text-foreground">SISTEMAFP PJ</div>
-              <div>Um sistema da Finanças em Propósito</div>
+      {/* CHAMADA FINAL + RODAPÉ */}
+      <footer style={{ background: C.olivaEscuro, color: C.papel }}>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-20 sm:pt-24 pb-12">
+          <div className="grid lg:grid-cols-12 gap-10 items-end pb-16 border-b" style={{ borderColor: "rgba(244,241,232,0.2)" }}>
+            <h2 className="lg:col-span-8 font-serif text-4xl sm:text-6xl font-semibold leading-[1.03] tracking-[-0.015em]">
+              Vamos descobrir <em className="font-normal" style={{ color: C.musgo }}>quanto sobra</em> na sua empresa?
+            </h2>
+            <div className="lg:col-span-4 lg:justify-self-end">
+              <CtaWhats claro>Falar no WhatsApp</CtaWhats>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            <a href={waLink(MSG_PADRAO)} target="_blank" rel="noopener noreferrer" className="hover:text-primary">WhatsApp</a>
-            <Link to="/login" className="hover:text-primary">Entrar no sistema</Link>
+          <div className="pt-10 flex flex-col md:flex-row md:items-center justify-between gap-6 text-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-md p-1.5" style={{ background: C.papel }}>
+                <img src={fepLogo} alt="Finanças em Propósito" className="h-10 w-auto" />
+              </div>
+              <div>
+                <div className="font-semibold">SISTEMAFP PJ</div>
+                <div className="opacity-70">Um sistema da Finanças em Propósito</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 opacity-80">
+              <a href={waLink(MSG_PADRAO)} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-4">WhatsApp</a>
+              <Link to="/login" className="hover:underline underline-offset-4">Entrar no sistema</Link>
+              <span>© {new Date().getFullYear()} Finanças em Propósito</span>
+            </div>
           </div>
-          <p>© {new Date().getFullYear()} Finanças em Propósito</p>
         </div>
       </footer>
     </div>
