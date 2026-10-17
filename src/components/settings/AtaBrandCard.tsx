@@ -147,7 +147,7 @@ export function AtaBrandCard({ consultant }: { consultant: Consultant }) {
       cnpj: "00000000000000",
       brand: { nome: consultant.consultancy_name, logoUrl, ...(valid ? cores : DEFAULT_BRAND) },
     });
-    if (!ok) toast.error("Permita pop-ups para visualizar o exemplo.");
+    if (!ok) toast.error("Não foi possível gerar o exemplo.");
   };
 
   return (

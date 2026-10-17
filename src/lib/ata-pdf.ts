@@ -215,14 +215,38 @@ table { width: 100%; border-collapse: collapse; margin: 2pt 0 4pt; font-size: 9p
 <p class="sub">${esc(sub)}</p>
 <div class="regua"></div>
 ${body}
-<script>window.onload = () => setTimeout(() => window.print(), 300);</script>
 </body></html>`;
 }
 
-export function openAtaPdf(markdown: string, meta: AtaMeta, target?: Window | null) {
-  const w = target ?? window.open("", "_blank");
-  if (!w) return false;
-  w.document.write(buildAtaHtml(markdown, meta));
-  w.document.close();
+// Imprime a ata por um iframe invisível na própria página: não abre janela nova,
+// então não depende de liberar pop-ups. O título da página vira o nome do PDF.
+export function openAtaPdf(markdown: string, meta: AtaMeta) {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument;
+  const win = frame.contentWindow;
+  if (!doc || !win) { frame.remove(); return false; }
+
+  doc.open();
+  doc.write(buildAtaHtml(markdown, meta));
+  doc.close();
+
+  const tituloOriginal = document.title;
+  const limpar = () => {
+    document.title = tituloOriginal;
+    setTimeout(() => frame.remove(), 1000);
+  };
+  const imprimir = () => {
+    document.title = `${meta.numero} - ${meta.empresa}`.replace(/[\/:*?"<>|]/g, "-");
+    win.addEventListener("afterprint", limpar, { once: true });
+    win.focus();
+    win.print();
+  };
+  // Espera a logo carregar antes de imprimir.
+  const imgs = Array.from(doc.images);
+  Promise.all(imgs.map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; }))))
+    .then(() => setTimeout(imprimir, 150));
   return true;
 }

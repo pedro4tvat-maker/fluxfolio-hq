@@ -830,9 +830,6 @@ function TaskGeneratorDialog({ minute, consultantId, onClose }: {
 async function exportPdf(m: Minute, companyName: string, cnpj: string | null, numero: string) {
   const content = m.final_content || m.generated_content || "";
   if (!content.trim()) { toast.error("A ata está vazia."); return; }
-  // Abre a janela antes do await para o navegador não bloquear o pop-up.
-  const w = window.open("", "_blank");
-  if (!w) { toast.error("Permita pop-ups para exportar PDF"); return; }
   let brand: AtaBrand = DEFAULT_BRAND;
   const { data } = await sb.rpc("consultant_branding", { _consultant_id: m.consultant_id });
   const b = (data ?? [])[0];
@@ -845,5 +842,5 @@ async function exportPdf(m: Minute, companyName: string, cnpj: string | null, nu
       clara: b.brand_light || DEFAULT_BRAND.clara,
     };
   }
-  openAtaPdf(content, { numero, empresa: companyName, cnpj, brand }, w);
+  if (!openAtaPdf(content, { numero, empresa: companyName, cnpj, brand })) toast.error("Não foi possível gerar o PDF.");
 }
