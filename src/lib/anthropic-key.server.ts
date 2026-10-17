@@ -12,12 +12,3 @@ export function getAnthropicKey(): string | undefined {
   const key = (process.env.ANTHROPIC_API_KEY || fromCf || "").trim();
   return key || undefined;
 }
-
-// Diagnóstico sem expor o valor: só presença e tamanho.
-export function describeAnthropicKey(): string {
-  const env = cfEnv();
-  const pe = process.env.ANTHROPIC_API_KEY;
-  const cf = env?.ANTHROPIC_API_KEY;
-  return `process.env: ${pe === undefined ? "ausente" : `${String(pe).length} caracteres`}; ` +
-    `cloudflare: ${env ? (cf === undefined ? "ausente" : `${typeof cf}, ${String(cf).length} caracteres`) : "sem env"}`;
-}

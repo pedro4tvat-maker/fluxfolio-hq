@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { describeAnthropicKey, getAnthropicKey } from "@/lib/anthropic-key.server";
+import { getAnthropicKey } from "@/lib/anthropic-key.server";
 
 const inputSchema = z.object({
   empresa: z.string(),
@@ -14,18 +14,35 @@ const inputSchema = z.object({
   inconsistencias: z.number(),
 });
 
-const SYSTEM_PROMPT =
-  "Você é um consultor financeiro sênior. Analise APENAS os números fornecidos, sem inventar valores ou fatos não presentes nos dados. " +
-  "Responda em português do Brasil, formato Markdown, com estas seções nesta ordem: " +
-  "## Resumo executivo\n## Pontos positivos\n## Pontos de atenção\n## Recomendações\n## Próximas ações\n" +
-  "Cada seção deve ser objetiva (3 a 6 bullets). Nunca cite números que não estejam nos dados.";
+const SYSTEM_PROMPT = `Você é um consultor financeiro que explica os números para donos de pequenas empresas que não têm formação em finanças. Escreva como numa conversa franca com o empresário: frases curtas, palavras do dia a dia, tom próximo e respeitoso.
+
+Regras de conteúdo:
+- Use APENAS os números fornecidos. Nunca invente valores, causas ou fatos.
+- Evite jargão. Quando precisar de um termo técnico (margem, inadimplência, ticket médio, custo fixo), explique em poucas palavras o que ele significa na prática. Ex.: "inadimplência (clientes que ainda não pagaram o que devem)".
+- Sempre diga o que o número significa para o negócio e o que fazer com ele.
+- Valores em reais no formato R$ 1.234,56; datas e meses por extenso quando ajudar (ex.: "em outubro").
+- Se os dados parecerem incompletos ou estranhos, diga isso de forma simples e sugira conferir os lançamentos, sem acusar ninguém.
+
+Formato (o sistema transforma os símbolos em títulos e listas, o leitor não vê os símbolos):
+## Resumo
+Um parágrafo curto (3 a 4 frases) com a situação geral.
+## O que está indo bem
+- 2 a 4 itens
+## O que merece atenção
+- 2 a 5 itens
+## O que recomendamos
+- 3 a 5 itens, cada um começando com uma ação clara
+## Próximos passos
+- 3 a 5 itens com prazo simples (esta semana, nos próximos 15 dias, este mês)
+
+Use **negrito** só para o valor ou a ideia mais importante de cada item, no máximo uma vez por item. Não use tabelas, emojis nem outros títulos.`;
 
 export const generateExecutiveAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data }) => {
     const apiKey = getAnthropicKey();
-    if (!apiKey) throw new Error(`ANTHROPIC_API_KEY não configurada (${describeAnthropicKey()})`);
+    if (!apiKey) throw new Error("A IA ainda não foi configurada no servidor (ANTHROPIC_API_KEY).");
     const client = new Anthropic({ apiKey });
 
     const userPrompt =
@@ -35,7 +52,7 @@ export const generateExecutiveAnalysis = createServerFn({ method: "POST" })
       `Top produtos:\n${JSON.stringify(data.topProdutos, null, 2)}\n\n` +
       `Destaques automáticos:\n- ${data.destaques.join("\n- ")}\n\n` +
       `Inconsistências detectadas: ${data.inconsistencias}\n\n` +
-      `Escreva a análise consultiva profissional.`;
+      `Escreva a análise para o dono da empresa, em linguagem simples.`;
 
     try {
       // fallbacks "default": se o modelo recusar a resposta, a própria API refaz

@@ -28,6 +28,7 @@ import {
   type Destaque,
 } from "@/lib/reports";
 import { generateExecutiveAnalysis } from "@/lib/executive-ai.functions";
+import { AnaliseTexto } from "@/components/AnaliseTexto";
 import {
   ArrowLeft, Printer, Save, FileText, Sparkles, MessageCircle, AlertTriangle,
   TrendingUp, TrendingDown, CheckCircle2, Loader2, Copy,
@@ -121,6 +122,32 @@ function Executivo() {
   // Comparativo com mês anterior (último vs penúltimo da série)
   const cur = serie && serie.length > 0 ? serie[serie.length - 1] : null;
   const prev = serie && serie.length > 1 ? serie[serie.length - 2] : null;
+  // Totais do período escolhido (soma dos meses da série), não só do último mês.
+  const tot = useMemo(() => {
+    if (!serie || serie.length === 0) return null;
+    const sum = (k: "receitaBruta" | "receitaLiquida" | "custosVariaveis" | "custosFixos" | "despesasFin" | "resultadoOperacional" | "lucroLiquido" | "qtdVendas") =>
+      serie.reduce((acc, m) => acc + (Number(m[k]) || 0), 0);
+    const receitaBruta = sum("receitaBruta");
+    const receitaLiquida = sum("receitaLiquida");
+    const resultadoOperacional = sum("resultadoOperacional");
+    const lucroLiquido = sum("lucroLiquido");
+    const qtdVendas = sum("qtdVendas");
+    return {
+      receitaBruta, receitaLiquida,
+      custosVariaveis: sum("custosVariaveis"),
+      custosFixos: sum("custosFixos"),
+      despesasFin: sum("despesasFin"),
+      resultadoOperacional, lucroLiquido, qtdVendas,
+      margemOperacional: receitaLiquida > 0 ? (resultadoOperacional / receitaLiquida) * 100 : 0,
+      margemLiquida: receitaLiquida > 0 ? (lucroLiquido / receitaLiquida) * 100 : 0,
+      ticketMedio: qtdVendas > 0 ? receitaBruta / qtdVendas : 0,
+    };
+  }, [serie]);
+  // O último mês ainda está em andamento quando o fim do período é hoje ou depois.
+  const hojeIso = iso(new Date());
+  const mesEmAndamento = !!cur && cur.periodo.end >= hojeIso && cur.periodo.start <= hojeIso;
+  const fmtBr = (d: string) => d.split("-").reverse().join("/");
+
   const growth = (a?: number | null, b?: number | null) => {
     if (a == null || b == null || b === 0) return null;
     return ((a - b) / Math.abs(b)) * 100;
@@ -205,24 +232,29 @@ function Executivo() {
           receita: p["Receita total"],
           margem_pct: p["Margem %"],
         }));
+      const t = tot!;
       const kpis = {
-        receita_bruta: cur.receitaBruta,
-        receita_liquida: cur.receitaLiquida,
-        custos_variaveis: cur.custosVariaveis,
-        custos_fixos: cur.custosFixos,
-        resultado_operacional: cur.resultadoOperacional,
-        margem_operacional_pct: cur.margemOperacional,
-        lucro_liquido: cur.lucroLiquido,
-        margem_liquida_pct: cur.margemLiquida,
-        ticket_medio: cur.ticketMedio,
-        qtd_vendas: cur.qtdVendas,
+        receita_bruta_total_periodo: t.receitaBruta,
+        receita_liquida_total_periodo: t.receitaLiquida,
+        custos_variaveis_total_periodo: t.custosVariaveis,
+        custos_fixos_total_periodo: t.custosFixos,
+        resultado_operacional_total_periodo: t.resultadoOperacional,
+        margem_operacional_periodo_pct: Number(t.margemOperacional.toFixed(1)),
+        lucro_liquido_total_periodo: t.lucroLiquido,
+        margem_liquida_periodo_pct: Number(t.margemLiquida.toFixed(1)),
+        ticket_medio_periodo: Number(t.ticketMedio.toFixed(2)),
+        qtd_vendas_periodo: t.qtdVendas,
         contas_receber_vencidas: rec?.summary.vencido ?? 0,
         contas_pagar_vencidas: pay?.summary.vencido ?? 0,
+        ultimo_mes: cur.label,
+        ultimo_mes_situacao: mesEmAndamento
+          ? `em andamento: dados lançados só até ${fmtBr(hojeIso)}; não compare com meses fechados`
+          : "mês fechado",
       };
       const { analysis } = await callIa({
         data: {
           empresa: company?.nome ?? "—",
-          periodo: `${inicio} a ${fim}`,
+          periodo: `${fmtBr(inicio)} a ${fmtBr(fim)}`,
           kpis,
           serieMensal: (serie ?? []).map((s) => ({
             mes: s.label,
@@ -332,18 +364,22 @@ function Executivo() {
           <>
             {/* KPIs */}
             <SectionTitle>Indicadores do período</SectionTitle>
+            <p className="text-xs text-muted-foreground -mt-2 mb-3">
+              Soma de {fmtBr(inicio)} a {fmtBr(fim)}.
+              {mesEmAndamento && <> O mês {cur.label} ainda está em andamento (dados até {fmtBr(hojeIso)}).</>}
+            </p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              <Kpi label="Receita bruta" value={fmt(cur.receitaBruta)} delta={growth(cur.receitaBruta, prev?.receitaBruta)} />
-              <Kpi label="Receita líquida" value={fmt(cur.receitaLiquida)} delta={growth(cur.receitaLiquida, prev?.receitaLiquida)} />
-              <Kpi label="Custos variáveis" value={fmt(cur.custosVariaveis)} />
-              <Kpi label="Custos fixos" value={fmt(cur.custosFixos)} />
-              <Kpi label="Despesas financeiras" value={fmt(cur.despesasFin)} />
-              <Kpi label="Resultado operacional" value={fmt(cur.resultadoOperacional)} delta={growth(cur.resultadoOperacional, prev?.resultadoOperacional)} />
-              <Kpi label="Margem operacional" value={fmtPct(cur.margemOperacional)} />
+              <Kpi label="Receita bruta" value={fmt(tot!.receitaBruta)} />
+              <Kpi label="Receita líquida" value={fmt(tot!.receitaLiquida)} />
+              <Kpi label="Custos variáveis" value={fmt(tot!.custosVariaveis)} />
+              <Kpi label="Custos fixos" value={fmt(tot!.custosFixos)} />
+              <Kpi label="Despesas financeiras" value={fmt(tot!.despesasFin)} />
+              <Kpi label="Resultado operacional" value={fmt(tot!.resultadoOperacional)} />
+              <Kpi label="Margem operacional" value={fmtPct(tot!.margemOperacional)} />
               <Kpi label="Margem contribuição" value={fmtPct(mc?.summary.mcPct ?? 0)} />
-              <Kpi label="Lucro líquido" value={fmt(cur.lucroLiquido)} delta={growth(cur.lucroLiquido, prev?.lucroLiquido)} />
-              <Kpi label="Ticket médio" value={fmt(cur.ticketMedio)} />
-              <Kpi label="Qtd. vendas" value={String(cur.qtdVendas)} />
+              <Kpi label="Lucro líquido" value={fmt(tot!.lucroLiquido)} />
+              <Kpi label="Ticket médio" value={fmt(tot!.ticketMedio)} />
+              <Kpi label="Qtd. vendas" value={String(tot!.qtdVendas)} />
               <Kpi label="A receber (vencidas)" value={fmt(rec?.summary.vencido ?? 0)} />
               <Kpi label="A receber (abertas)" value={fmt(rec?.summary.totalReceber ?? 0)} />
               <Kpi label="A pagar (abertas)" value={fmt(pay?.summary.totalPagar ?? 0)} />
@@ -555,7 +591,7 @@ function Executivo() {
               )}
               {iaAnalysis && (
                 <>
-                  <div className="prose prose-sm max-w-none whitespace-pre-wrap text-[13px]">{iaAnalysis}</div>
+                  <AnaliseTexto texto={iaAnalysis} cor={BRAND.primary} />
                   <div className="mt-3 print:hidden">
                     <Button size="sm" variant="ghost" onClick={runIa}><Sparkles className="size-4" /> Regerar</Button>
                   </div>
