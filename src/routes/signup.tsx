@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Wheat, Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, BadgeCheck, UserCheck } from "lucide-react";
+import { Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, BadgeCheck, UserCheck } from "lucide-react";
 import { toast } from "sonner";
+import logoAsset from "@/assets/sistemafp-icone.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -242,9 +243,7 @@ function SignupPage() {
     <div className="min-h-screen grid place-items-center bg-background p-6">
       <div className="w-full max-w-xl bg-card p-8 rounded-2xl shadow-card border space-y-6">
         <div className="flex items-center gap-2">
-          <div className="size-9 rounded-xl bg-primary grid place-items-center text-primary-foreground">
-            <Wheat className="size-4" />
-          </div>
+          <img src={logoAsset} alt="" className="size-9 object-contain" />
           <span className="font-display font-semibold">SISTEMAFP PJ</span>
         </div>
 

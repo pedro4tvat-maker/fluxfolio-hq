@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, ArrowUpRight, MessageCircle, Plus } from "lucide-react";
 import logoAsset from "@/assets/sistemafp-icone.png";
-import fepLogo from "@/assets/financas-em-proposito.png";
 
 // Contato comercial: todos os botões principais abrem o WhatsApp.
 const WHATSAPP = "5577981427618";
@@ -384,7 +383,7 @@ function LandingPage() {
           <div className="pt-10 flex flex-col md:flex-row md:items-center justify-between gap-6 text-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-md p-1.5" style={{ background: C.papel }}>
-                <img src={fepLogo} alt="Finanças em Propósito" className="h-10 w-auto" />
+                <img src={logoAsset} alt="SISTEMAFP PJ" className="h-10 w-10 object-contain" />
               </div>
               <div>
                 <div className="font-semibold">SISTEMAFP PJ</div>
