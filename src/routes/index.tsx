@@ -92,10 +92,10 @@ const PASSOS = [
 const FAQ = [
   { q: "Preciso entender de finanças para usar?", a: "Não. O sistema foi pensado para o dono do negócio, e a análise mostra os números em linguagem simples, explicando o que cada um significa para a sua empresa." },
   { q: "Funciona no celular?", a: "Sim. Você acessa pelo navegador do celular ou do computador, e pode instalar como aplicativo na tela inicial." },
-  { q: "Meus dados ficam seguros?", a: "Cada empresa só enxerga os próprios dados, e o consultor só acessa as empresas que autorizarem o vínculo. Os dados ficam em servidores profissionais com cópia de segurança." },
+  { q: "Meus dados ficam seguros?", a: "Cada empresa só enxerga os próprios dados, e o consultor só acessa as empresas que autorizarem o vínculo. Os dados ficam em servidores profissionais na nuvem, com acesso protegido por senha." },
   { q: "Para que tipo de empresa ele serve?", a: "Principalmente pequenas empresas que vendem produtos e controlam estoque: comércio, pequena indústria, alimentação, revenda, agro e serviços com venda de produtos." },
   { q: "O sistema emite nota fiscal?", a: "Não. O SISTEMAFP PJ cuida da gestão financeira e dos resultados; a nota fiscal continua no emissor que você já usa." },
-  { q: "Como faço para começar?", a: "Chame no WhatsApp. Conversamos sobre a sua empresa, fazemos a implantação e você já começa a usar." },
+  { q: "Como faço para começar?", a: "Chame no WhatsApp. Conversamos sobre a sua empresa, combinamos a implantação (contratada à parte) e você já começa a usar." },
 ];
 
 function LandingPage() {
@@ -153,7 +153,7 @@ function LandingPage() {
               <a href="#como-funciona">Como funciona <ArrowRight className="size-5" /></a>
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground mt-6">Plano a partir de {PRECO}/mês · Implantação com o consultor</p>
+          <p className="text-sm text-muted-foreground mt-6">Sistema a partir de {PRECO}/mês · Implantação contratada à parte</p>
         </div>
       </section>
 
@@ -306,13 +306,13 @@ function LandingPage() {
               </div>
             </div>
             <ul className="grid sm:grid-cols-2 gap-3 mb-8">
-              {["Caixa, contas a pagar e a receber", "Vendas, estoque e precificação", "DRE e relatórios do mês e do ano", "Análise com IA em linguagem simples", "Implantação com o consultor", "Acesso pelo computador e celular"].map((i) => (
+              {["Caixa, contas a pagar e a receber", "Vendas, estoque e precificação", "DRE e relatórios do mês e do ano", "Análise com IA em linguagem simples", "Atualizações e melhorias incluídas", "Acesso pelo computador e celular"].map((i) => (
                 <li key={i} className="flex items-center gap-2 text-sm"><CheckCircle2 className="size-4 text-primary shrink-0" /> {i}</li>
               ))}
             </ul>
             <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4 text-sm mb-8 flex gap-3">
               <HandCoins className="size-5 text-primary shrink-0 mt-0.5" />
-              <p>Quer reuniões de acompanhamento e plano de ação com o consultor? Chame no WhatsApp para montar o acompanhamento ideal para sua empresa.</p>
+              <p><strong className="text-foreground">Implantação à parte:</strong> o consultor configura o sistema do jeito da sua empresa. Quer também reuniões de acompanhamento e plano de ação? Chame no WhatsApp e montamos a proposta ideal para o seu negócio.</p>
             </div>
             <WhatsButton className="w-full h-12 text-base" msg="Olá! Quero contratar o SISTEMAFP PJ. Pode me explicar como funciona a implantação?">
               Quero contratar
