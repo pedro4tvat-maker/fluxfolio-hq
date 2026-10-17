@@ -72,7 +72,7 @@ ${previous_action_plan || "Nenhuma ata anterior: esta é a primeira reunião reg
 RELATO LIVRE DO CONSULTOR:
 ${raw_notes}
 
-FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos, tabelas e marcações):
+FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos e marcações). A ata deve ler como um documento corrido: prefira parágrafos bem escritos; a única tabela é o plano de ação.
 
 ## 1. Identificação da reunião
 - **Data:** ${fmtDate(meeting_date)}
@@ -81,9 +81,8 @@ FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos, 
 - **Tipo:** ${meeting_type || "Não informado"}
 
 ## 2. Participantes
-| Nome | Função | Organização |
-|---|---|---|
-| [uma linha por participante; o consultor responsável primeiro, com função "Consultor Financeiro" e a organização dele; função ou organização desconhecida: "Não informado"] | | |
+- **[Nome do consultor responsável]** — Consultor Financeiro ([organização do consultor])
+- **[Nome]** — [Função ou "Não informado"] ([Organização ou "Não informado"])
 
 **Ausentes:** [quem foi citado como ausente, ou "Não houve ausências."]
 
@@ -94,14 +93,16 @@ FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos, 
 2. [item da pauta]
 
 ## 4. Assuntos discutidos
+> [Síntese da reunião em 2 a 3 frases: o contexto, o principal ponto de atenção e o encaminhamento geral.]
+
 ### 4.1 [Título do assunto]
-[Um ou dois parágrafos formais sobre o que foi tratado neste assunto.]
+[Um a dois parágrafos formais e completos sobre o que foi apresentado, analisado e concluído neste assunto. Destaque em **negrito** números ou fatos-chave citados no relato.]
 
 ### 4.2 [Título do assunto]
 [...]
 
 ## 5. Decisões tomadas
-1. [Decisão, citando em negrito quem ficou responsável, ex.: **Carlos (Gerente)** será responsável por:]
+1. [Decisão escrita como frase completa, citando em negrito quem ficou responsável, ex.: **Carlos (Gerente)** passará a ser responsável por:]
    - [detalhe da decisão, quando houver]
 [Se não houve decisão formal: "Nenhuma decisão formal foi registrada nesta reunião."]
 
@@ -111,13 +112,12 @@ FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos, 
 | 1 | [ação concreta] | [nome] | [DD/MM/AAAA ou A definir] | Pendente |
 
 ## 7. Pendências da reunião anterior
-[Se houver ata anterior: tabela | Ação | Responsável | Status | com cada ação do plano anterior e o status que o relato indicar (Concluída, Em andamento, Pendente ou Não mencionada). Se não houver: "Não se aplica: esta foi a primeira reunião registrada."]
+[Se houver ata anterior, uma linha por ação do plano anterior, no formato abaixo, com o status que o relato indicar: Concluída, Em andamento, Pendente ou Não mencionada.]
+- [Status] [Ação] — [Responsável]
+[Se não houver ata anterior: "Não se aplica: esta foi a primeira reunião registrada."]
 
 ## 8. Próxima reunião
-- **Data:** ${next_meeting_date ? fmtDate(next_meeting_date) : "A definir"}
-- **Horário:** [horário, se informado no relato, ou A definir]
-
-**Pauta prevista:**
+A próxima reunião está prevista para **${next_meeting_date ? fmtDate(next_meeting_date) : "data a definir"}**[, às **horário**, se informado no relato], com a seguinte pauta:
 1. [item previsto para a próxima reunião]
 
 ## 9. Encerramento

@@ -43,7 +43,8 @@ type Block =
   | { t: "itemTit"; text: string }
   | { t: "ol"; items: Item[] }
   | { t: "ul"; items: Item[] }
-  | { t: "p"; text: string };
+  | { t: "p"; text: string }
+  | { t: "callout"; text: string };
 type Section = { title: string; blocks: Block[] };
 
 const cells = (line: string) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
@@ -71,6 +72,17 @@ function parseSection(lines: string[]): Block[] {
       }
       i--;
       if (rows.length) blocks.push({ t: "table", rows });
+      continue;
+    }
+    if (line.startsWith(">")) {
+      flushFicha(); flushList();
+      const parts: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith(">")) {
+        parts.push(lines[i].trim().replace(/^>\s?/, ""));
+        i++;
+      }
+      i--;
+      blocks.push({ t: "callout", text: parts.join(" ").trim() });
       continue;
     }
     const h3 = line.match(/^###\s+(.*)$/);
@@ -122,6 +134,14 @@ const rgb = (hex: string): [number, number, number] => [1, 3, 5].map((i) => pars
 const TEXTO: [number, number, number] = [26, 26, 26];
 const CINZA: [number, number, number] = [85, 85, 85];
 const GRADE: [number, number, number] = [201, 203, 176];
+const statusColor = (status: string): [number, number, number] => {
+  const st = status.toLowerCase();
+  if (/conclu|realizad|feito|ok/.test(st)) return [46, 125, 50];
+  if (/andamento|parcial|iniciad/.test(st)) return [183, 121, 31];
+  if (/atras|vencid|cancel/.test(st)) return [185, 28, 28];
+  if (/n[ãa]o menciona|sem informa/.test(st)) return [110, 110, 110];
+  return [94, 96, 52]; // pendente
+};
 
 async function loadImage(url: string): Promise<{ data: string; w: number; h: number; fmt: string } | null> {
   try {
@@ -243,32 +263,67 @@ export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
       headStyles: { fillColor: E, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: C },
       columnStyles: w ? Object.fromEntries(w.map((p, i) => [i, { cellWidth: (WIDTH * p) / 100 }])) : {},
+      didParseCell: (data: any) => {
+        const isStatus = /status/i.test(String(head[data.column.index] ?? ""));
+        if (isStatus && data.section === "body") {
+          data.cell.styles.textColor = statusColor(String(data.cell.raw ?? ""));
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
   };
 
+  // Quadro de destaque com pares "Rótulo: valor" em duas colunas.
   const ficha = (pairs: [string, string][]) => {
-    const body: string[][] = [];
-    for (let i = 0; i < pairs.length; i += 2) {
-      const row: string[] = [];
-      pairs.slice(i, i + 2).forEach(([r, v]) => row.push(plain(r), plain(v)));
-      while (row.length < 4) row.push("");
-      body.push(row);
-    }
-    autoTable(doc, {
-      startY: y,
-      margin,
-      body,
-      theme: "grid",
-      styles: { font: "helvetica", fontSize: 9, cellPadding: 1.8, lineColor: GRADE, lineWidth: 0.18, textColor: TEXTO },
-      columnStyles: {
-        0: { cellWidth: 32, fillColor: C, textColor: E, fontStyle: "bold" },
-        1: { cellWidth: WIDTH / 2 - 32 },
-        2: { cellWidth: 32, fillColor: C, textColor: E, fontStyle: "bold" },
-        3: { cellWidth: WIDTH / 2 - 32 },
-      },
+    const rows = Math.ceil(pairs.length / 2);
+    const h = rows * 6 + 3;
+    ensure(h + 2);
+    doc.setFillColor(...C);
+    doc.roundedRect(MM.left, y, WIDTH, h, 1.5, 1.5, "F");
+    pairs.forEach(([r, v], i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const x = MM.left + 4 + col * (WIDTH / 2);
+      const ty = y + 5.3 + row * 6;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...E);
+      const label = `${plain(r)}: `;
+      doc.text(label, x, ty);
+      doc.setFont("helvetica", "normal"); doc.setTextColor(...TEXTO);
+      const lw = doc.getTextWidth(label);
+      doc.text(doc.splitTextToSize(plain(v), WIDTH / 2 - 8 - lw)[0] ?? "", x + lw, ty);
     });
-    y = (doc as any).lastAutoTable.finalY + 2;
+    y += h + 2;
+  };
+
+  // Quadro de síntese: fundo claro com barra lateral na cor principal.
+  const callout = (text: string) => {
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9.5);
+    const linhas = doc.splitTextToSize(plain(text), WIDTH - 10).length;
+    const h = linhas * LINE(9.5) + 4;
+    ensure(h + 2);
+    doc.setFillColor(...C);
+    doc.rect(MM.left, y, WIDTH, h, "F");
+    doc.setFillColor(...P);
+    doc.rect(MM.left, y, 1.3, h, "F");
+    const top = y;
+    y += 2;
+    rich(text, MM.left + 5, WIDTH - 10);
+    y = Math.max(y, top + h) + 2;
+  };
+
+  // Item de lista com etiqueta colorida: "[Concluída] Ação — Responsável".
+  const tagged = (status: string, text: string, x: number, width: number) => {
+    ensure(LINE(9.5) + 1);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(7.5);
+    const label = status.toUpperCase();
+    const tw = doc.getTextWidth(label) + 4;
+    doc.setFillColor(...statusColor(status));
+    doc.roundedRect(x, y + 0.6, tw, 4.2, 1, 1, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.text(label, x + 2, y + 3.65);
+    rich(text, x + tw + 2.5, width - tw - 2.5);
+    y += 0.8;
   };
 
   const sectionBar = (title: string) => {
@@ -287,7 +342,13 @@ export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
     const encerramento = /^\s*\d+\.?\s*encerramento/i.test(sec.title);
     if (/^\s*2\.?\s*participantes/i.test(sec.title)) {
       const tb = sec.blocks.find((bl) => bl.t === "table") as { rows: string[][] } | undefined;
-      signers = (tb?.rows.slice(1) ?? []).filter((r) => r[0]).map((r) => [plain(r[0]), plain(r[1] ?? "")]);
+      const lista = sec.blocks.find((bl) => bl.t === "ul") as { items: Item[] } | undefined;
+      signers = tb
+        ? tb.rows.slice(1).filter((r) => r[0]).map((r) => [plain(r[0]), plain(r[1] ?? "")])
+        : (lista?.items ?? []).map((it) => {
+            const [nomeP, resto = ""] = plain(it.text).split(/\s+[—–-]\s+/, 2);
+            return [nomeP.trim(), resto.replace(/\s*\(.*\)\s*$/, "").trim()] as [string, string];
+          });
     }
     // Encerramento e assinaturas ficam juntos na mesma página.
     if (encerramento) ensure(40 + Math.ceil(signers.length / 3) * 22);
@@ -297,7 +358,8 @@ export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
       if (bl.t === "table") table(bl.rows);
       else if (bl.t === "ficha") ficha(bl.pairs);
       else if (bl.t === "itemTit") { y += 1.2; ensure(12); rich(`**${plain(bl.text)}**`, MM.left, WIDTH, 9.5, E); }
-      else if (bl.t === "p") { rich(bl.text, MM.left, WIDTH); y += 0.8; }
+      else if (bl.t === "p") { rich(bl.text, MM.left, WIDTH); y += 1.2; }
+      else if (bl.t === "callout") callout(bl.text);
       else if (bl.t === "ol") {
         bl.items.forEach((it, i) => {
           rich(`**${i + 1}.** ${it.text}`, MM.left, WIDTH);
@@ -306,9 +368,12 @@ export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
         });
       } else {
         bl.items.forEach((it) => {
-          rich(`•  ${it.text}`, MM.left + 2, WIDTH - 2);
+          const tag = it.text.match(/^\[([^\]]+)\]\s*(.*)$/);
+          if (tag) tagged(tag[1], tag[2], MM.left + 2, WIDTH - 2);
+          else rich(`•  ${it.text}`, MM.left + 2, WIDTH - 2);
           it.subs.forEach((s) => rich(`–  ${s}`, MM.left + 8, WIDTH - 8));
         });
+        y += 0.8;
       }
     }
 

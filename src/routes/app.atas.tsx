@@ -81,9 +81,7 @@ const defaultTemplate = (_empresa: string) => `## 1. Identificação da reunião
 - **Tipo:**
 
 ## 2. Participantes
-| Nome | Função | Organização |
-|---|---|---|
-| | | |
+- **[Nome]** — [Função] ([Organização])
 
 **Ausentes:** Não houve ausências.
 
@@ -93,6 +91,8 @@ const defaultTemplate = (_empresa: string) => `## 1. Identificação da reunião
 1.
 
 ## 4. Assuntos discutidos
+> Síntese da reunião em duas ou três frases.
+
 ### 4.1
 
 ## 5. Decisões tomadas
@@ -107,10 +107,7 @@ const defaultTemplate = (_empresa: string) => `## 1. Identificação da reunião
 Não se aplica: esta foi a primeira reunião registrada.
 
 ## 8. Próxima reunião
-- **Data:**
-- **Horário:**
-
-**Pauta prevista:**
+A próxima reunião está prevista para **data a definir**, com a seguinte pauta:
 1.
 
 ## 9. Encerramento

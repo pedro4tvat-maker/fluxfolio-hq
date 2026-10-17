@@ -28,10 +28,8 @@ const EXEMPLO = `## 1. Identificação da reunião
 - **Tipo:** Acompanhamento mensal
 
 ## 2. Participantes
-| Nome | Função | Organização |
-|---|---|---|
-| Consultor Responsável | Consultor Financeiro | Sua Consultoria |
-| Cliente Exemplo | Proprietário | Empresa Exemplo |
+- **Consultor Responsável** — Consultor Financeiro (Sua Consultoria)
+- **Cliente Exemplo** — Proprietário (Empresa Exemplo)
 
 **Ausentes:** Não houve ausências.
 
@@ -42,6 +40,8 @@ const EXEMPLO = `## 1. Identificação da reunião
 2. Revisão do plano de ação.
 
 ## 4. Assuntos discutidos
+> Reunião de acompanhamento com foco no fluxo de caixa do mês e na revisão do plano de ação.
+
 ### 4.1 Fluxo de caixa do mês
 Foi apresentado o fluxo de caixa realizado no período, com destaque para a evolução das receitas e o controle das despesas fixas.
 
@@ -58,10 +58,7 @@ Foi apresentado o fluxo de caixa realizado no período, com destaque para a evol
 Não se aplica: esta foi a primeira reunião registrada.
 
 ## 8. Próxima reunião
-- **Data:** 27/10/2026
-- **Horário:** 09:00
-
-**Pauta prevista:**
+A próxima reunião está prevista para **27/10/2026**, às **09:00**, com a seguinte pauta:
 1. Acompanhamento do plano de ação.
 
 ## 9. Encerramento
