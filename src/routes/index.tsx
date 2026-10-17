@@ -102,7 +102,14 @@ function LandingPage() {
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    // Rolagem suave ao clicar nos links do menu (respeita quem prefere menos movimento)
+    const html = document.documentElement;
+    const reduzir = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduzir) html.style.scrollBehavior = "smooth";
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      html.style.scrollBehavior = "";
+    };
   }, []);
 
   return (
