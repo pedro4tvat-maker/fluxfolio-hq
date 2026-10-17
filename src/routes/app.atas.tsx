@@ -20,7 +20,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { openAtaPdf, DEFAULT_BRAND, type AtaBrand } from "@/lib/ata-pdf";
+import { downloadAtaPdf, DEFAULT_BRAND, type AtaBrand } from "@/lib/ata-pdf";
 import {
   Plus, Sparkles, Pencil, Copy, Trash2, FileDown, Share2, NotebookPen,
   CheckCircle2, ListPlus, Inbox, Filter,
@@ -842,5 +842,10 @@ async function exportPdf(m: Minute, companyName: string, cnpj: string | null, nu
       clara: b.brand_light || DEFAULT_BRAND.clara,
     };
   }
-  if (!openAtaPdf(content, { numero, empresa: companyName, cnpj, brand })) toast.error("Não foi possível gerar o PDF.");
+  try {
+    await downloadAtaPdf(content, { numero, empresa: companyName, cnpj, brand });
+  } catch (e) {
+    console.error(e);
+    toast.error("Não foi possível gerar o PDF.");
+  }
 }

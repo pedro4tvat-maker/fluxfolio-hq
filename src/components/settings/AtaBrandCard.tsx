@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_BRAND, openAtaPdf } from "@/lib/ata-pdf";
+import { DEFAULT_BRAND, downloadAtaPdf } from "@/lib/ata-pdf";
 
 const sb = supabase as any;
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -141,13 +141,12 @@ export function AtaBrandCard({ consultant }: { consultant: Consultant }) {
   });
 
   const preview = () => {
-    const ok = openAtaPdf(EXEMPLO, {
+    downloadAtaPdf(EXEMPLO, {
       numero: "Ata nº 001/2026",
       empresa: "Empresa Exemplo",
       cnpj: "00000000000000",
       brand: { nome: consultant.consultancy_name, logoUrl, ...(valid ? cores : DEFAULT_BRAND) },
-    });
-    if (!ok) toast.error("Não foi possível gerar o exemplo.");
+    }).catch(() => toast.error("Não foi possível gerar o exemplo."));
   };
 
   return (
@@ -157,7 +156,7 @@ export function AtaBrandCard({ consultant }: { consultant: Consultant }) {
           <h3 className="font-display font-semibold flex items-center gap-2"><Palette className="size-4 text-primary" /> Identidade visual das atas</h3>
           <p className="text-sm text-muted-foreground">Logo e cores que aparecem nas atas em PDF enviadas aos seus clientes.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={preview}><Eye className="size-4" /> Ver ata de exemplo</Button>
+        <Button variant="outline" size="sm" onClick={preview}><Eye className="size-4" /> Baixar ata de exemplo</Button>
       </div>
 
       <div className="grid md:grid-cols-[220px_1fr] gap-6 items-start">

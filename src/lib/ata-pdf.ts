@@ -1,8 +1,10 @@
 // PDF da ata no modelo padrão (o mesmo de gerar_ata.py): logo da consultoria,
-// "ATA DE REUNIÃO", nº/empresa/CNPJ, faixas coloridas por seção, tabelas e
-// assinaturas. O texto da ata é Markdown nas 9 seções do modelo; aqui ele vira
-// HTML estilizado e o navegador salva em PDF. Logo e cores vêm da identidade
-// visual que cada consultor configura.
+// "ATA DE REUNIÃO", nº/empresa/CNPJ, faixas coloridas por seção, tabelas,
+// rodapé com nº da página e assinaturas. O texto da ata é Markdown nas 9 seções
+// do modelo; aqui ele é desenhado com jsPDF e baixado como arquivo (sem diálogo
+// de impressão nem pop-up). Logo e cores vêm da identidade visual do consultor.
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export type AtaBrand = {
   nome: string; // nome da consultoria no rodapé
@@ -27,71 +29,33 @@ export type AtaMeta = {
   brand?: AtaBrand;
 };
 
-const HEX = /^#[0-9a-fA-F]{6}$/;
-const cor = (v: string | undefined, fallback: string) => (v && HEX.test(v) ? v : fallback);
-
-const esc = (s: string) =>
-  s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-
-// **negrito** e *itálico* depois de escapar o HTML.
-const inline = (s: string) =>
-  esc(s.trim())
-    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
-    .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<i>$2</i>");
-
 export const formatCnpj = (v?: string | null) => {
   const d = (v ?? "").replace(/\D/g, "");
   return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : (v ?? "");
 };
 
-const cells = (line: string) =>
-  line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+// ---------- Leitura do Markdown ----------
 
+type Item = { text: string; subs: string[] };
+type Block =
+  | { t: "ficha"; pairs: [string, string][] }
+  | { t: "table"; rows: string[][] }
+  | { t: "itemTit"; text: string }
+  | { t: "ol"; items: Item[] }
+  | { t: "ul"; items: Item[] }
+  | { t: "p"; text: string };
+type Section = { title: string; blocks: Block[] };
+
+const cells = (line: string) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
 const isSeparator = (line: string) => /^\|?\s*:?-{2,}/.test(line.trim());
+const plain = (s: string) => s.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").trim();
 
-function tableHtml(rows: string[][], widths?: number[]) {
-  const [head, ...body] = rows;
-  const col = (i: number) => (widths?.[i] ? ` style="width:${widths[i]}%"` : "");
-  return `<table class="grid"><thead><tr>${head.map((h, i) => `<th${col(i)}>${inline(h)}</th>`).join("")}</tr></thead><tbody>${body
-    .map((r) => `<tr>${head.map((_, i) => `<td>${inline(r[i] ?? "")}</td>`).join("")}</tr>`)
-    .join("")}</tbody></table>`;
-}
-
-// Pares "Rótulo: valor" em grade de 2 pares por linha (como a ficha do modelo).
-function fichaHtml(pairs: [string, string][]) {
-  let html = '<table class="ficha">';
-  for (let i = 0; i < pairs.length; i += 2) {
-    html += "<tr>";
-    for (const [rot, val] of pairs.slice(i, i + 2)) html += `<td class="rot">${inline(rot)}</td><td>${inline(val)}</td>`;
-    if (pairs.length - i < 2) html += "<td class='rot'></td><td></td>";
-    html += "</tr>";
-  }
-  return html + "</table>";
-}
-
-const WIDTHS: Record<string, number[]> = {
-  "nº|ação|responsável|prazo|status": [6, 45, 15, 19, 15],
-  "nome|função|organização": [40, 30, 30],
-};
-
-function sectionBody(lines: string[]) {
-  let html = "";
-  let fichas: [string, string][] = [];
-  let list: { kind: "ol" | "ul"; items: { text: string; subs: string[] }[] } | null = null;
-
-  const flushFicha = () => {
-    if (fichas.length) html += fichaHtml(fichas);
-    fichas = [];
-  };
-  const flushList = () => {
-    if (!list) return;
-    html += list.kind === "ol"
-      ? list.items
-          .map((it, i) => `<p class="txt"><b>${i + 1}.</b> ${inline(it.text)}</p>${it.subs.map((s) => `<p class="txt sub">• ${inline(s)}</p>`).join("")}`)
-          .join("")
-      : `<ul>${list.items.map((it) => `<li>${inline(it.text)}${it.subs.length ? `<ul>${it.subs.map((s) => `<li>${inline(s)}</li>`).join("")}</ul>` : ""}</li>`).join("")}</ul>`;
-    list = null;
-  };
+function parseSection(lines: string[]): Block[] {
+  const blocks: Block[] = [];
+  let ficha: [string, string][] = [];
+  let list: { t: "ol" | "ul"; items: Item[] } | null = null;
+  const flushFicha = () => { if (ficha.length) blocks.push({ t: "ficha", pairs: ficha }); ficha = []; };
+  const flushList = () => { if (list) blocks.push(list); list = null; };
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
@@ -106,147 +70,279 @@ function sectionBody(lines: string[]) {
         i++;
       }
       i--;
-      const key = rows[0]?.map((h) => h.toLowerCase()).join("|") ?? "";
-      if (rows.length) html += tableHtml(rows, WIDTHS[key]);
+      if (rows.length) blocks.push({ t: "table", rows });
       continue;
     }
-
     const h3 = line.match(/^###\s+(.*)$/);
-    if (h3) { flushFicha(); flushList(); html += `<p class="item-tit">${inline(h3[1])}</p>`; continue; }
+    if (h3) { flushFicha(); flushList(); blocks.push({ t: "itemTit", text: h3[1] }); continue; }
 
-    // "- **Data:** 16/10/2026" vira par da ficha
     const par = line.match(/^[-*]\s+\*\*([^*]+?):\*\*\s*(.*)$/);
-    if (par) { flushList(); fichas.push([par[1], par[2] || "Não informado"]); continue; }
+    if (par) { flushList(); ficha.push([par[1], par[2] || "Não informado"]); continue; }
     flushFicha();
 
     const sub = raw.match(/^\s{2,}[-*•]\s+(.*)$/);
-    if (sub && list?.items.length) { list.items[list.items.length - 1].subs.push(sub[1]); continue; }
+    if (sub && list && list.items.length) { list.items[list.items.length - 1].subs.push(sub[1]); continue; }
 
     const ol = line.match(/^\d+[.)]\s+(.*)$/);
     if (ol) {
-      if (list?.kind !== "ol") { flushList(); list = { kind: "ol", items: [] }; }
+      if (list?.t !== "ol") { flushList(); list = { t: "ol", items: [] }; }
       list.items.push({ text: ol[1], subs: [] });
       continue;
     }
     const ul = line.match(/^[-*•]\s+(.*)$/);
     if (ul) {
-      if (list?.kind !== "ul") { flushList(); list = { kind: "ul", items: [] }; }
+      if (list?.t !== "ul") { flushList(); list = { t: "ul", items: [] }; }
       list.items.push({ text: ul[1], subs: [] });
       continue;
     }
     flushList();
-    html += `<p class="txt">${inline(line)}</p>`;
+    blocks.push({ t: "p", text: line });
   }
   flushFicha(); flushList();
-  return html;
+  return blocks;
 }
 
-// Participantes (nome, função) lidos da tabela da seção 2, para as assinaturas.
-function signers(md: string): [string, string][] {
-  const sec = md.split(/^##\s+/m).find((s) => /^\s*2\.?\s*participantes/i.test(s));
-  if (!sec) return [];
-  const rows = sec.split("\n").filter((l) => l.trim().startsWith("|") && !isSeparator(l)).map(cells);
-  return rows.slice(1).filter((r) => r[0]).map((r) => [r[0], r[1] ?? ""]);
-}
-
-export function buildAtaHtml(markdown: string, meta: AtaMeta) {
-  const md = markdown.replace(/\r\n/g, "\n");
-  // Ignora título solto antes da seção 1 (o cabeçalho é desenhado aqui).
-  const parts = md.split(/^##\s+/m).slice(1);
-  let body = "";
-  for (const part of parts) {
+function parseAta(markdown: string): Section[] {
+  return markdown.replace(/\r\n/g, "\n").split(/^##\s+/m).slice(1).map((part) => {
     const [titleLine, ...rest] = part.split("\n");
-    const title = titleLine.replace(/\*\*/g, "").trim();
-    let sectionHtml = `<div class="secao">${esc(title.toUpperCase())}</div>${sectionBody(rest)}`;
-    if (/^\s*\d+\.?\s*encerramento/i.test(title)) {
-      const s = signers(md);
-      const assinaturas = s
-        .map(([n, f]) => `<div class="ass"><div class="linha"></div><b>${esc(n)}</b><br/>${esc(f)}</div>`)
-        .join("");
-      sectionHtml = `<div class="bloco-final">${sectionHtml}<div class="assinaturas">${assinaturas}</div></div>`;
-    }
-    body += sectionHtml;
-  }
+    return { title: plain(titleLine), blocks: parseSection(rest) };
+  });
+}
 
+// ---------- Desenho ----------
+
+const MM = { left: 20, right: 20, top: 15, bottom: 22 };
+const PAGE_W = 210;
+const PAGE_H = 297;
+const WIDTH = PAGE_W - MM.left - MM.right;
+const PT = 0.3528; // mm por ponto
+const LINE = (size: number) => size * PT * 1.42;
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const rgb = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
+const TEXTO: [number, number, number] = [26, 26, 26];
+const CINZA: [number, number, number] = [85, 85, 85];
+const GRADE: [number, number, number] = [201, 203, 176];
+
+async function loadImage(url: string): Promise<{ data: string; w: number; h: number; fmt: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const data: string = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+    const dims: { w: number; h: number } = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = reject;
+      img.src = data;
+    });
+    const fmt = blob.type.includes("png") ? "PNG" : blob.type.includes("webp") ? "WEBP" : "JPEG";
+    return { data, ...dims, fmt };
+  } catch {
+    return null;
+  }
+}
+
+export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
+  const b = meta.brand ?? DEFAULT_BRAND;
+  const P = rgb(HEX.test(b.primaria) ? b.primaria : DEFAULT_BRAND.primaria);
+  const E = rgb(HEX.test(b.escura) ? b.escura : DEFAULT_BRAND.escura);
+  const C = rgb(HEX.test(b.clara) ? b.clara : DEFAULT_BRAND.clara);
+  const nome = b.nome?.trim() || DEFAULT_BRAND.nome;
+
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  doc.setProperties({ title: `${meta.numero} - ${meta.empresa}`, author: nome });
+  let y = MM.top;
+
+  const ensure = (h: number) => {
+    if (y + h > PAGE_H - MM.bottom) { doc.addPage(); y = MM.top; }
+  };
+
+  // Texto com trechos em **negrito**, quebrado em linhas dentro da largura.
+  const rich = (text: string, x: number, width: number, size = 9.5, color = TEXTO) => {
+    const words: { w: string; bold: boolean }[] = [];
+    text.split(/(\*\*.+?\*\*)/g).forEach((part) => {
+      if (!part) return;
+      const bold = /^\*\*.+\*\*$/.test(part);
+      const s = bold ? part.slice(2, -2) : part.replace(/\*(.+?)\*/g, "$1");
+      s.split(/(\s+)/).forEach((w) => w && words.push({ w, bold }));
+    });
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    const lh = LINE(size);
+    let line: { w: string; bold: boolean }[] = [];
+    let lineW = 0;
+    const measure = (w: { w: string; bold: boolean }) => { doc.setFont("helvetica", w.bold ? "bold" : "normal"); return doc.getTextWidth(w.w); };
+    const flush = () => {
+      while (line.length && !line[line.length - 1].w.trim()) line.pop();
+      ensure(lh);
+      let cx = x;
+      line.forEach((w) => { doc.setFont("helvetica", w.bold ? "bold" : "normal"); doc.text(w.w, cx, y + lh * 0.75); cx += doc.getTextWidth(w.w); });
+      y += lh;
+      line = []; lineW = 0;
+    };
+    words.forEach((w) => {
+      if (!w.w.trim() && !line.length) return;
+      const ww = measure(w);
+      if (lineW + ww > width && line.length) {
+        flush();
+        if (!w.w.trim()) return;
+      }
+      line.push(w); lineW += ww;
+    });
+    if (line.length) flush();
+  };
+
+  // Cabeçalho
+  const logo = b.logoUrl ? await loadImage(b.logoUrl) : null;
+  if (logo) {
+    const boxW = 50, boxH = 25;
+    const r = Math.min(boxW / logo.w, boxH / logo.h);
+    const w = logo.w * r, h = logo.h * r;
+    doc.addImage(logo.data, logo.fmt, (PAGE_W - w) / 2, y, w, h);
+    y += h + 2;
+  } else {
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(...E);
+    doc.text(nome, PAGE_W / 2, y + 8, { align: "center" });
+    y += 12;
+  }
+  doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.setTextColor(...E);
+  doc.text("ATA DE REUNIÃO", PAGE_W / 2, y + 6, { align: "center" });
+  y += 9;
   const cnpj = formatCnpj(meta.cnpj);
   const sub = [meta.numero, meta.empresa, cnpj && cnpj !== "Não informado" ? `CNPJ ${cnpj}` : ""].filter(Boolean).join("  •  ");
-  const b = meta.brand ?? DEFAULT_BRAND;
-  const P = cor(b.primaria, DEFAULT_BRAND.primaria);
-  const E = cor(b.escura, DEFAULT_BRAND.escura);
-  const C = cor(b.clara, DEFAULT_BRAND.clara);
-  const nome = b.nome?.trim() || DEFAULT_BRAND.nome;
-  const rodape = `${nome} — Consultoria Financeira  |  ${meta.numero}`;
-  const logo = b.logoUrl ? new URL(b.logoUrl, window.location.origin).href : null;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(...CINZA);
+  doc.text(sub, PAGE_W / 2, y + 3.5, { align: "center" });
+  y += 6;
+  doc.setDrawColor(...P); doc.setLineWidth(0.5);
+  doc.line(MM.left, y, PAGE_W - MM.right, y);
+  y += 2;
 
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<title>${esc(`${meta.numero} - ${meta.empresa}`)}</title>
-<style>
-@page { size: A4; margin: 1.5cm 2cm 2.2cm 2cm;
-  @bottom-left { content: "${rodape.replace(/"/g, "'")}"; font: 7.5pt Arial, sans-serif; color: #555; border-top: 0.8pt solid ${P}; vertical-align: top; padding-top: 4pt; }
-  @bottom-right { content: "Página " counter(page); font: 7.5pt Arial, sans-serif; color: #555; border-top: 0.8pt solid ${P}; vertical-align: top; padding-top: 4pt; }
-}
-* { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
-body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; font-size: 9.5pt; }
-.cab { text-align: center; }
-.cab img { width: 5cm; height: 2.5cm; object-fit: contain; }
-.cab-nome { font-size: 14pt; font-weight: bold; color: ${E}; letter-spacing: 0.5pt; padding: 0.6cm 0 0.2cm; }
-h1 { font-size: 18pt; color: ${E}; text-align: center; margin: 6pt 0 2pt; }
-.sub { font-size: 9.5pt; color: #555; text-align: center; margin: 0 0 4pt; }
-.regua { border-bottom: 1.5pt solid ${P}; margin-bottom: 4pt; }
-.secao { background: ${P}; color: #fff; font-weight: bold; font-size: 10.5pt; padding: 4pt 8pt; margin: 10pt 0 6pt; break-after: avoid; }
-.txt { text-align: justify; line-height: 13.5pt; margin: 0 0 3pt; }
-.txt.sub { padding-left: 16pt; }
-.item-tit { font-weight: bold; color: ${E}; margin: 6pt 0 2pt; break-after: avoid; }
-ul { margin: 0 0 4pt 0; padding-left: 16pt; line-height: 13.5pt; }
-table { width: 100%; border-collapse: collapse; margin: 2pt 0 4pt; font-size: 9pt; }
-.grid th { background: ${E}; color: #fff; text-align: left; padding: 4pt; border: 0.5pt solid #C9CBB0; }
-.grid td { padding: 4pt; border: 0.5pt solid #C9CBB0; vertical-align: middle; }
-.grid tbody tr:nth-child(even) td { background: ${C}; }
-.grid tr { break-inside: avoid; }
-.ficha td { padding: 5pt; border: 0.5pt solid #C9CBB0; width: 35%; }
-.ficha td.rot { background: ${C}; color: ${E}; font-weight: bold; width: 15%; }
-.bloco-final { break-inside: avoid; }
-.assinaturas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28pt 12pt; margin-top: 34pt; }
-.ass { text-align: center; font-size: 8.5pt; line-height: 11pt; }
-.ass .linha { border-top: 0.8pt solid #1a1a1a; width: 85%; margin: 0 auto 3pt; }
-</style></head><body>
-<div class="cab">${logo ? `<img src="${esc(logo)}" alt="${esc(nome)}">` : `<div class="cab-nome">${esc(nome)}</div>`}</div>
-<h1>ATA DE REUNIÃO</h1>
-<p class="sub">${esc(sub)}</p>
-<div class="regua"></div>
-${body}
-</body></html>`;
-}
+  const margin = { left: MM.left, right: MM.right, top: MM.top, bottom: MM.bottom };
 
-// Imprime a ata por um iframe invisível na própria página: não abre janela nova,
-// então não depende de liberar pop-ups. O título da página vira o nome do PDF.
-export function openAtaPdf(markdown: string, meta: AtaMeta) {
-  const frame = document.createElement("iframe");
-  frame.setAttribute("aria-hidden", "true");
-  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
-  document.body.appendChild(frame);
-  const doc = frame.contentDocument;
-  const win = frame.contentWindow;
-  if (!doc || !win) { frame.remove(); return false; }
-
-  doc.open();
-  doc.write(buildAtaHtml(markdown, meta));
-  doc.close();
-
-  const tituloOriginal = document.title;
-  const limpar = () => {
-    document.title = tituloOriginal;
-    setTimeout(() => frame.remove(), 1000);
+  const table = (rows: string[][]) => {
+    const [head, ...body] = rows;
+    const key = head.map((h) => plain(h).toLowerCase()).join("|");
+    const widths: Record<string, number[]> = {
+      "nº|ação|responsável|prazo|status": [6, 45, 15, 19, 15],
+      "nome|função|organização": [40, 30, 30],
+      "ação|responsável|status": [60, 20, 20],
+    };
+    const w = widths[key];
+    autoTable(doc, {
+      startY: y,
+      margin,
+      head: [head.map(plain)],
+      body: body.map((r) => head.map((_, i) => plain(r[i] ?? ""))),
+      theme: "grid",
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 1.4, lineColor: GRADE, lineWidth: 0.18, textColor: TEXTO, valign: "middle" },
+      headStyles: { fillColor: E, textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: C },
+      columnStyles: w ? Object.fromEntries(w.map((p, i) => [i, { cellWidth: (WIDTH * p) / 100 }])) : {},
+    });
+    y = (doc as any).lastAutoTable.finalY + 2;
   };
-  const imprimir = () => {
-    document.title = `${meta.numero} - ${meta.empresa}`.replace(/[\/:*?"<>|]/g, "-");
-    win.addEventListener("afterprint", limpar, { once: true });
-    win.focus();
-    win.print();
+
+  const ficha = (pairs: [string, string][]) => {
+    const body: string[][] = [];
+    for (let i = 0; i < pairs.length; i += 2) {
+      const row: string[] = [];
+      pairs.slice(i, i + 2).forEach(([r, v]) => row.push(plain(r), plain(v)));
+      while (row.length < 4) row.push("");
+      body.push(row);
+    }
+    autoTable(doc, {
+      startY: y,
+      margin,
+      body,
+      theme: "grid",
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 1.8, lineColor: GRADE, lineWidth: 0.18, textColor: TEXTO },
+      columnStyles: {
+        0: { cellWidth: 32, fillColor: C, textColor: E, fontStyle: "bold" },
+        1: { cellWidth: WIDTH / 2 - 32 },
+        2: { cellWidth: 32, fillColor: C, textColor: E, fontStyle: "bold" },
+        3: { cellWidth: WIDTH / 2 - 32 },
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY + 2;
   };
-  // Espera a logo carregar antes de imprimir.
-  const imgs = Array.from(doc.images);
-  Promise.all(imgs.map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; }))))
-    .then(() => setTimeout(imprimir, 150));
+
+  const sectionBar = (title: string) => {
+    y += 3.5;
+    ensure(6.5 + 12);
+    doc.setFillColor(...P);
+    doc.rect(MM.left, y, WIDTH, 6.5, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.setTextColor(255, 255, 255);
+    doc.text(title.toUpperCase(), MM.left + 2.8, y + 4.6);
+    y += 6.5 + 2;
+  };
+
+  let signers: [string, string][] = [];
+
+  for (const sec of parseAta(markdown)) {
+    const encerramento = /^\s*\d+\.?\s*encerramento/i.test(sec.title);
+    if (/^\s*2\.?\s*participantes/i.test(sec.title)) {
+      const tb = sec.blocks.find((bl) => bl.t === "table") as { rows: string[][] } | undefined;
+      signers = (tb?.rows.slice(1) ?? []).filter((r) => r[0]).map((r) => [plain(r[0]), plain(r[1] ?? "")]);
+    }
+    // Encerramento e assinaturas ficam juntos na mesma página.
+    if (encerramento) ensure(40 + Math.ceil(signers.length / 3) * 22);
+    sectionBar(sec.title);
+
+    for (const bl of sec.blocks) {
+      if (bl.t === "table") table(bl.rows);
+      else if (bl.t === "ficha") ficha(bl.pairs);
+      else if (bl.t === "itemTit") { y += 1.2; ensure(12); rich(`**${plain(bl.text)}**`, MM.left, WIDTH, 9.5, E); }
+      else if (bl.t === "p") { rich(bl.text, MM.left, WIDTH); y += 0.8; }
+      else if (bl.t === "ol") {
+        bl.items.forEach((it, i) => {
+          rich(`**${i + 1}.** ${it.text}`, MM.left, WIDTH);
+          it.subs.forEach((s) => rich(`•  ${s}`, MM.left + 6, WIDTH - 6));
+          y += 0.6;
+        });
+      } else {
+        bl.items.forEach((it) => {
+          rich(`•  ${it.text}`, MM.left + 2, WIDTH - 2);
+          it.subs.forEach((s) => rich(`–  ${s}`, MM.left + 8, WIDTH - 8));
+        });
+      }
+    }
+
+    if (encerramento && signers.length) {
+      y += 12;
+      const colW = WIDTH / 3;
+      signers.forEach(([n, f], i) => {
+        const col = i % 3;
+        if (col === 0 && i > 0) y += 22;
+        ensure(18);
+        const cx = MM.left + colW * col + colW / 2;
+        doc.setDrawColor(26, 26, 26); doc.setLineWidth(0.25);
+        doc.line(cx - colW * 0.42, y, cx + colW * 0.42, y);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(...TEXTO);
+        doc.text(doc.splitTextToSize(n, colW - 4), cx, y + 4, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.text(doc.splitTextToSize(f, colW - 4), cx, y + 8, { align: "center" });
+      });
+    }
+  }
+
+  // Rodapé em todas as páginas
+  const total = doc.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i);
+    const fy = PAGE_H - 15;
+    doc.setDrawColor(...P); doc.setLineWidth(0.28);
+    doc.line(MM.left, fy, PAGE_W - MM.right, fy);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(...CINZA);
+    doc.text(`${nome} — Consultoria Financeira  |  ${meta.numero}`, MM.left, fy + 4.2);
+    doc.text(`Página ${i}`, PAGE_W - MM.right, fy + 4.2, { align: "right" });
+  }
+
+  const arquivo = `${meta.numero} - ${meta.empresa}`.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
+  doc.save(`${arquivo}.pdf`);
   return true;
 }
