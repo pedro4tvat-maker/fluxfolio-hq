@@ -110,8 +110,13 @@ function Executivo() {
 
   const destaques: Destaque[] = useMemo(() => {
     if (!serie || !vendas || !rec || !pay || !estoque) return [];
+    // Mês em andamento não entra nas comparações mês a mês (geraria "queda" falsa).
+    const hoje = iso(new Date());
+    const ult = serie[serie.length - 1];
+    const emAndamento = ult && ult.periodo.end >= hoje && ult.periodo.start <= hoje;
+    const serieFechada = emAndamento && serie.length > 2 ? serie.slice(0, -1) : serie;
     return buildDestaquesAlertas(
-      serie,
+      serieFechada,
       { margemPct: vendas.summary.margemPct, custoZerado: vendas.summary.custoZerado, itensIncompletos: vendas.summary.itensIncompletos },
       { inadimplencia: rec.summary.inadimplencia, vencido: rec.summary.vencido },
       { vencido: pay.summary.vencido },
@@ -122,6 +127,23 @@ function Executivo() {
   // Comparativo com mês anterior (último vs penúltimo da série)
   const cur = serie && serie.length > 0 ? serie[serie.length - 1] : null;
   const prev = serie && serie.length > 1 ? serie[serie.length - 2] : null;
+  // Produtos somados por nome (a lista original tem uma linha por item vendido).
+  const produtosAgg = useMemo(() => {
+    const map = new Map<string, { Produto: string; Quantidade: number; "Receita total": number; "Margem R$": number }>();
+    for (const p of (vendas?.produtos ?? []) as any[]) {
+      const nome = String(p.Produto ?? "Sem nome").replace(/\s+/g, " ").trim();
+      const key = nome.toLocaleLowerCase("pt-BR");
+      const a = map.get(key) ?? { Produto: nome, Quantidade: 0, "Receita total": 0, "Margem R$": 0 };
+      a.Quantidade += Number(p.Quantidade) || 0;
+      a["Receita total"] += Number(p["Receita total"]) || 0;
+      a["Margem R$"] += Number(p["Margem R$"]) || 0;
+      map.set(key, a);
+    }
+    return [...map.values()]
+      .map((a) => ({ ...a, "Margem %": a["Receita total"] > 0 ? (a["Margem R$"] / a["Receita total"]) * 100 : 0 }))
+      .sort((a, b) => b["Receita total"] - a["Receita total"]);
+  }, [vendas]);
+
   // Totais do período escolhido (soma dos meses da série), não só do último mês.
   const tot = useMemo(() => {
     if (!serie || serie.length === 0) return null;
@@ -222,16 +244,12 @@ function Executivo() {
     }
     setIaLoading(true);
     try {
-      const topProdutos = (vendas?.produtos ?? [])
-        .slice()
-        .sort((a: any, b: any) => (b["Receita total"] as number) - (a["Receita total"] as number))
-        .slice(0, 8)
-        .map((p: any) => ({
-          produto: p.Produto,
-          quantidade: p.Quantidade,
-          receita: p["Receita total"],
-          margem_pct: p["Margem %"],
-        }));
+      const topProdutos = produtosAgg.slice(0, 8).map((p) => ({
+        produto: p.Produto,
+        quantidade: p.Quantidade,
+        receita: Number(p["Receita total"].toFixed(2)),
+        margem_pct: Number(p["Margem %"].toFixed(1)),
+      }));
       const t = tot!;
       const kpis = {
         receita_bruta_total_periodo: t.receitaBruta,
@@ -461,7 +479,7 @@ function Executivo() {
                     <ChartCard title="Top produtos por faturamento">
                       <ResponsiveContainer width="100%" height={220}>
                         <BarChart
-                          data={vendas.produtos.slice().sort((a: any, b: any) => (b["Receita total"] as number) - (a["Receita total"] as number)).slice(0, 6)}
+                          data={produtosAgg.slice(0, 6)}
                           layout="vertical"
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.neutral} />
