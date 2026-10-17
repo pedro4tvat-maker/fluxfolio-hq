@@ -23,7 +23,7 @@ import {
   ArrowDownCircle,
   Layers,
 } from "lucide-react";
-import logoAsset from "@/assets/sistemafp-logo.jpg";
+import logoAsset from "@/assets/sistemafp-icone.png";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {

@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { CONSULTORIA_SECTIONS } from "@/routes/app.consultoria";
 import { AGENDA_SECTIONS } from "@/routes/app.agenda";
 import { COMPANY_AGENDA_SECTIONS } from "@/components/agenda/CompanyAgenda";
-import fepLogo from "@/assets/financas-em-proposito.png";
+import appIcon from "@/assets/sistemafp-icone.png";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async () => {
@@ -242,8 +242,8 @@ function AppLayout() {
           )}
         >
           <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
-            <div className="size-9 rounded-xl bg-sidebar-primary grid place-items-center text-sidebar-primary-foreground shrink-0 overflow-hidden">
-              <img src={fepLogo} alt="Finanças em Propósito" className="size-7 object-contain" />
+            <div className="size-9 shrink-0">
+              <img src={appIcon} alt="SISTEMAFP PJ" className="size-9 object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-display font-semibold truncate leading-tight">SISTEMAFP PJ</div>
