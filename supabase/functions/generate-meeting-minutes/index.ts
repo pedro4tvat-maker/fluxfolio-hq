@@ -40,7 +40,7 @@ serve(async (req) => {
       const m = typeof d === "string" ? d.match(/^(\d{4})-(\d{2})-(\d{2})/) : null;
       return m ? `${m[3]}/${m[2]}/${m[1]}` : (d || "Não informado");
     };
-    const fmtTime = (t?: string) => (typeof t === "string" && t ? t.slice(0, 5) : "Não informado");
+    const fmtTime = (t?: string) => (typeof t === "string" && t ? t.slice(0, 5) : "");
     const lista = Array.isArray(participants) && participants.length ? participants.join(", ") : "Não informado";
 
     // Mesmo modelo de ata do gerador oficial (gerar_ata.py): 9 seções. O cabeçalho
@@ -49,7 +49,8 @@ serve(async (req) => {
 
 Regras:
 - Reescreva o relato em linguagem formal e consultiva; nunca copie trechos informais.
-- Não invente nomes, valores, datas, decisões ou responsáveis que não estejam nos dados. Quando faltar, escreva "Não informado" ou "A definir".
+- Não invente nomes, valores, datas, decisões ou responsáveis que não estejam nos dados.
+- Quando uma informação não existir, omita o campo ou escreva a frase sem ela. Nunca escreva "Não informado", "A definir", "Indefinido" ou equivalentes.
 - Siga exatamente o formato pedido: as 9 seções, nesta ordem, com os mesmos títulos, tabelas e listas. Nada antes da seção 1 e nada depois da seção 9.
 - Use datas no formato DD/MM/AAAA.
 - Responda só com a ata em Markdown, sem comentários.`;
@@ -58,7 +59,7 @@ Regras:
 Empresa: ${company_name || "Não informado"}
 CNPJ: ${company_cnpj || "Não informado"}
 Data: ${fmtDate(meeting_date)}
-Horário: ${fmtTime(meeting_time)}
+Horário: ${fmtTime(meeting_time) || "Não informado"}
 Tipo de reunião: ${meeting_type || "Não informado"}
 Participantes informados: ${lista}
 Consultor responsável (redator da ata): ${consultant_name || "Não informado"}
@@ -77,16 +78,16 @@ FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos e
 ## 1. Identificação da reunião
 - **Data:** ${fmtDate(meeting_date)}
 - **Horário:** ${fmtTime(meeting_time)}
-- **Modalidade:** [Presencial / Online (ferramenta) / Não informado — deduza do relato]
-- **Tipo:** ${meeting_type || "Não informado"}
+- **Modalidade:** [Presencial ou Online (ferramenta), deduzido do relato; se não der para saber, omita esta linha]
+- **Tipo:** ${meeting_type || ""}
 
 ## 2. Participantes
 - **[Nome do consultor responsável]** — Consultor Financeiro ([organização do consultor])
-- **[Nome]** — [Função ou "Não informado"] ([Organização ou "Não informado"])
+- **[Nome]** — [Função] ([Organização]) [se a função ou a organização não forem conhecidas, escreva só o nome]
 
 **Ausentes:** [quem foi citado como ausente, ou "Não houve ausências."]
 
-**Redação da ata:** ${consultant_name || "Não informado"}
+**Redação da ata:** ${consultant_name || ""}
 
 ## 3. Pauta
 1. [item da pauta]
@@ -109,7 +110,7 @@ FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos e
 ## 6. Plano de ação
 | Nº | Ação | Responsável | Prazo | Status |
 |---|---|---|---|---|
-| 1 | [ação concreta] | [nome] | [DD/MM/AAAA ou A definir] | Pendente |
+| 1 | [ação concreta] | [nome, ou vazio se não houver] | [DD/MM/AAAA, ou vazio se não houver] | Pendente |
 
 ## 7. Pendências da reunião anterior
 [Se houver ata anterior, uma linha por ação do plano anterior, no formato abaixo, com o status que o relato indicar: Concluída, Em andamento, Pendente ou Não mencionada.]
@@ -117,7 +118,7 @@ FORMATO OBRIGATÓRIO (substitua o que está entre colchetes; mantenha títulos e
 [Se não houver ata anterior: "Não se aplica: esta foi a primeira reunião registrada."]
 
 ## 8. Próxima reunião
-A próxima reunião está prevista para **${next_meeting_date ? fmtDate(next_meeting_date) : "data a definir"}**[, às **horário**, se informado no relato], com a seguinte pauta:
+${next_meeting_date ? `A próxima reunião está prevista para **${fmtDate(next_meeting_date)}**[, às **horário**, se informado no relato], com a seguinte pauta:` : "A data da próxima reunião será combinada entre as partes. Pauta prevista:"}
 1. [item previsto para a próxima reunião]
 
 ## 9. Encerramento
@@ -177,7 +178,7 @@ Nada mais havendo a tratar, a reunião foi encerrada e a presente ata foi lavrad
       const retry = await generate(
         userPrompt +
           "\n\nIMPORTANTE: não deixe textos entre colchetes do modelo. " +
-          "Substitua todos pelos dados reais ou por 'Não informado' / 'A definir'.",
+          "Substitua todos pelos dados reais ou remova o trecho.",
       ).catch(() => null);
       if (retry) content = retry;
     }

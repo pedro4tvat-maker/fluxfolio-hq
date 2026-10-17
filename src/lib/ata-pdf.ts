@@ -49,9 +49,15 @@ type Section = { title: string; blocks: Block[] };
 
 const cells = (line: string) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
 const isSeparator = (line: string) => /^\|?\s*:?-{2,}/.test(line.trim());
+// Valores que significam "não há informação": o campo é omitido no PDF.
+const VAZIO = /^(n[ãa]o informad[oa]s?|a definir|indefinid[oa]s?|n\/a|-+|—|–|nenhum[a]?|sem informa[çc][ãa]o)\.?$/i;
+const isVazio = (v: string) => !v.trim() || VAZIO.test(plainText(v));
+// "2026-09-29" -> "29/09/2026"
+const brDates = (s: string) => s.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$3/$2/$1");
+function plainText(s: string) { return s.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").trim(); }
 const plain = (s: string) => s.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").trim();
 
-function parseSection(lines: string[]): Block[] {
+function parseSection(lines: string[], isIdent: boolean): Block[] {
   const blocks: Block[] = [];
   let ficha: [string, string][] = [];
   let list: { t: "ol" | "ul"; items: Item[] } | null = null;
@@ -89,7 +95,10 @@ function parseSection(lines: string[]): Block[] {
     if (h3) { flushFicha(); flushList(); blocks.push({ t: "itemTit", text: h3[1] }); continue; }
 
     const par = line.match(/^[-*]\s+\*\*([^*]+?):\*\*\s*(.*)$/);
-    if (par) { flushList(); ficha.push([par[1], par[2] || "Não informado"]); continue; }
+    if (par && isIdent) { flushList(); if (!isVazio(par[2])) ficha.push([par[1], par[2]]); continue; }
+    if (par && isVazio(par[2])) continue; // "- **Prazo:** A definir" some
+    const subPar = raw.match(/^\s{2,}[-*•]\s+\*\*([^*]+?):\*\*\s*(.*)$/);
+    if (subPar && isVazio(subPar[2])) continue;
     flushFicha();
 
     const sub = raw.match(/^\s{2,}[-*•]\s+(.*)$/);
@@ -115,9 +124,10 @@ function parseSection(lines: string[]): Block[] {
 }
 
 function parseAta(markdown: string): Section[] {
-  return markdown.replace(/\r\n/g, "\n").split(/^##\s+/m).slice(1).map((part) => {
+  return brDates(markdown.replace(/\r\n/g, "\n")).split(/^##\s+/m).slice(1).map((part) => {
     const [titleLine, ...rest] = part.split("\n");
-    return { title: plain(titleLine), blocks: parseSection(rest) };
+    const title = plain(titleLine);
+    return { title, blocks: parseSection(rest, /^\s*1\.?\s*identifica/i.test(title)) };
   });
 }
 
@@ -257,7 +267,7 @@ export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
       startY: y,
       margin,
       head: [head.map(plain)],
-      body: body.map((r) => head.map((_, i) => plain(r[i] ?? ""))),
+      body: body.map((r) => head.map((_, i) => (isVazio(r[i] ?? "") ? "—" : plain(r[i] ?? "")))),
       theme: "grid",
       styles: { font: "helvetica", fontSize: 9, cellPadding: 1.4, lineColor: GRADE, lineWidth: 0.18, textColor: TEXTO, valign: "middle" },
       headStyles: { fillColor: E, textColor: [255, 255, 255], fontStyle: "bold" },
@@ -276,22 +286,35 @@ export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
 
   // Quadro de destaque com pares "Rótulo: valor" em duas colunas.
   const ficha = (pairs: [string, string][]) => {
-    const rows = Math.ceil(pairs.length / 2);
-    const h = rows * 6 + 3;
+    const colW = WIDTH / 2 - 8;
+    const lh = 4.4;
+    doc.setFontSize(9);
+    // Mede cada par (rótulo em negrito + valor quebrado em linhas) para o quadro não cortar texto.
+    const medidos = pairs.map(([r, v]) => {
+      doc.setFont("helvetica", "bold");
+      const label = `${plain(r)}:`;
+      const lw = doc.getTextWidth(label) + 1.6;
+      doc.setFont("helvetica", "normal");
+      const linhas: string[] = doc.splitTextToSize(plain(v), Math.max(20, colW - lw));
+      return { label, lw, linhas };
+    });
+    const alturas: number[] = [];
+    for (let i = 0; i < medidos.length; i += 2) {
+      alturas.push(Math.max(...medidos.slice(i, i + 2).map((m) => m.linhas.length)) * lh + 1.6);
+    }
+    const h = alturas.reduce((a, b) => a + b, 0) + 3;
     ensure(h + 2);
     doc.setFillColor(...C);
     doc.roundedRect(MM.left, y, WIDTH, h, 1.5, 1.5, "F");
-    pairs.forEach(([r, v], i) => {
+    let rowY = y + 2.2;
+    medidos.forEach((m, i) => {
       const col = i % 2;
-      const row = Math.floor(i / 2);
+      if (col === 0 && i > 0) rowY += alturas[i / 2 - 1];
       const x = MM.left + 4 + col * (WIDTH / 2);
-      const ty = y + 5.3 + row * 6;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...E);
-      const label = `${plain(r)}: `;
-      doc.text(label, x, ty);
+      doc.setFont("helvetica", "bold"); doc.setTextColor(...E);
+      doc.text(m.label, x, rowY + 3.2);
       doc.setFont("helvetica", "normal"); doc.setTextColor(...TEXTO);
-      const lw = doc.getTextWidth(label);
-      doc.text(doc.splitTextToSize(plain(v), WIDTH / 2 - 8 - lw)[0] ?? "", x + lw, ty);
+      m.linhas.forEach((ln, k) => doc.text(ln, x + m.lw, rowY + 3.2 + k * lh));
     });
     y += h + 2;
   };
@@ -352,7 +375,16 @@ export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
     }
     // Encerramento e assinaturas ficam juntos na mesma página.
     if (encerramento) ensure(40 + Math.ceil(signers.length / 3) * 22);
-    sectionBar(sec.title);
+    // Título solto sem número (atas antigas): vira subtítulo, não faixa de seção.
+    if (!/^\s*\d/.test(sec.title)) {
+      if (sec.title) {
+        doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...E);
+        ensure(8);
+        doc.text(doc.splitTextToSize(sec.title, WIDTH), PAGE_W / 2, y + 5, { align: "center" });
+        y += 8;
+      }
+      if (!sec.blocks.length) continue;
+    } else sectionBar(sec.title);
 
     for (const bl of sec.blocks) {
       if (bl.t === "table") table(bl.rows);
@@ -368,6 +400,9 @@ export async function downloadAtaPdf(markdown: string, meta: AtaMeta) {
         });
       } else {
         bl.items.forEach((it) => {
+          it.text = it.text
+            .replace(/\s*\((?:n[ãa]o informad[oa]|a definir|indefinid[oa])\)/gi, "")
+            .replace(/\s*[—–-]\s*(?:n[ãa]o informad[oa]|a definir|indefinid[oa])\b/gi, "");
           const tag = it.text.match(/^\[([^\]]+)\]\s*(.*)$/);
           if (tag) tagged(tag[1], tag[2], MM.left + 2, WIDTH - 2);
           else rich(`•  ${it.text}`, MM.left + 2, WIDTH - 2);
