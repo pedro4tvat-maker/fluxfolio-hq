@@ -117,7 +117,7 @@ export function AtaBrandCard({ consultant }: { consultant: Consultant }) {
       if (file.size > 2 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 2 MB.");
       const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
       const path = `${consultant.user_id}/logo-${Date.now()}.${ext}`;
-      const { error: upErr } = await sb.storage.from("branding").upload(path, file, { contentType: file.type, upsert: true });
+      const { error: upErr } = await sb.storage.from("branding").upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
       const url = sb.storage.from("branding").getPublicUrl(path).data.publicUrl as string;
       const { error } = await sb.from("consultants").update({ logo_url: url }).eq("id", consultant.id);
