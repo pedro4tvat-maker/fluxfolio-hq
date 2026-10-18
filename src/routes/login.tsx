@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Turnstile, type TurnstileHandle } from "@/components/Turnstile";
+import { traduzErroAuth } from "@/lib/senha";
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +23,8 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [showReset, setShowReset] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const captchaRef = useRef<TurnstileHandle>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -31,10 +35,11 @@ function LoginPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: captcha ?? undefined } });
+    captchaRef.current?.reset();
     setLoading(false);
     if (error) {
-      toast.error("Não foi possível entrar", { description: error.message });
+      toast.error("Não foi possível entrar", { description: traduzErroAuth(error.message) });
       return;
     }
     toast.success("Bem-vindo de volta!");
@@ -50,10 +55,12 @@ function LoginPage() {
     setResetLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/redefinir-senha`,
+      captchaToken: captcha ?? undefined,
     });
+    captchaRef.current?.reset();
     setResetLoading(false);
     if (error) {
-      toast.error("Erro ao enviar e-mail de recuperação", { description: error.message });
+      toast.error("Erro ao enviar e-mail de recuperação", { description: traduzErroAuth(error.message) });
       return;
     }
     toast.success("E-mail de recuperação enviado!", {
@@ -124,6 +131,8 @@ function LoginPage() {
               </div>
             </div>
           )}
+
+          <Turnstile ref={captchaRef} onToken={setCaptcha} />
 
           <div className="space-y-3">
             <Button type="submit" disabled={loading || resetLoading} className="w-full">

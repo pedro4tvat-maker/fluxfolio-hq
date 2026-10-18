@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, BadgeCheck, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import logoAsset from "@/assets/sistemafp-icone.png";
-import { forcaSenha, traduzErroSenha, validarSenha } from "@/lib/senha";
+import { forcaSenha, traduzErroAuth, validarSenha } from "@/lib/senha";
+import { Turnstile, type TurnstileHandle } from "@/components/Turnstile";
 import { LEGAL_VERSAO } from "@/lib/legal";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,8 @@ function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [aceite, setAceite] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const captchaRef = useRef<TurnstileHandle>(null);
   const strength = useMemo(() => passwordStrength(password), [password]);
 
   // company (cliente)
@@ -184,6 +187,7 @@ function SignupPage() {
       email,
       password,
       options: {
+        captchaToken: captcha ?? undefined,
         emailRedirectTo: `${window.location.origin}/login`,
         data: {
           full_name: name,
@@ -219,8 +223,9 @@ function SignupPage() {
       },
     });
     setLoading(false);
+    captchaRef.current?.reset();
     if (error) {
-      toast.error("Erro ao criar conta", { description: traduzErroSenha(error.message) });
+      toast.error("Erro ao criar conta", { description: traduzErroAuth(error.message) });
       return;
     }
     const linkedMsg = kind === "client_manager" && linkMode === "code" && foundByCode
@@ -494,6 +499,7 @@ function SignupPage() {
                 <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">Política de Privacidade</a>.
               </span>
             </label>
+            <Turnstile ref={captchaRef} onToken={setCaptcha} />
           </div>
         )}
 

@@ -35,3 +35,14 @@ export function traduzErroSenha(msg: string): string {
   if (m.includes("session") || m.includes("jwt") || m.includes("expired")) return "O link expirou. Peça um novo em \"Esqueci minha senha\".";
   return msg;
 }
+
+// Traduz os erros mais comuns de login/cadastro (inclui o captcha).
+export function traduzErroAuth(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("captcha")) return "Não foi possível confirmar a verificação de segurança. Aguarde alguns segundos e tente de novo.";
+  if (m.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
+  if (m.includes("email not confirmed")) return "Confirme seu e-mail pelo link que enviamos antes de entrar.";
+  if (m.includes("already registered") || m.includes("already been registered")) return "Já existe uma conta com este e-mail.";
+  if (m.includes("rate limit") || m.includes("too many")) return "Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.";
+  return traduzErroSenha(msg);
+}
