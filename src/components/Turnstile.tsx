@@ -8,8 +8,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 // Em desenvolvimento usa a chave de teste da Cloudflare, que sempre aprova.
 const SITE_KEY = import.meta.env.DEV ? "1x00000000000000000000AA" : "0x4AAAAAAFZ2psi5mdOyMHC_";
 // Liga/desliga o captcha no site. Deve acompanhar a configuração do Supabase
-// (Auth → Attack Protection → Captcha): com o captcha desligado lá, deixe false aqui.
-export const CAPTCHA_ATIVO = false;
+// (Auth → Attack Protection → Captcha, provedor "Turnstile by Cloudflare" — NÃO hCaptcha).
+export const CAPTCHA_ATIVO = true;
 
 const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
