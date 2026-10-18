@@ -71,7 +71,7 @@ const FAQ = [
   ["Preciso entender de finanças para usar?", "Não. O sistema foi pensado para o dono do negócio, e a análise explica cada número em linguagem simples: o que ele significa e o que fazer com ele."],
   ["Funciona no celular?", "Sim. Você acessa pelo navegador do celular ou do computador, e pode instalar como aplicativo na tela inicial."],
   ["Meus dados ficam seguros?", "Cada empresa só enxerga os próprios dados, e o consultor só acessa as empresas que autorizarem o vínculo. Os dados ficam em servidores profissionais na nuvem, com acesso protegido por senha."],
-  ["Para que tipo de empresa ele serve?", "Principalmente pequenas empresas que vendem produtos e controlam estoque: comércio, pequena indústria, alimentação, revenda, agro e serviços que também vendem produtos."],
+  ["Serve para a minha empresa?", "Se você tem uma pequena ou média empresa e quer saber de verdade quanto entra, quanto sai e quanto sobra, serve. O sistema se adapta ao seu negócio na implantação, com as suas contas, categorias e produtos. Ele é ainda mais útil para quem vende produtos e precisa controlar estoque."],
   ["O sistema emite nota fiscal?", "Não. O SISTEMAFP PJ cuida da gestão financeira e dos resultados; a nota fiscal continua no emissor que você já usa."],
   ["Como faço para começar?", "Chame no WhatsApp. Conversamos sobre a sua empresa, combinamos a implantação (contratada à parte) e você já começa a usar."],
 ];
@@ -89,6 +89,10 @@ function CtaWhats({ children, msg = MSG_PADRAO, claro = false, className = "" }:
       <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
     </a>
   );
+}
+
+function Grifo({ children }: { children: React.ReactNode }) {
+  return <span className="italic" style={{ color: C.oliva, backgroundImage: `linear-gradient(transparent 62%, ${C.musgo} 62%)` }}>{children}</span>;
 }
 
 function Rotulo({ children, cor = C.cafe }: { children: React.ReactNode; cor?: string }) {
@@ -113,13 +117,13 @@ function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: C.papel, color: C.tinta }}>
+    <div className="min-h-screen [overflow-x:clip]" style={{ background: C.papel, color: C.tinta }}>
       {/* TOPO */}
       <header
         className="sticky top-0 z-50 transition-colors duration-300"
         style={{ background: scrolled ? "rgba(244,241,232,0.92)" : "transparent", backdropFilter: scrolled ? "blur(8px)" : undefined, borderBottom: `1px solid ${scrolled ? C.linha : "transparent"}` }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3.5">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5 min-w-0">
             <img src={logoAsset} alt="" className="h-8 w-auto shrink-0" />
             <span className="font-display font-bold tracking-tight truncate">SISTEMAFP PJ</span>
@@ -220,15 +224,15 @@ function LandingPage() {
       </section>
 
       {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 scroll-mt-16">
-        <div className="grid lg:grid-cols-12 gap-10">
+      <section id="como-funciona" className="mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-20 scroll-mt-16 min-h-[calc(100svh-4rem)] flex flex-col justify-center [@media(max-height:780px)]:py-6">
+        <div className="grid lg:grid-cols-12 gap-10 w-full">
           <div className="lg:col-span-4">
             <Rotulo>Como funciona</Rotulo>
             <h2 className="font-serif text-4xl sm:text-5xl font-semibold leading-[1.05] tracking-[-0.01em]">Você não fica sozinho com o sistema.</h2>
           </div>
           <ol className="lg:col-span-8 lg:pl-8">
             {PASSOS.map(([t, d], i) => (
-              <li key={t} className="grid grid-cols-[64px_1fr] sm:grid-cols-[96px_1fr] gap-4 py-7 border-t first:border-t-0 first:pt-0" style={{ borderColor: C.linha }}>
+              <li key={t} className="grid grid-cols-[64px_1fr] sm:grid-cols-[96px_1fr] gap-4 py-7 [@media(max-height:780px)]:py-4 border-t first:border-t-0 first:pt-0" style={{ borderColor: C.linha }}>
                 <span className="font-serif text-5xl sm:text-6xl leading-none italic" style={{ color: C.cafe }}>{String(i + 1).padStart(2, "0")}</span>
                 <div>
                   <h3 className="font-serif text-2xl font-semibold mb-1.5">{t}</h3>
@@ -266,27 +270,23 @@ function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-24">
         <Rotulo>Para quem é</Rotulo>
         <p className="font-serif text-3xl sm:text-[42px] leading-[1.25] max-w-5xl">
-          Para o dono de{" "}
-          {["loja", "pequena indústria", "marmitaria", "torrefação", "revenda", "ótica"].map((s, i, a) => (
-            <span key={s}>
-              <span className="italic" style={{ color: C.oliva, backgroundImage: `linear-gradient(transparent 62%, ${C.musgo} 62%)` }}>{s}</span>
-              {i < a.length - 2 ? ", " : i === a.length - 2 ? " ou " : ""}
-            </span>
-          ))}{" "}
-          que vende bem, mas no fim do mês não sabe direito quanto sobrou.
+          Para quem{" "}
+          <Grifo>vende bem, mas no fim do mês não sabe direito quanto sobrou</Grifo>. Para quem{" "}
+          <Grifo>mistura o dinheiro da empresa com o de casa</Grifo>, descobre conta atrasada em cima da hora
+          e quer <Grifo>decidir com números, não no achismo</Grifo>.
         </p>
       </section>
 
       {/* O QUE FAZ */}
-      <section id="o-que-faz" className="border-t scroll-mt-16" style={{ borderColor: C.linha }}>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-24 grid lg:grid-cols-12 gap-10">
+      <section id="o-que-faz" className="border-t scroll-mt-16 min-h-[calc(100svh-4rem)] flex flex-col justify-center" style={{ borderColor: C.linha }}>
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-16 sm:py-20 [@media(max-height:780px)]:py-6 grid lg:grid-cols-12 gap-10">
           <div className="lg:col-span-4">
             <Rotulo>O que o sistema faz</Rotulo>
             <h2 className="font-serif text-4xl font-semibold leading-[1.08]">O financeiro inteiro de uma pequena empresa.</h2>
           </div>
           <dl className="lg:col-span-8 grid sm:grid-cols-2 gap-x-10">
             {FUNCOES.map(([t, d]) => (
-              <div key={t} className="py-5 border-t" style={{ borderColor: C.linha }}>
+              <div key={t} className="py-5 [@media(max-height:780px)]:py-3 border-t" style={{ borderColor: C.linha }}>
                 <dt className="font-semibold text-[17px]">{t}</dt>
                 <dd className="mt-1 leading-relaxed" style={{ color: C.tintaSuave }}>{d}</dd>
               </div>
@@ -310,8 +310,8 @@ function LandingPage() {
       )}
 
       {/* PLANO — em formato de recibo */}
-      <section id="plano" className="border-t scroll-mt-16" style={{ borderColor: C.linha, background: C.papelEscuro }}>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 grid lg:grid-cols-12 gap-12 items-center">
+      <section id="plano" className="border-t scroll-mt-16 min-h-[calc(100svh-4rem)] flex flex-col justify-center" style={{ borderColor: C.linha, background: C.papelEscuro }}>
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-16 sm:py-20 [@media(max-height:780px)]:py-6 grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5">
             <Rotulo>Plano</Rotulo>
             <h2 className="font-serif text-4xl sm:text-5xl font-semibold leading-[1.05]">Um preço só. Sem letra miúda.</h2>
@@ -321,14 +321,14 @@ function LandingPage() {
             </p>
           </div>
           <div className="lg:col-span-7">
-            <div className="relative bg-white mx-auto max-w-lg px-7 sm:px-9 pt-9 pb-8 shadow-[0_18px_40px_-24px_rgba(30,35,24,0.5)] rotate-[0.6deg]">
+            <div className="relative bg-white mx-auto max-w-lg px-7 sm:px-9 pt-9 pb-8 [@media(max-height:780px)]:pt-6 [@media(max-height:780px)]:pb-5 shadow-[0_18px_40px_-24px_rgba(30,35,24,0.5)] rotate-[0.6deg]">
               {/* serrilhado do recibo */}
               <div className="absolute -bottom-2 left-0 right-0 h-3" style={{ background: "radial-gradient(circle at 8px 0, transparent 6px, white 6.5px) 0 0 / 16px 12px repeat-x" }} />
-              <div className="text-center border-b border-dashed pb-5 mb-5" style={{ borderColor: C.linha }}>
+              <div className="text-center border-b border-dashed pb-5 mb-5 [@media(max-height:780px)]:pb-3 [@media(max-height:780px)]:mb-3" style={{ borderColor: C.linha }}>
                 <div className="font-display font-bold tracking-tight">SISTEMAFP PJ</div>
                 <div className="text-xs uppercase tracking-[0.2em] mt-1" style={{ color: C.tintaSuave }}>sua conta mensal</div>
               </div>
-              <ul className="space-y-3 font-mono text-[14px]">
+              <ul className="space-y-3 [@media(max-height:780px)]:space-y-2 font-mono text-[14px]">
                 {([
                   ["Sistema completo", `${PRECO}/mês`, true],
                   ["Análise com IA", "incluída", false],
@@ -343,7 +343,7 @@ function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <div className="border-t border-dashed mt-6 pt-6" style={{ borderColor: C.linha }}>
+              <div className="border-t border-dashed mt-6 pt-6 [@media(max-height:780px)]:mt-4 [@media(max-height:780px)]:pt-4" style={{ borderColor: C.linha }}>
                 <CtaWhats msg={MSG_CONTRATAR} className="w-full">Quero contratar</CtaWhats>
                 <p className="text-center text-xs mt-3" style={{ color: C.tintaSuave }}>Você fala direto com o consultor.</p>
               </div>
@@ -353,7 +353,7 @@ function LandingPage() {
       </section>
 
       {/* DÚVIDAS */}
-      <section id="duvidas" className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 grid lg:grid-cols-12 gap-10 scroll-mt-16">
+      <section id="duvidas" className="mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-20 grid lg:grid-cols-12 gap-10 scroll-mt-16 min-h-[calc(100svh-4rem)] content-center [@media(max-height:780px)]:py-6">
         <div className="lg:col-span-4">
           <Rotulo>Dúvidas</Rotulo>
           <h2 className="font-serif text-4xl font-semibold leading-[1.08]">Perguntas que todo dono faz.</h2>
@@ -364,7 +364,7 @@ function LandingPage() {
               <button
                 type="button"
                 onClick={() => setFaqAberto(faqAberto === i ? null : i)}
-                className="w-full flex items-center justify-between gap-6 text-left py-5 font-serif text-xl sm:text-2xl"
+                className="w-full flex items-center justify-between gap-6 text-left py-5 [@media(max-height:780px)]:py-3 font-serif text-xl sm:text-2xl [@media(max-height:780px)]:sm:text-xl"
                 aria-expanded={faqAberto === i}
               >
                 {q}
