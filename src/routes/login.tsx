@@ -35,6 +35,7 @@ function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captcha) return;
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: captcha ?? undefined } });
     captchaRef.current?.reset();
@@ -50,6 +51,7 @@ function LoginPage() {
 
   const onResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captcha) return;
     if (!email) {
       toast.error("Por favor, informe seu e-mail");
       return;
@@ -137,8 +139,8 @@ function LoginPage() {
           <Turnstile ref={captchaRef} onToken={setCaptcha} />
 
           <div className="space-y-3">
-            <Button type="submit" disabled={loading || resetLoading} className="w-full">
-              {showReset ? (resetLoading ? "Enviando..." : "Enviar link de recuperação") : (loading ? "Entrando..." : "Entrar")}
+            <Button type="submit" disabled={loading || resetLoading || !captcha} className="w-full">
+              {!captcha ? "Verificando segurança..." : showReset ? (resetLoading ? "Enviando..." : "Enviar link de recuperação") : (loading ? "Entrando..." : "Entrar")}
             </Button>
             
             {showReset && (

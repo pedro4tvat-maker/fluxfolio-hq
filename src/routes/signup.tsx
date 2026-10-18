@@ -512,8 +512,8 @@ function SignupPage() {
           {step < totalSteps ? (
             <Button type="button" onClick={next}>Continuar <ArrowRight className="size-4" /></Button>
           ) : (
-            <Button type="button" onClick={submit} disabled={loading}>
-              {loading ? "Criando..." : "Criar conta"}
+            <Button type="button" onClick={submit} disabled={loading || !captcha}>
+              {!captcha ? "Verificando segurança..." : loading ? "Criando..." : "Criar conta"}
             </Button>
           )}
         </div>
