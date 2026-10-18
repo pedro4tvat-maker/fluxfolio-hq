@@ -11,6 +11,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { AceiteTermos, precisaAceitarTermos } from "@/components/AceiteTermos";
 import { useRecoveryFlags } from "@/hooks/use-recovery-flags";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -281,6 +282,7 @@ function AppLayout() {
           <Outlet />
         </main>
       </div>
+      {precisaAceitarTermos(user) && <AceiteTermos onSair={logout} />}
     </div>
   );
 }

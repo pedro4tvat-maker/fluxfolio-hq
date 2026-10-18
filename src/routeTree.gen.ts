@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
 import { Route as AppAtasRouteImport } from './routes/app.atas'
@@ -65,6 +67,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
   id: '/redefinir-senha',
   path: '/redefinir-senha',
@@ -73,6 +80,11 @@ const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -256,8 +268,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/signup': typeof SignupRoute
+  '/termos': typeof TermosRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
   '/app/backups': typeof AppBackupsRoute
@@ -297,8 +311,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/signup': typeof SignupRoute
+  '/termos': typeof TermosRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
   '/app/backups': typeof AppBackupsRoute
@@ -340,8 +356,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/signup': typeof SignupRoute
+  '/termos': typeof TermosRoute
   '/app/agenda': typeof AppAgendaRoute
   '/app/atas': typeof AppAtasRoute
   '/app/backups': typeof AppBackupsRoute
@@ -384,8 +402,10 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/signup'
+    | '/termos'
     | '/app/agenda'
     | '/app/atas'
     | '/app/backups'
@@ -425,8 +445,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/signup'
+    | '/termos'
     | '/app/agenda'
     | '/app/atas'
     | '/app/backups'
@@ -467,8 +489,10 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/signup'
+    | '/termos'
     | '/app/agenda'
     | '/app/atas'
     | '/app/backups'
@@ -510,8 +534,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   SignupRoute: typeof SignupRoute
+  TermosRoute: typeof TermosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -537,6 +563,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/redefinir-senha': {
       id: '/redefinir-senha'
       path: '/redefinir-senha'
@@ -549,6 +582,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -910,8 +950,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   SignupRoute: SignupRoute,
+  TermosRoute: TermosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

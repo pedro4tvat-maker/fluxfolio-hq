@@ -79,7 +79,9 @@ function LoginPage() {
           </p>
         </div>
         <p className="text-xs text-foreground/50">
-          © {new Date().getFullYear()} SistemaFP PJ — por Finanças em Propósito
+          © {new Date().getFullYear()} SistemaFP PJ — por Finanças em Propósito ·{" "}
+          <Link to="/termos" className="underline underline-offset-2">Termos</Link> ·{" "}
+          <Link to="/privacidade" className="underline underline-offset-2">Privacidade</Link>
         </p>
       </div>
 

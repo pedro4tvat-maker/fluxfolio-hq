@@ -4,6 +4,7 @@ import { Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, 
 import { toast } from "sonner";
 import logoAsset from "@/assets/sistemafp-icone.png";
 import { forcaSenha, traduzErroSenha, validarSenha } from "@/lib/senha";
+import { LEGAL_VERSAO } from "@/lib/legal";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ function SignupPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [aceite, setAceite] = useState(false);
   const strength = useMemo(() => passwordStrength(password), [password]);
 
   // company (cliente)
@@ -127,6 +129,7 @@ function SignupPage() {
   const validatePwd = () => {
     { const erroSenha = validarSenha(password); if (erroSenha) return erroSenha; }
     if (password !== confirm) return "As senhas não coincidem";
+    if (!aceite) return "Para criar a conta, aceite os Termos de Uso e a Política de Privacidade";
     return null;
   };
 
@@ -207,6 +210,9 @@ function SignupPage() {
           consultancy_cnpj: consultancyCnpj.replace(/\D/g, ""),
           consultancy_city: consultancyCity.trim(),
           consultancy_state: consultancyState,
+          // aceite dos termos (LGPD)
+          accepted_terms_version: LEGAL_VERSAO,
+          accepted_terms_at: new Date().toISOString(),
           // vínculo
           ...linkPayload,
         },
@@ -480,6 +486,14 @@ function SignupPage() {
               <Label htmlFor="confirm">Confirmar senha<span className="text-destructive ml-1">*</span></Label>
               <Input id="confirm" type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </div>
+            <label className="flex items-start gap-2.5 text-sm pt-1 cursor-pointer">
+              <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5 size-4 accent-primary shrink-0" />
+              <span className="text-muted-foreground">
+                Li e aceito os{" "}
+                <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">Termos de Uso</a>{" "}e a{" "}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">Política de Privacidade</a>.
+              </span>
+            </label>
           </div>
         )}
 

@@ -400,6 +400,8 @@ function LandingPage() {
             <div className="flex flex-wrap gap-x-6 gap-y-2 opacity-80">
               <a href={waLink(MSG_PADRAO)} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-4">WhatsApp</a>
               <Link to="/login" className="hover:underline underline-offset-4">Entrar no sistema</Link>
+              <Link to="/termos" className="hover:underline underline-offset-4">Termos de Uso</Link>
+              <Link to="/privacidade" className="hover:underline underline-offset-4">Privacidade</Link>
               <span>© {new Date().getFullYear()} Finanças em Propósito</span>
             </div>
           </div>
