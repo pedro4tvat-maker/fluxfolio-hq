@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Turnstile, type TurnstileHandle } from "@/components/Turnstile";
+import { CAPTCHA_ATIVO, Turnstile, type TurnstileHandle } from "@/components/Turnstile";
 import { traduzErroAuth } from "@/lib/senha";
 import { encerrarSeInativo, registrarAtividade } from "@/lib/inatividade";
 import { useEffect, useRef, useState } from "react";
@@ -37,7 +37,7 @@ function LoginPage() {
     e.preventDefault();
     if (!captcha) return;
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: captcha ?? undefined } });
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: CAPTCHA_ATIVO ? captcha ?? undefined : undefined } });
     captchaRef.current?.reset();
     setLoading(false);
     if (error) {
@@ -59,7 +59,7 @@ function LoginPage() {
     setResetLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/redefinir-senha`,
-      captchaToken: captcha ?? undefined,
+      captchaToken: CAPTCHA_ATIVO ? captcha ?? undefined : undefined,
     });
     captchaRef.current?.reset();
     setResetLoading(false);

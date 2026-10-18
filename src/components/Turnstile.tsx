@@ -7,6 +7,10 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 // Chave pública do widget "SISTEMAFP login" (válida para sistemafp.com.br).
 // Em desenvolvimento usa a chave de teste da Cloudflare, que sempre aprova.
 const SITE_KEY = import.meta.env.DEV ? "1x00000000000000000000AA" : "0x4AAAAAAFZ2psi5mdOyMHC_";
+// Liga/desliga o captcha no site. Deve acompanhar a configuração do Supabase
+// (Auth → Attack Protection → Captcha): com o captcha desligado lá, deixe false aqui.
+export const CAPTCHA_ATIVO = false;
+
 const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 type TurnstileApi = {
@@ -45,12 +49,17 @@ export const Turnstile = forwardRef<TurnstileHandle, { onToken: (token: string |
 
     useImperativeHandle(ref, () => ({
       reset: () => {
+        if (!CAPTCHA_ATIVO) return;
         onTokenRef.current(null);
         if (widgetId.current && window.turnstile) window.turnstile.reset(widgetId.current);
       },
     }));
 
     useEffect(() => {
+      if (!CAPTCHA_ATIVO) {
+        onTokenRef.current("desligado");
+        return;
+      }
       let cancelado = false;
       loadScript()
         .then(() => {
@@ -72,6 +81,7 @@ export const Turnstile = forwardRef<TurnstileHandle, { onToken: (token: string |
       };
     }, []);
 
+    if (!CAPTCHA_ATIVO) return null;
     return <div ref={box} className="min-h-[65px]" />;
   },
 );

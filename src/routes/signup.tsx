@@ -4,7 +4,7 @@ import { Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, 
 import { toast } from "sonner";
 import logoAsset from "@/assets/sistemafp-icone.png";
 import { forcaSenha, traduzErroAuth, validarSenha } from "@/lib/senha";
-import { Turnstile, type TurnstileHandle } from "@/components/Turnstile";
+import { CAPTCHA_ATIVO, Turnstile, type TurnstileHandle } from "@/components/Turnstile";
 import { LEGAL_VERSAO } from "@/lib/legal";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -187,7 +187,7 @@ function SignupPage() {
       email,
       password,
       options: {
-        captchaToken: captcha ?? undefined,
+        captchaToken: CAPTCHA_ATIVO ? captcha ?? undefined : undefined,
         emailRedirectTo: `${window.location.origin}/login`,
         data: {
           full_name: name,
