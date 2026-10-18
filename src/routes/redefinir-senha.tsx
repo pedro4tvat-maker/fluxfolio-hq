@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { REGRA_SENHA, forcaSenha, traduzErroSenha, validarSenha } from "@/lib/senha";
+import { registrarAtividade } from "@/lib/inatividade";
 import logoAsset from "@/assets/sistemafp-pj-logo.png";
 
 // Destino do link "Esqueci minha senha": o link do e-mail abre uma sessão de
@@ -57,6 +58,7 @@ function RedefinirSenha() {
     const { error } = await supabase.auth.updateUser({ password: senha });
     setSalvando(false);
     if (error) return toast.error("Não foi possível salvar a senha", { description: traduzErroSenha(error.message) });
+    registrarAtividade(true);
     toast.success("Senha alterada! Você já está conectado.");
     navigate({ to: "/app", replace: true });
   };

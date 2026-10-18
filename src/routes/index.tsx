@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { encerrarSeInativo } from "@/lib/inatividade";
 import { ArrowRight, ArrowUpRight, MessageCircle, Plus } from "lucide-react";
 import logoAsset from "@/assets/sistemafp-icone.png";
 
@@ -32,6 +33,7 @@ const C = {
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
+    await encerrarSeInativo();
     const { data } = await supabase.auth.getSession();
     if (data.session) throw redirect({ to: "/app" });
   },

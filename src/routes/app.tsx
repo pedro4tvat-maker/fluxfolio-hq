@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { createFileRoute, Outlet, redirect, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard, ArrowLeftRight, ArrowDownCircle, ArrowUpCircle,
   Target, Package, FileBarChart, Settings, LogOut, Menu, Building2,
@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { AceiteTermos, precisaAceitarTermos } from "@/components/AceiteTermos";
+import { encerrarSeInativo, LIMITE_MINUTOS, useInatividade } from "@/lib/inatividade";
 import { useRecoveryFlags } from "@/hooks/use-recovery-flags";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import appIcon from "@/assets/sistemafp-icone.png";
 export const Route = createFileRoute("/app")({
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
+    if (await encerrarSeInativo()) throw redirect({ to: "/login" });
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/login" });
   },
@@ -140,6 +142,12 @@ function AppLayout() {
     toast.success("Sessão encerrada");
     navigate({ to: "/login", replace: true });
   };
+
+  const aoExpirar = useCallback(() => {
+    toast.info(`Sessão encerrada após ${LIMITE_MINUTOS} minutos sem uso. Entre novamente.`);
+    navigate({ to: "/login", replace: true });
+  }, [navigate]);
+  useInatividade(aoExpirar);
 
   if (loading) {
     return <div className="min-h-screen grid place-items-center text-muted-foreground">Carregando...</div>;

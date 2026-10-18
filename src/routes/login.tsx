@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Turnstile, type TurnstileHandle } from "@/components/Turnstile";
 import { traduzErroAuth } from "@/lib/senha";
+import { encerrarSeInativo, registrarAtividade } from "@/lib/inatividade";
 import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +28,7 @@ function LoginPage() {
   const captchaRef = useRef<TurnstileHandle>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    encerrarSeInativo().then(() => supabase.auth.getSession()).then(({ data }) => {
       if (data.session) navigate({ to: "/app", replace: true });
     });
   }, [navigate]);
@@ -42,6 +43,7 @@ function LoginPage() {
       toast.error("Não foi possível entrar", { description: traduzErroAuth(error.message) });
       return;
     }
+    registrarAtividade(true);
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/app", replace: true });
   };
