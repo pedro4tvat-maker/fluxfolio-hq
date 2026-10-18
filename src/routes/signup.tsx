@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Wallet, Briefcase, Building2, ArrowLeft, ArrowRight, Check, Search, X, BadgeCheck, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import logoAsset from "@/assets/sistemafp-icone.png";
+import { forcaSenha, traduzErroSenha, validarSenha } from "@/lib/senha";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,21 +19,7 @@ export const Route = createFileRoute("/signup")({
   component: SignupPage,
 });
 
-function passwordStrength(p: string) {
-  let s = 0;
-  if (p.length >= 8) s++;
-  if (/[A-Z]/.test(p)) s++;
-  if (/[0-9]/.test(p)) s++;
-  if (/[^A-Za-z0-9]/.test(p)) s++;
-  const map = [
-    { label: "Muito fraca", color: "bg-destructive" },
-    { label: "Fraca", color: "bg-destructive" },
-    { label: "Média", color: "bg-warning" },
-    { label: "Forte", color: "bg-success" },
-    { label: "Muito forte", color: "bg-success" },
-  ];
-  return { score: s, ...map[s] };
-}
+const passwordStrength = forcaSenha;
 
 type AccountKind = "client_manager" | "consultant";
 
@@ -138,7 +125,7 @@ function SignupPage() {
     return null;
   };
   const validatePwd = () => {
-    if (strength.score < 2) return "Use uma senha mais forte (mínimo 8 caracteres, com letras e números)";
+    { const erroSenha = validarSenha(password); if (erroSenha) return erroSenha; }
     if (password !== confirm) return "As senhas não coincidem";
     return null;
   };
@@ -227,7 +214,7 @@ function SignupPage() {
     });
     setLoading(false);
     if (error) {
-      toast.error("Erro ao criar conta", { description: error.message });
+      toast.error("Erro ao criar conta", { description: traduzErroSenha(error.message) });
       return;
     }
     const linkedMsg = kind === "client_manager" && linkMode === "code" && foundByCode

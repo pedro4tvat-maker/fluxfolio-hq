@@ -148,7 +148,7 @@ function ConsultantSettingsPage() {
           <div><span className="text-muted-foreground">Criada em:</span> {new Date(data.created_at).toLocaleDateString("pt-BR")}</div>
         </div>
         <div className="flex flex-wrap gap-2 pt-2">
-          <Button variant="outline" onClick={() => supabase.auth.resetPasswordForEmail(user?.email ?? "").then(() => toast.success("E-mail de redefinição enviado"))}>Redefinir senha</Button>
+          <Button variant="outline" onClick={() => supabase.auth.resetPasswordForEmail(user?.email ?? "", { redirectTo: `${window.location.origin}/redefinir-senha` }).then(() => toast.success("E-mail de redefinição enviado"))}>Redefinir senha</Button>
           <Button variant="outline" className="text-destructive" onClick={logout}><LogOut className="size-4" /> Encerrar sessão</Button>
         </div>
       </div>

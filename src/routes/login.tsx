@@ -49,7 +49,7 @@ function LoginPage() {
     }
     setResetLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`,
+      redirectTo: `${window.location.origin}/redefinir-senha`,
     });
     setResetLoading(false);
     if (error) {
