@@ -13,7 +13,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, Pencil, Trash2, UserCheck } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, UserCheck, MessageCircle, Mail, MapPin, UserX, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/crm")({ component: CRMPage });
@@ -111,85 +111,123 @@ function CRMPage() {
     return <div className="text-muted-foreground">Selecione uma empresa para acessar o CRM.</div>;
   }
 
+  const contagem = (t: string) => contacts.filter((c) => c.tipo === t).length;
+  const filtrosAtivos = search || tipoFilter !== "all" || statusFilter !== "all";
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-6 max-w-6xl">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold">CRM</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">CRM</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Cadastre e acompanhe clientes, leads e parceiros comerciais.
+            Seus clientes, leads, fornecedores e parceiros num lugar só.
           </p>
         </div>
-        <Button onClick={openCreate}><Plus className="size-4" /> Novo contato</Button>
+        <Button className="rounded-full h-11 px-5 shadow-sm" onClick={openCreate}><Plus className="size-4" /> Novo contato</Button>
       </div>
 
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="size-4 absolute left-3 top-2.5 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar por nome, CPF/CNPJ, email ou telefone" value={search} onChange={(e) => setSearch(e.target.value)} />
+      {/* Resumo por tipo (clique para filtrar) */}
+      <div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-5 sm:px-7 sm:py-6 grid gap-5 lg:grid-cols-[1fr_2fr] lg:items-center">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Contatos cadastrados</div>
+          <div className="font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums">{contacts.length}</div>
+          <div className="text-xs text-muted-foreground mt-1">{contacts.filter((c) => c.status === "ativo").length} ativo(s)</div>
         </div>
-        <Select value={tipoFilter} onValueChange={setTipoFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {TIPOS.map((t) => <SelectItem key={t} value={t}>{labelTipo(t)}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            {STATUSES.map((s) => <SelectItem key={s} value={s}>{labelStatus(s)}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {(["cliente", "lead", "fornecedor", "parceiro"] as const).map((t) => {
+            const ativo = tipoFilter === t;
+            return (
+              <button key={t} type="button" onClick={() => setTipoFilter(ativo ? "all" : t)}
+                className={`text-left rounded-2xl px-3.5 py-3 transition-colors ${ativo ? "bg-background shadow-sm ring-1 ring-primary/30" : "bg-background/60 hover:bg-background"}`}>
+                <div className="text-[11px] font-medium text-muted-foreground">{labelTipo(t)}s</div>
+                <div className="font-display font-bold text-2xl tabular-nums mt-0.5">{contagem(t)}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="bg-card border rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left">
-            <tr>
-              <th className="px-4 py-2 font-medium">Nome</th>
-              <th className="px-4 py-2 font-medium">Tipo</th>
-              <th className="px-4 py-2 font-medium">CPF/CNPJ</th>
-              <th className="px-4 py-2 font-medium">Contato</th>
-              <th className="px-4 py-2 font-medium">Cidade/UF</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Carregando...</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhum contato encontrado.</td></tr>
-            ) : filtered.map((c) => (
-              <tr key={c.id} className="border-t hover:bg-muted/30">
-                <td className="px-4 py-2">
-                  <Link to="/app/crm/$id" params={{ id: c.id }} className="font-medium hover:underline">{c.name}</Link>
-                </td>
-                <td className="px-4 py-2">{labelTipo(c.tipo)}</td>
-                <td className="px-4 py-2 font-mono text-xs">{c.cpf_cnpj ?? "—"}</td>
-                <td className="px-4 py-2 text-xs">
-                  {c.phone && <div>{c.phone}</div>}
-                  {c.email && <div className="text-muted-foreground">{c.email}</div>}
-                </td>
-                <td className="px-4 py-2 text-xs">{[c.city, c.state].filter(Boolean).join("/") || "—"}</td>
-                <td className="px-4 py-2"><StatusBadge status={c.status} /></td>
-                <td className="px-4 py-2 text-right whitespace-nowrap">
-                  {c.tipo === "lead" && (
-                    <Button variant="ghost" size="sm" onClick={() => transformarEmCliente(c)} title="Converter em cliente">
-                      <UserCheck className="size-4" />
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(c)} title="Editar"><Pencil className="size-4" /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => inativar(c)} title="Inativar">Inativar</Button>
-                  <Button variant="ghost" size="sm" onClick={() => excluir(c)} title="Excluir"><Trash2 className="size-4" /></Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Busca e situação */}
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="relative flex-1">
+          <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-10 h-11 rounded-full bg-card border shadow-sm" placeholder="Buscar por nome, CPF/CNPJ, e-mail ou telefone..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {([["all", "Todos"], ...STATUSES.map((st) => [st, labelStatus(st)])] as [string, string][]).map(([v, r]) => (
+            <button key={v} type="button" onClick={() => setStatusFilter(v)}
+              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${statusFilter === v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}>
+              {r}
+            </button>
+          ))}
+          {filtrosAtivos && (
+            <button type="button" className="h-8 px-3 rounded-full text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => { setSearch(""); setTipoFilter("all"); setStatusFilter("all"); }}>
+              Limpar
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Lista */}
+      <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-10">Carregando...</p>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-10">
+            <Users className="size-10 mx-auto text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground mt-2">Nenhum contato encontrado.</p>
+          </div>
+        ) : (
+          <ul>
+            {filtered.map((c) => {
+              const zap = linkWhatsApp(c.whatsapp || c.phone);
+              const local = [c.city, c.state].filter(Boolean).join("/");
+              return (
+                <li key={c.id} className="group flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                  <Link to="/app/crm/$id" params={{ id: c.id }} className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className={`size-10 shrink-0 rounded-full grid place-items-center text-sm font-semibold ${c.status === "inativo" || c.status === "perdido" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
+                      {iniciais(c.name)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium text-sm truncate">{c.name}</span>
+                        <span className="shrink-0 rounded-full bg-muted px-2 py-px text-[10px] font-medium text-muted-foreground">{labelTipo(c.tipo)}</span>
+                        <StatusBadge status={c.status} />
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate flex items-center gap-3">
+                        {c.phone && <span>{c.phone}</span>}
+                        {c.email && <span className="hidden sm:inline-flex items-center gap-1 truncate"><Mail className="size-3" /> {c.email}</span>}
+                        {local && <span className="hidden md:inline-flex items-center gap-1"><MapPin className="size-3" /> {local}</span>}
+                        {!c.phone && !c.email && !local && <span>Sem contato cadastrado</span>}
+                      </div>
+                    </div>
+                  </Link>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {zap && (
+                      <a href={zap} target="_blank" rel="noopener noreferrer" title="Conversar no WhatsApp" className="size-8 grid place-items-center rounded-full hover:bg-background text-success">
+                        <MessageCircle className="size-4" />
+                      </a>
+                    )}
+                    {c.tipo === "lead" && (
+                      <button type="button" onClick={() => transformarEmCliente(c)} title="Converter em cliente" className="size-8 grid place-items-center rounded-full hover:bg-background text-primary">
+                        <UserCheck className="size-4" />
+                      </button>
+                    )}
+                    <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <button type="button" onClick={() => openEdit(c)} title="Editar" className="size-8 grid place-items-center rounded-full hover:bg-background"><Pencil className="size-3.5" /></button>
+                      {c.status !== "inativo" && (
+                        <button type="button" onClick={() => inativar(c)} title="Inativar" className="size-8 grid place-items-center rounded-full hover:bg-background"><UserX className="size-3.5" /></button>
+                      )}
+                      <button type="button" onClick={() => excluir(c)} title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive"><Trash2 className="size-3.5" /></button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <ContactForm
         open={openForm}
@@ -200,6 +238,17 @@ function CRMPage() {
       />
     </div>
   );
+}
+
+export function iniciais(nome: string) {
+  return nome.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+// Link do WhatsApp a partir do telefone (assume Brasil quando vier sem o 55)
+export function linkWhatsApp(tel: string | null | undefined) {
+  const d = (tel ?? "").replace(/\D/g, "");
+  if (d.length < 10) return null;
+  return `https://wa.me/${d.length <= 11 ? "55" + d : d}`;
 }
 
 export function ContactForm({
@@ -350,13 +399,13 @@ export function labelStatus(s: string) {
   return ({ novo: "Novo", em_atendimento: "Em atendimento", ativo: "Ativo", inativo: "Inativo", perdido: "Perdido" }[s] ?? s);
 }
 
-function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    novo: "bg-blue-500/10 text-blue-600 border-blue-500/30",
-    em_atendimento: "bg-amber-500/10 text-amber-600 border-amber-500/30",
-    ativo: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
-    inativo: "bg-muted text-muted-foreground border-muted",
-    perdido: "bg-destructive/10 text-destructive border-destructive/30",
+    novo: "bg-primary/10 text-primary",
+    em_atendimento: "bg-warning/15 text-warning-foreground",
+    ativo: "bg-success/12 text-success",
+    inativo: "bg-muted text-muted-foreground",
+    perdido: "bg-destructive/10 text-destructive",
   };
-  return <span className={`inline-block text-[11px] px-2 py-0.5 rounded-full border ${map[status] ?? ""}`}>{labelStatus(status)}</span>;
+  return <span className={`shrink-0 inline-block text-[10px] font-medium px-2 py-px rounded-full ${map[status] ?? ""}`}>{labelStatus(status)}</span>;
 }

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { formatDate, formatMoney, monthRange } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1917,18 +1918,18 @@ function VendasPage() {
                         </div>
                         <div className="col-span-2">
                           <Label className="text-xs text-muted-foreground">Preço un.</Label>
-                          <Input type="number" min="0" step="0.01" className="text-right"
+                          <CurrencyInput className="text-right"
                             value={it.preco_unitario}
-                            onChange={(e) => updateItem(idx, { preco_unitario: e.target.value })} />
+                            onChange={(v) => updateItem(idx, { preco_unitario: v })} />
                         </div>
                         <div className="col-span-2">
                           <Label className="text-xs text-muted-foreground">
                             Custo un. {it.product_id && it.custo_padrao ? `(padrão ${formatMoney(Number(it.custo_padrao))})` : ""}
                           </Label>
-                          <Input type="number" min="0" step="0.01" className="text-right"
+                          <CurrencyInput className="text-right"
                             placeholder="Opcional"
                             value={it.custo_unitario}
-                            onChange={(e) => updateItem(idx, { custo_unitario: e.target.value })} />
+                            onChange={(v) => updateItem(idx, { custo_unitario: v })} />
                         </div>
                         <div className="col-span-1 flex justify-end pt-5">
                           <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)}>

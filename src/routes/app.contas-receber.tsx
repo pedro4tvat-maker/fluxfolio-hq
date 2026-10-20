@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { formatDate, formatMoney, downloadCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -357,7 +358,7 @@ function NewReceivableDialog({ companyId, categorias, contas, centros, onDone }:
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2"><Label>Descrição</Label><Input value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} /></div>
         <div><Label>Cliente</Label><Input value={f.cliente} onChange={(e) => setF({ ...f, cliente: e.target.value })} /></div>
-        <div><Label>Valor</Label><Input value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} /></div>
+        <div><Label>Valor</Label><CurrencyInput value={f.valor} onChange={(v) => setF({ ...f, valor: v })} /></div>
         <div><Label>Vencimento</Label><Input type="date" value={f.vencimento} onChange={(e) => setF({ ...f, vencimento: e.target.value })} /></div>
         <div><Label>Forma</Label>
           <Select value={f.forma_recebimento} onValueChange={(v) => setF({ ...f, forma_recebimento: v })}>

@@ -6,22 +6,25 @@ import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { formatMoney, formatDate, monthRange, downloadCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowDownCircle, ArrowUpCircle, BarChart3, Download, Filter, List, Search, Building2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, BarChart3, Download, Filter, Landmark, List, Search, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { sugerirCategoria, type Historico, type Sugestao } from "@/lib/sugestao-categoria";
 import { FluxoGraficos } from "@/components/FluxoGraficos";
+import { ConciliacaoExtrato } from "@/components/ConciliacaoExtrato";
 import { FluxoListaCompacta } from "@/components/FluxoListaCompacta";
 
 export const Route = createFileRoute("/app/fluxo-caixa")({
   // ?novo=entrada|saida abre a janela de lançamento direto (atalho do dashboard)
-  validateSearch: (s: Record<string, unknown>): { novo?: "entrada" | "saida" } => ({
+  validateSearch: (s: Record<string, unknown>): { novo?: "entrada" | "saida"; conciliar?: boolean } => ({
     novo: s.novo === "entrada" || s.novo === "saida" ? s.novo : undefined,
+    conciliar: s.conciliar === true || s.conciliar === "true" ? true : undefined,
   }),
   component: FluxoCaixa,
 });
@@ -72,14 +75,15 @@ function FluxoCaixa() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const { novo } = Route.useSearch();
+  const { novo, conciliar } = Route.useSearch();
   const navigate = Route.useNavigate();
+  const [conciliando, setConciliando] = useState(false);
   useEffect(() => {
-    if (!novo) return;
-    setNovoTipo(novo);
-    setOpenNew(true);
+    if (!novo && !conciliar) return;
+    if (novo) { setNovoTipo(novo); setOpenNew(true); }
+    if (conciliar) setConciliando(true);
     navigate({ search: {}, replace: true });
-  }, [novo, navigate]);
+  }, [novo, conciliar, navigate]);
   const [editingTx, setEditingTx] = useState<Tx | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Tx | null>(null);
 
@@ -208,6 +212,9 @@ function FluxoCaixa() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <CompanySwitcher />
+          <Button variant="outline" onClick={() => setConciliando((v) => !v)} title="Importe o extrato do banco e confira com os lançamentos">
+            <Landmark className="size-4" /> Conciliar extrato
+          </Button>
           <Button variant="outline" onClick={handleExport}><Download className="size-4" /> Exportar CSV</Button>
           <Button variant="outline" onClick={() => { setNovoTipo("entrada"); setOpenNew(true); }} title="Atalho: tecla E">
             <ArrowUpCircle className="size-4 text-success" /> Entrada <kbd className="ml-1 hidden md:inline text-[10px] text-muted-foreground border rounded px-1">E</kbd>
@@ -242,6 +249,8 @@ function FluxoCaixa() {
           </Dialog>
         </div>
       </div>
+
+      {conciliando && <ConciliacaoExtrato onClose={() => setConciliando(false)} />}
 
       {/* Resumo do período */}
       <div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-5 sm:px-7 sm:py-6 grid gap-5 md:grid-cols-[1.1fr_2fr] md:items-center">
@@ -519,7 +528,7 @@ function TransactionDialog({
           </div>
           <div>
             <Label>Valor (R$)</Label>
-            <Input ref={valorRef} inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
+            <CurrencyInput ref={valorRef} value={valor} onChange={setValor} />
           </div>
         </div>
 

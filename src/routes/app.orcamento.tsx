@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -153,7 +154,7 @@ function OrcamentoPage() {
           </div>
           <div className="space-y-1">
             <Label>Valor previsto para {NOMES_MES[mes - 1].toLowerCase()}</Label>
-            <Input type="number" min="0" step="0.01" className="rounded-xl" value={form.valor_orcado} onChange={(e) => setForm({ ...form, valor_orcado: e.target.value })} />
+            <CurrencyInput className="rounded-xl" value={form.valor_orcado} onChange={(v) => setForm({ ...form, valor_orcado: v })} />
           </div>
           <Button type="submit" className="rounded-full" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
         </form>
@@ -212,7 +213,7 @@ function OrcamentoPage() {
                         <div className="flex items-center gap-1 shrink-0">
                           {editingId === r.id ? (
                             <>
-                              <Input type="number" min="0" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8 w-28 rounded-full" autoFocus />
+                              <CurrencyInput value={editValue} onChange={setEditValue} className="h-8 w-32 rounded-full" autoFocus />
                               <Button size="sm" className="h-8 rounded-full" onClick={() => salvarEdicao(r.id)}>Salvar</Button>
                               <button type="button" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => setEditingId(null)} aria-label="Cancelar"><X className="size-3.5" /></button>
                             </>

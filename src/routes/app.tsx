@@ -93,7 +93,6 @@ const clientNav: NavEntry[] = [
       { to: "/app/orcamento", label: "Orçamento", icon: Target },
     ],
   },
-  { to: "/app/importacoes", label: "Importador de Dados", icon: Upload },
   { to: "/app/crm", label: "CRM", icon: Users },
   { to: "/app/configuracoes", label: "Configurações da Empresa", icon: Settings },
 ];
@@ -129,12 +128,12 @@ function AppLayout() {
     });
   }, [isConsultant, showReconstrucao, showCorrecaoOs]);
 
-  const [groupsOpen, setGroupsOpen] = useState<Record<string, boolean>>({
-    fluxo: true,
-    gerenciamento: true,
-    organizacao: true,
-  });
-  const toggleGroup = (id: string) => setGroupsOpen((s) => ({ ...s, [id]: !s[id] }));
+  // Menu enxuto: as categorias começam fechadas e só uma fica aberta por vez
+  const grupoDaRota = (p: string) =>
+    nav.find((e): e is NavGroup => isGroup(e) && e.children.some((c) => p.startsWith(c.to)))?.id ?? null;
+  const [grupoAberto, setGrupoAberto] = useState<string | null>(() => grupoDaRota(path));
+  useEffect(() => { const g = grupoDaRota(path); if (g) setGrupoAberto(g); }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
+  const toggleGroup = (id: string) => setGrupoAberto((atual) => (atual === id ? null : id));
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -205,7 +204,7 @@ function AppLayout() {
   };
 
   const renderGroup = (g: NavGroup) => {
-    const isOpen = groupsOpen[g.id] ?? true;
+    const isOpen = grupoAberto === g.id;
     const groupActive = g.children.some((c) => path.startsWith(c.to));
     return (
       <div key={g.id}>

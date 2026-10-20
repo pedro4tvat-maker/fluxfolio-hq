@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -488,7 +489,9 @@ function NumField({ label, value, onChange }: { label: string; value: number | u
   return (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
-      <Input type="number" min="0" step="0.01" value={value ?? 0} onChange={(e) => onChange(e.target.value)} />
+      {label.includes("%")
+        ? <Input type="number" min="0" step="0.01" value={value ?? 0} onChange={(e) => onChange(e.target.value)} />
+        : <CurrencyInput value={value ?? ""} onChange={onChange} />}
     </div>
   );
 }

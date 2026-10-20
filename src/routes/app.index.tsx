@@ -889,12 +889,14 @@ function ClientDashboard() {
                 ["/app/vendas", "Venda", ShoppingCart],
                 ["/app/contas-pagar", "A pagar", ArrowUpCircle],
                 ["/app/contas-receber", "A receber", ArrowDownCircle],
-                ["/app/importacoes", "Importar extrato", Upload],
               ] as const).map(([to, rotulo, Icone]) => (
                 <Link key={to} to={to} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-muted/70 hover:bg-muted text-xs font-medium transition-colors">
                   <Icone className="size-3.5 text-primary" /> {rotulo}
                 </Link>
               ))}
+              <Link to="/app/fluxo-caixa" search={{ conciliar: true }} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-muted/70 hover:bg-muted text-xs font-medium transition-colors">
+                <Upload className="size-3.5 text-primary" /> Conciliar extrato
+              </Link>
             </div>
           </section>
 

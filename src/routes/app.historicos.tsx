@@ -7,6 +7,7 @@ import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { useSelectedBranch } from "@/hooks/use-selected-branch";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -478,7 +479,9 @@ function FieldsGroup({ title, fields, form, setField }: { title: string; fields:
         {fields.map(([k, label]) => (
           <div key={k}>
             <Label className="text-xs">{label}</Label>
-            <Input type="number" step="0.01" value={form[k] ?? ""} onChange={(e) => setField(k, e.target.value === "" ? null : Number(e.target.value))} />
+            {k === "sales_count"
+              ? <Input type="number" step="1" value={form[k] ?? ""} onChange={(e) => setField(k, e.target.value === "" ? null : Number(e.target.value))} />
+              : <CurrencyInput value={form[k] ?? ""} onChange={(v) => setField(k, v === "" ? null : Number(v))} />}
           </div>
         ))}
       </div>

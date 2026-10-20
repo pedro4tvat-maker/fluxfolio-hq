@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -293,7 +294,7 @@ function ReceitaForm({ consultantId, record, onClose }: { consultantId: string; 
               <SelectContent><SelectItem value="none">Sem contrato</SelectItem>{contracts.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.client_name || c.plan_name || c.id.slice(0,8)}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
-          <Field label="Valor" required><Input type="number" step="0.01" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
+          <Field label="Valor" required><CurrencyInput value={f.amount} onChange={(v) => setF({ ...f, amount: v })} /></Field>
           <Field label="Forma de recebimento">
             <Select value={f.payment_method ?? "Pix"} onValueChange={(v) => setF({ ...f, payment_method: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -410,7 +411,7 @@ function DespesaForm({ consultantId, record, onClose }: { consultantId: string; 
               <SelectContent>{EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
-          <Field label="Valor" required><Input type="number" step="0.01" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
+          <Field label="Valor" required><CurrencyInput value={f.amount} onChange={(v) => setF({ ...f, amount: v })} /></Field>
           <Field label="Forma de pagamento">
             <Select value={f.payment_method ?? "Pix"} onValueChange={(v) => setF({ ...f, payment_method: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -548,7 +549,7 @@ function ContratoForm({ consultantId, record, onClose }: { consultantId: string;
           <Field label="Nome do cliente" required><Input value={f.client_name ?? ""} onChange={(e) => setF({ ...f, client_name: e.target.value })} /></Field>
           <Field label="Tipo de serviço"><Input value={f.service_type ?? ""} onChange={(e) => setF({ ...f, service_type: e.target.value })} /></Field>
           <Field label="Plano contratado"><Input value={f.plan_name ?? ""} onChange={(e) => setF({ ...f, plan_name: e.target.value })} /></Field>
-          <Field label="Valor mensal" required><Input type="number" step="0.01" value={f.monthly_amount} onChange={(e) => setF({ ...f, monthly_amount: e.target.value })} /></Field>
+          <Field label="Valor mensal" required><CurrencyInput value={f.monthly_amount} onChange={(v) => setF({ ...f, monthly_amount: v })} /></Field>
           <Field label="Dia de vencimento (1-28)"><Input type="number" min={1} max={28} value={f.due_day} onChange={(e) => setF({ ...f, due_day: e.target.value })} /></Field>
           <Field label="Início" required><Input type="date" value={f.start_date} onChange={(e) => setF({ ...f, start_date: e.target.value })} /></Field>
           <Field label="Encerramento"><Input type="date" value={f.end_date ?? ""} onChange={(e) => setF({ ...f, end_date: e.target.value || null })} /></Field>

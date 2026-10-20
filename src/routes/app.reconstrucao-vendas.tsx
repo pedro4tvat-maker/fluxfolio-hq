@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -674,7 +675,7 @@ function Page() {
                           <Input placeholder="Ex.: Frete adicional" value={it.product_name} onChange={(e) => updateItem(i, { product_name: e.target.value })} />
                         </div>
                         <div className="col-span-4 md:col-span-1"><Label className="text-xs">Qtd</Label><Input type="number" value={it.quantity} onChange={(e) => updateItem(i, { quantity: e.target.value })} /></div>
-                        <div className="col-span-8 md:col-span-4"><Label className="text-xs">Valor un.</Label><Input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: e.target.value })} /></div>
+                        <div className="col-span-8 md:col-span-4"><Label className="text-xs">Valor un.</Label><CurrencyInput value={it.unit_price} onChange={(v) => updateItem(i, { unit_price: v })} /></div>
                         <div className="col-span-12 md:col-span-1 flex items-end"><Button size="icon" variant="ghost" onClick={() => removeItem(i)}><Trash2 className="size-4" /></Button></div>
                         <div className="col-span-12"><Input placeholder="Observação (opcional)" value={it.observation} onChange={(e) => updateItem(i, { observation: e.target.value })} /></div>
                       </>
@@ -695,8 +696,8 @@ function Page() {
                           {!it.product_id && <Input className="mt-1" placeholder="Nome do produto" value={it.product_name} onChange={(e) => updateItem(i, { product_name: e.target.value })} />}
                         </div>
                         <div className="col-span-4 md:col-span-1"><Label className="text-xs">Qtd</Label><Input type="number" value={it.quantity} onChange={(e) => updateItem(i, { quantity: e.target.value })} /></div>
-                        <div className="col-span-4 md:col-span-2"><Label className="text-xs">Preço un.</Label><Input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: e.target.value })} /></div>
-                        <div className="col-span-4 md:col-span-2"><Label className="text-xs">Custo un.</Label><Input type="number" step="0.01" value={it.unit_cost} onChange={(e) => updateItem(i, { unit_cost: e.target.value })} /></div>
+                        <div className="col-span-4 md:col-span-2"><Label className="text-xs">Preço un.</Label><CurrencyInput value={it.unit_price} onChange={(v) => updateItem(i, { unit_price: v })} /></div>
+                        <div className="col-span-4 md:col-span-2"><Label className="text-xs">Custo un.</Label><CurrencyInput value={it.unit_cost} onChange={(v) => updateItem(i, { unit_cost: v })} /></div>
                         <div className="col-span-10 md:col-span-2">
                           <Label className="text-xs">Local de estoque</Label>
                           <Select value={it.stock_location_id || "_none"} onValueChange={(v) => updateItem(i, { stock_location_id: v === "_none" ? "" : v })}>
