@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDownCircle, ArrowUpCircle, Download, Filter, PlusCircle, Search, Trash2, Pencil, Lock, Building2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Download, Filter, Search, Trash2, Pencil, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
+import { sugerirCategoria, type Historico, type Sugestao } from "@/lib/sugestao-categoria";
 
 export const Route = createFileRoute("/app/fluxo-caixa")({ component: FluxoCaixa });
 
@@ -45,6 +46,25 @@ function FluxoCaixa() {
   const [categoria, setCategoria] = useState<string>("todas");
   const [search, setSearch] = useState("");
   const [openNew, setOpenNew] = useState(false);
+  const [novoTipo, setNovoTipo] = useState<"entrada" | "saida">("entrada");
+
+  // Atalhos: E = nova entrada, S = nova saída (fora de campos de texto e sem janela aberta)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      const k = e.key.toLowerCase();
+      if (k === "e" || k === "s") {
+        e.preventDefault();
+        setNovoTipo(k === "e" ? "entrada" : "saida");
+        setOpenNew(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const [editingTx, setEditingTx] = useState<Tx | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Tx | null>(null);
 
@@ -174,17 +194,23 @@ function FluxoCaixa() {
         <div className="flex items-center gap-2 flex-wrap">
           <CompanySwitcher />
           <Button variant="outline" onClick={handleExport}><Download className="size-4" /> Exportar CSV</Button>
+          <Button variant="outline" onClick={() => { setNovoTipo("entrada"); setOpenNew(true); }} title="Atalho: tecla E">
+            <ArrowUpCircle className="size-4 text-success" /> Entrada <kbd className="ml-1 hidden md:inline text-[10px] text-muted-foreground border rounded px-1">E</kbd>
+          </Button>
+          <Button variant="outline" onClick={() => { setNovoTipo("saida"); setOpenNew(true); }} title="Atalho: tecla S">
+            <ArrowDownCircle className="size-4 text-destructive" /> Saída <kbd className="ml-1 hidden md:inline text-[10px] text-muted-foreground border rounded px-1">S</kbd>
+          </Button>
           <Dialog open={openNew} onOpenChange={setOpenNew}>
-            <DialogTrigger asChild>
-              <Button><PlusCircle className="size-4" /> Novo lançamento</Button>
-            </DialogTrigger>
-            <TransactionDialog
+            {openNew && <TransactionDialog
+              key={novoTipo}
+              tipoInicial={novoTipo}
               companyId={selected!}
               categorias={categorias}
               contas={contas}
               costCenters={costCenters}
               onDone={() => { setOpenNew(false); qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
-            />
+              onSavedKeepOpen={() => { qc.invalidateQueries({ queryKey: ["transactions"] }); qc.invalidateQueries({ queryKey: ["dashboard-companies"] }); }}
+            />}
           </Dialog>
           <Dialog open={!!editingTx} onOpenChange={(o) => !o && setEditingTx(null)}>
             {editingTx && (
@@ -372,16 +398,18 @@ function FluxoCaixa() {
 }
 
 function TransactionDialog({
-  tx, companyId, categorias, contas, costCenters, onDone,
+  tx, tipoInicial, companyId, categorias, contas, costCenters, onDone, onSavedKeepOpen,
 }: {
   tx?: Tx;
+  tipoInicial?: "entrada" | "saida";
+  onSavedKeepOpen?: () => void;
   companyId: string;
   categorias: { id: string; nome: string; tipo: string }[];
   contas: { id: string; nome: string }[];
   costCenters: { id: string; nome: string }[];
   onDone: () => void;
 }) {
-  const [tipo, setTipo] = useState<"entrada" | "saida">(tx?.tipo ?? "entrada");
+  const [tipo, setTipo] = useState<"entrada" | "saida">(tx?.tipo ?? tipoInicial ?? "entrada");
   const [data, setData] = useState(tx?.data ?? new Date().toISOString().slice(0, 10));
   const [descricao, setDescricao] = useState(tx?.descricao ?? "");
   const [valor, setValor] = useState(tx ? String(tx.valor).replace(".", ",") : "");
@@ -393,6 +421,42 @@ function TransactionDialog({
   const [observacoes, setObservacoes] = useState(tx?.observacoes ?? "");
   const [saving, setSaving] = useState(false);
   const [descMode, setDescMode] = useState<"livre" | "os">("livre");
+  const [sugestao, setSugestao] = useState<Sugestao | null>(null);
+  const categoriaManual = useRef(!!tx?.categoria_id); // usuário escolheu a categoria? então não sobrescreve
+  const valorRef = useRef<HTMLInputElement>(null);
+
+  // Histórico da empresa para sugerir categoria pela descrição (só em lançamento novo)
+  const { data: historico } = useQuery({
+    queryKey: ["fluxo-historico-categorias", companyId],
+    enabled: !!companyId && !tx,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("transactions")
+        .select("descricao, tipo, categoria_id, conta_id, centro_custo_id")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .not("categoria_id", "is", null)
+        .order("data", { ascending: false })
+        .limit(800);
+      return (data ?? []) as Historico[];
+    },
+  });
+
+  useEffect(() => {
+    if (tx || !historico) return;
+    const t = setTimeout(() => {
+      const s = sugerirCategoria(descricao, tipo, historico);
+      setSugestao(s);
+      if (s && !categoriaManual.current && categorias.some((c) => c.id === s.categoria_id && c.tipo === tipo)) {
+        setCategoriaId(s.categoria_id);
+        if (!contaId && s.conta_id) setContaId(s.conta_id);
+        if (!centroCustoId && s.centro_custo_id) setCentroCustoId(s.centro_custo_id);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [descricao, tipo, historico]);
 
   // Últimas vendas da empresa (para vincular OS na descrição)
   const { data: ultimasVendas } = useQuery({
@@ -415,7 +479,7 @@ function TransactionDialog({
 
   const catFiltered = categorias.filter((c) => c.tipo === tipo);
 
-  const submit = async () => {
+  const submit = async (continuar = false) => {
     const v = Number(valor.replace(",", "."));
     if (!descricao.trim()) return toast.error("Informe uma descrição");
     if (!v || v <= 0) return toast.error("Informe um valor válido");
@@ -446,21 +510,32 @@ function TransactionDialog({
       if (error) return toast.error("Erro ao salvar", { description: error.message });
       toast.success("Lançamento criado");
       setDescricao(""); setValor(""); setObservacoes("");
+      if (continuar) {
+        // Mantém data, tipo, conta, forma, status e centro de custo para o próximo
+        setCategoriaId(""); categoriaManual.current = false; setSugestao(null);
+        onSavedKeepOpen?.();
+        setTimeout(() => valorRef.current?.focus(), 50);
+        return;
+      }
     }
     onDone();
   };
 
   return (
-    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+    <DialogContent
+      className="max-w-lg max-h-[90vh] overflow-y-auto"
+      onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !saving) { e.preventDefault(); submit(false); } }}
+      onOpenAutoFocus={(e) => { if (!tx) { e.preventDefault(); setTimeout(() => valorRef.current?.focus(), 30); } }}
+    >
       <DialogHeader>
         <DialogTitle>{tx ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
       </DialogHeader>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant={tipo === "entrada" ? "default" : "outline"} onClick={() => { setTipo("entrada"); setCategoriaId(""); }}>
+          <Button type="button" variant={tipo === "entrada" ? "default" : "outline"} onClick={() => { setTipo("entrada"); setCategoriaId(""); categoriaManual.current = false; }}>
             <ArrowUpCircle className="size-4" /> Entrada
           </Button>
-          <Button type="button" variant={tipo === "saida" ? "default" : "outline"} onClick={() => { setTipo("saida"); setCategoriaId(""); }}>
+          <Button type="button" variant={tipo === "saida" ? "default" : "outline"} onClick={() => { setTipo("saida"); setCategoriaId(""); categoriaManual.current = false; }}>
             <ArrowDownCircle className="size-4" /> Saída
           </Button>
         </div>
@@ -472,7 +547,7 @@ function TransactionDialog({
           </div>
           <div>
             <Label>Valor (R$)</Label>
-            <Input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
+            <Input ref={valorRef} inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
           </div>
         </div>
 
@@ -522,12 +597,17 @@ function TransactionDialog({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Categoria</Label>
-            <Select value={categoriaId} onValueChange={setCategoriaId}>
+            <Select value={categoriaId} onValueChange={(v) => { categoriaManual.current = true; setCategoriaId(v); }}>
               <SelectTrigger><SelectValue placeholder={catFiltered.length ? "Selecionar" : "Nenhuma cadastrada"} /></SelectTrigger>
               <SelectContent>
                 {catFiltered.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
               </SelectContent>
             </Select>
+            {!tx && sugestao && categoriaId === sugestao.categoria_id && !categoriaManual.current && (
+              <p className="mt-1 text-[11px] text-muted-foreground truncate" title={sugestao.exemplo}>
+                Sugerida pelo histórico (“{sugestao.exemplo}”)
+              </p>
+            )}
           </div>
           <div>
             <Label>Conta</Label>
@@ -577,8 +657,12 @@ function TransactionDialog({
           <Textarea rows={2} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
         </div>
       </div>
-      <DialogFooter>
-        <Button onClick={submit} disabled={saving}>{saving ? "Salvando..." : tx ? "Atualizar lançamento" : "Salvar lançamento"}</Button>
+      <DialogFooter className="gap-2 sm:gap-2 items-center">
+        <span className="hidden sm:inline text-[11px] text-muted-foreground mr-auto">Ctrl + Enter para salvar</span>
+        {!tx && (
+          <Button variant="outline" onClick={() => submit(true)} disabled={saving}>Salvar e lançar outro</Button>
+        )}
+        <Button onClick={() => submit(false)} disabled={saving}>{saving ? "Salvando..." : tx ? "Atualizar lançamento" : "Salvar lançamento"}</Button>
       </DialogFooter>
     </DialogContent>
   );
