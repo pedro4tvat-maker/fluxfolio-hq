@@ -10,13 +10,14 @@ type Item = {
   status: string;
   categoria_id: string | null;
   conta_id: string | null;
+  forma_pagamento?: string | null;
   payable_id?: string | null;
   receivable_id?: string | null;
 };
 
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-// Lista enxuta dos lançamentos (usada ao lado do gráfico): agrupada por dia,
+// Lista enxuta dos lançamentos: agrupada por dia,
 // com ícone arredondado, categoria e conta em segundo plano e ações ao passar o mouse.
 export function FluxoListaCompacta<T extends Item>({
   itens, carregando, categorias, contas, onEditar, onExcluir,
@@ -41,7 +42,7 @@ export function FluxoListaCompacta<T extends Item>({
   }
 
   return (
-    <div className="max-h-[560px] overflow-y-auto pr-1">
+    <div>
       {grupos.map((g) => {
         const [a, m, d] = g.data.split("-");
         return (
@@ -53,7 +54,7 @@ export function FluxoListaCompacta<T extends Item>({
               {g.itens.map((t) => {
                 const entrada = t.tipo === "entrada";
                 const auto = !!(t.payable_id || t.receivable_id);
-                const detalhe = [t.categoria_id ? cat.get(t.categoria_id) : null, t.conta_id ? conta.get(t.conta_id) : null].filter(Boolean).join(" · ");
+                const detalhe = [t.categoria_id ? cat.get(t.categoria_id) : null, t.conta_id ? conta.get(t.conta_id) : null, t.forma_pagamento].filter(Boolean).join(" · ");
                 return (
                   <li key={t.id} className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-muted/60 transition-colors">
                     <span className={`size-9 shrink-0 rounded-full grid place-items-center ${entrada ? "bg-success/12 text-success" : "bg-destructive/10 text-destructive"}`}>

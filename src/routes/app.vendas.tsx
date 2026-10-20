@@ -3,14 +3,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, monthRange } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText, TrendingUp, Download, Ban, Pencil, Building2 } from "lucide-react";
+import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText, TrendingUp, Download, Ban, Pencil, Building2, Search, ShoppingBag, CalendarClock, Receipt } from "lucide-react";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { ContactForm } from "./app.crm";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -207,6 +208,9 @@ function VendasPage() {
   const sevenAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [reportFrom, setReportFrom] = useState(sevenAgo);
   const [reportTo, setReportTo] = useState(today);
+  const [periodo, setPeriodo] = useState<"mes" | "mes_passado" | "30d" | "tudo">("mes");
+  const [aba, setAba] = useState<"todas" | "vista" | "prazo">("todas");
+  const [busca, setBusca] = useState("");
   const [form, setForm] = useState({
     forma: "vista" as "vista" | "prazo",
     forma_pagamento: "Pix",
@@ -1605,6 +1609,57 @@ function VendasPage() {
     }
   }
 
+
+  // ---------- Somente exibição: período, busca e resumo da lista ----------
+  const faixa = useMemo(() => {
+    const hoje = new Date();
+    if (periodo === "mes") return monthRange(hoje);
+    if (periodo === "mes_passado") return monthRange(new Date(hoje.getFullYear(), hoje.getMonth() - 1, 15));
+    if (periodo === "30d") {
+      const ini = new Date(hoje); ini.setDate(ini.getDate() - 30);
+      return { start: ini.toISOString().slice(0, 10), end: hoje.toISOString().slice(0, 10) };
+    }
+    return { start: "1900-01-01", end: "2999-12-31" };
+  }, [periodo]);
+
+  const listaVendas = useMemo(() => {
+    const dentro = (d: string | null | undefined) => !!d && d.slice(0, 10) >= faixa.start && d.slice(0, 10) <= faixa.end;
+    const tituloDe = (desc: string | null, os: string | null | undefined) =>
+      os ? `OS ${os}` : (desc || "Venda").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "");
+    const clienteDe = (desc: string | null) => {
+      const m = (desc || "").match(/Venda\s*-\s*([^(]+?)\s*(\(|$)/);
+      return m ? m[1].trim() : null;
+    };
+    const vista = (vendas?.tx ?? []).filter((r) => dentro(r.data)).map((r) => ({
+      chave: `v-${r.id}`, tipo: "vista" as const, row: r, data: r.data as string,
+      titulo: tituloDe(r.descricao, (r as { os_code?: string | null }).os_code),
+      cliente: clienteDe(r.descricao), forma: r.forma_pagamento ?? null, status: null as string | null, valor: Number(r.valor) || 0,
+    }));
+    const prazo = (vendas?.rec ?? []).filter((r) => dentro(r.vencimento)).map((r) => ({
+      chave: `p-${r.id}`, tipo: "prazo" as const, row: r, data: r.vencimento as string,
+      titulo: tituloDe(r.descricao, (r as { os_code?: string | null }).os_code),
+      cliente: r.cliente ?? clienteDe(r.descricao), forma: r.forma_recebimento ?? null, status: r.status as string | null, valor: Number(r.valor) || 0,
+    }));
+    const todas = [...vista, ...prazo].sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+    const totalVista = vista.reduce((a, b) => a + b.valor, 0);
+    const totalPrazo = prazo.reduce((a, b) => a + b.valor, 0);
+    const emAberto = prazo.filter((x) => x.status === "em_aberto").reduce((a, b) => a + b.valor, 0);
+    const porDia = new Map<string, number>();
+    for (const x of todas) porDia.set(x.data.slice(0, 10), (porDia.get(x.data.slice(0, 10)) ?? 0) + x.valor);
+    const serie = [...porDia.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([d, v]) => ({ rotulo: `${d.slice(8, 10)}/${d.slice(5, 7)}`, Vendas: v }));
+    const q = busca.trim().toLowerCase();
+    const visiveis = todas
+      .filter((x) => aba === "todas" || x.tipo === aba)
+      .filter((x) => !q || `${x.titulo} ${x.cliente ?? ""} ${x.row.descricao ?? ""}`.toLowerCase().includes(q));
+    return {
+      visiveis, serie, totalVista, totalPrazo, emAberto,
+      total: totalVista + totalPrazo, qtd: todas.length,
+      ticket: todas.length > 0 ? (totalVista + totalPrazo) / todas.length : 0,
+    };
+  }, [vendas, faixa, aba, busca]);
+
+  const STATUS_ROTULO: Record<string, string> = { em_aberto: "Em aberto", recebido: "Recebido", pago: "Recebido", atrasado: "Atrasado", cancelado: "Cancelado" };
+
   async function reprocessOldSales() {
     if (!selected || !vendas) return;
     const ok = window.confirm("Corrigir vendas antigas sem itens estruturados?\n\nO sistema tentará recriar os itens a partir da descrição técnica ou das movimentações de estoque vinculadas. Vendas sem dados suficientes serão sinalizadas para revisão manual.");
@@ -1647,19 +1702,81 @@ function VendasPage() {
 
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-6xl">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold">Fluxo de Vendas</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Fluxo de Vendas</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Registre vendas com múltiplos itens, gere ordem de serviço imprimível e dê baixa automática no estoque.
+            Registre vendas com vários itens, gere a ordem de serviço e dê baixa automática no estoque.
           </p>
         </div>
-        <Button onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Nova venda"}</Button>
+        <Button onClick={() => setOpen((v) => !v)} className="rounded-full h-11 px-5 shadow-sm">
+          {open ? <><X className="size-4" /> Fechar</> : <><Plus className="size-4" /> Nova venda</>}
+        </Button>
       </div>
 
+      {/* Resumo do período */}
+      {selected && (
+        <div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-5 sm:px-7 sm:py-6 grid gap-6 lg:grid-cols-[1fr_1.3fr] lg:items-center">
+          <div className="space-y-4">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Vendido no período</div>
+              <div className="font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums">{formatMoney(listaVendas.total)}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {listaVendas.qtd} venda(s) · ticket médio {formatMoney(listaVendas.ticket)}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              {([
+                ["À vista", listaVendas.totalVista, ShoppingBag, "text-success"],
+                ["A prazo", listaVendas.totalPrazo, CalendarClock, "text-primary"],
+                ["Em aberto", listaVendas.emAberto, Receipt, "text-warning-foreground"],
+              ] as const).map(([rotulo, valor, Icone, cor]) => (
+                <div key={rotulo} className="rounded-2xl bg-background/70 px-3 py-2.5">
+                  <div className={`flex items-center gap-1.5 text-[11px] font-medium ${cor}`}><Icone className="size-3.5" /> {rotulo}</div>
+                  <div className="font-display font-semibold text-sm sm:text-base tabular-nums mt-0.5 truncate">{formatMoney(valor)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="h-36 sm:h-40">
+            {listaVendas.serie.length > 1 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={listaVendas.serie} margin={{ left: 4, right: 4, top: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gVendas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#5B8C3E" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#5B8C3E" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="rotulo" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
+                  <Tooltip
+                    cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
+                    content={({ active, payload, label }) => active && payload?.length ? (
+                      <div className="rounded-xl bg-popover/95 backdrop-blur border shadow-lg px-3 py-2 text-xs">
+                        <div className="font-semibold">{label}</div>
+                        <div className="tabular-nums">{formatMoney(Number(payload[0].value))}</div>
+                      </div>
+                    ) : null}
+                  />
+                  <Area type="monotone" dataKey="Vendas" stroke="#5B8C3E" strokeWidth={2.5} fill="url(#gVendas)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full grid place-items-center text-sm text-muted-foreground text-center px-6">
+                O gráfico aparece quando houver vendas em mais de um dia no período.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {open && (
-        <form onSubmit={handleSubmit} className="bg-card border rounded-2xl p-4 grid gap-4 md:grid-cols-2">
+        <form onSubmit={handleSubmit} className="bg-card rounded-3xl shadow-card p-5 sm:p-6 grid gap-5 md:grid-cols-2">
+          <div className="md:col-span-2 -mb-1">
+            <h2 className="font-display font-semibold text-lg">Nova venda</h2>
+            <p className="text-xs text-muted-foreground">Escolha o cliente, adicione os itens e defina como será o pagamento.</p>
+          </div>
           <div className="space-y-1 md:col-span-2">
             <Label>Cliente (CRM)</Label>
             <div className="flex gap-2">
@@ -1772,11 +1889,11 @@ function VendasPage() {
             </div>
 
             {items.length === 0 ? (
-              <div className="text-sm text-muted-foreground border border-dashed rounded-lg p-6 text-center">
+              <div className="text-sm text-muted-foreground rounded-2xl bg-muted/40 p-8 text-center">
                 Adicione produtos do estoque ou um serviço avulso para iniciar a venda.
               </div>
             ) : (
-              <div className="border rounded-lg divide-y">
+              <div className="space-y-3">
                 {items.map((it, idx) => {
                   const qtd = Number(it.quantidade) || 0;
                   const preco = Number(it.preco_unitario) || 0;
@@ -1786,7 +1903,7 @@ function VendasPage() {
                   const margemPct = preco > 0 ? ((preco - custo) / preco) * 100 : 0;
                   const custoAlterado = it.product_id && it.custo_padrao && Number(it.custo_padrao) !== custo;
                   return (
-                    <div key={idx} className="p-3 space-y-2">
+                    <div key={idx} className="rounded-2xl bg-muted/40 p-3 sm:p-4 space-y-2">
                       <div className="grid grid-cols-12 gap-2 items-center">
                         <div className="col-span-5">
                           <Label className="text-xs text-muted-foreground">Descrição</Label>
@@ -1819,7 +1936,7 @@ function VendasPage() {
                           </Button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-12 gap-2 items-end rounded-md bg-muted/40 p-2 border border-dashed">
+                      <div className="grid grid-cols-12 gap-2 items-end rounded-xl bg-background/80 p-2.5">
                         <div className="col-span-12 md:col-span-8">
                           <Label className="text-xs font-medium flex items-center gap-1">
                             <Building2 className="size-3" /> De onde este item vai sair? (Centro de estoque de origem)
@@ -1917,13 +2034,21 @@ function VendasPage() {
             <Input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Opcional (aparece na OS)" />
           </div>
 
-          <div className="md:col-span-2 flex items-center justify-between border-t pt-3 gap-3 flex-wrap">
-            <div className="text-sm">Total: <span className="font-display font-bold text-lg">{formatMoney(total)}</span></div>
+          <div className="md:col-span-2 flex items-center justify-between rounded-2xl bg-primary/5 px-4 py-3 gap-3 flex-wrap">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Total da venda</div>
+              <div className="font-display font-bold text-2xl tabular-nums">{formatMoney(total)}</div>
+              {totalCusto > 0 && total > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Margem estimada <b className={lucro >= 0 ? "text-success" : "text-destructive"}>{formatMoney(lucro)} ({margemPct.toFixed(1)}%)</b>
+                </div>
+              )}
+            </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" disabled={items.length === 0} onClick={() => generateOrderHTML({ openPrint: true })}>
+              <Button type="button" variant="outline" className="rounded-full" disabled={items.length === 0} onClick={() => generateOrderHTML({ openPrint: true })}>
                 <FileText className="size-4" /> Pré-visualizar OS
               </Button>
-              <Button type="submit" disabled={saving || items.length === 0}>
+              <Button type="submit" className="rounded-full" disabled={saving || items.length === 0}>
                 {saving ? "Salvando..." : "Registrar venda e gerar OS"}
               </Button>
             </div>
@@ -1958,105 +2083,136 @@ function VendasPage() {
         />
       )}
 
-      <section className="bg-card border rounded-2xl p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="text-lg font-display font-semibold flex items-center gap-2"><TrendingUp className="size-5" /> Relatório do período</h2>
-            <p className="text-xs text-muted-foreground">Faturamento, custos diretos e margem de cada venda no intervalo escolhido.</p>
+      {/* Busca, período e tipo de venda */}
+      {selected && (
+        <div className="space-y-3">
+          <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+            <div className="relative flex-1">
+              <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar por cliente, OS ou produto..."
+                className="pl-10 h-11 rounded-full bg-card border shadow-sm"
+              />
+            </div>
+            <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="Tipo de venda">
+              {([["todas", "Todas"], ["vista", "À vista"], ["prazo", "A prazo"]] as const).map(([v, r]) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={aba === v}
+                  onClick={() => setAba(v)}
+                  className={`px-4 h-9 rounded-full text-sm font-medium transition-colors ${aba === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-end gap-2 flex-wrap">
-            <div className="space-y-1">
-              <Label className="text-xs">De</Label>
-              <Input type="date" value={reportFrom} onChange={(e) => setReportFrom(e.target.value)} className="h-9" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Até</Label>
-              <Input type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} className="h-9" />
-            </div>
-            <Button type="button" onClick={printPeriodMarginReport}>
-              <Download className="size-4" /> Exportar Fluxo + Margem
-            </Button>
-            <Button type="button" variant="outline" onClick={reprocessOldSales}>
-              Corrigir vendas antigas
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {([["mes", "Mês atual"], ["mes_passado", "Mês passado"], ["30d", "Últimos 30 dias"], ["tudo", "Tudo"]] as const).map(([v, r]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setPeriodo(v)}
+                className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${periodo === v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
+              >
+                {r}
+              </button>
+            ))}
           </div>
         </div>
-      </section>
+      )}
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-display font-semibold">Vendas recentes (à vista)</h2>
-        <div className="bg-card border rounded-2xl p-4">
+      {/* Lista de vendas */}
+      {selected && (
+        <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
           {isLoading ? (
-            <div className="text-muted-foreground">Carregando...</div>
-          ) : vendas?.tx.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhuma venda à vista registrada.</div>
+            <p className="text-sm text-muted-foreground text-center py-10">Carregando...</p>
+          ) : listaVendas.visiveis.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">Nenhuma venda neste filtro.</p>
           ) : (
-            <div className="space-y-2">
-              {vendas?.tx.map((row) => (
-                <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{(row as { os_code?: string | null }).os_code ? `OS ${(row as { os_code?: string | null }).os_code}` : (row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(row.data)} • {row.forma_pagamento ?? "—"}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="font-display font-semibold text-success mr-1">{formatMoney(Number(row.valor))}</div>
-                    <Button type="button" variant="outline" size="icon" title="Editar venda" onClick={() => editSale(row, "vista")}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button type="button" variant="outline" size="icon" title="Baixar OS" onClick={() => printPastSaleOS(row, "vista")}>
-                      <FileText className="size-4" />
-                    </Button>
-                    <Button type="button" variant="outline" size="icon" title="Relatório de margem" onClick={() => printSaleMarginReport(row, "vista")}>
-                      <TrendingUp className="size-4" />
-                    </Button>
-                    <Button type="button" variant="outline" size="icon" title="Cancelar venda" className="text-destructive hover:text-destructive" onClick={() => cancelSale(row, "vista")}>
-                      <Ban className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ul>
+              {listaVendas.visiveis.map((v) => {
+                const prazo = v.tipo === "prazo";
+                const linhaPrazo = { ...v.row, data: null, forma_pagamento: null } as typeof v.row & { data: null; forma_pagamento: null };
+                return (
+                  <li key={v.chave} className="group flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                    <span className={`size-10 shrink-0 rounded-full grid place-items-center ${prazo ? "bg-primary/10 text-primary" : "bg-success/12 text-success"}`}>
+                      {prazo ? <CalendarClock className="size-4" /> : <ShoppingBag className="size-4" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium text-sm truncate">{v.titulo}</span>
+                        <span className={`shrink-0 rounded-full px-2 py-px text-[10px] font-medium ${prazo ? "bg-primary/10 text-primary" : "bg-success/12 text-success"}`}>
+                          {prazo ? "A prazo" : "À vista"}
+                        </span>
+                        {prazo && v.status && (
+                          <span className={`shrink-0 rounded-full px-2 py-px text-[10px] font-medium ${v.status === "em_aberto" ? "bg-warning/15 text-warning-foreground" : "bg-muted text-muted-foreground"}`}>
+                            {STATUS_ROTULO[v.status] ?? v.status.replace(/_/g, " ")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {[v.cliente, prazo ? `vence ${formatDate(v.data)}` : formatDate(v.data), v.forma].filter(Boolean).join(" · ")}
+                      </div>
+                    </div>
+                    <div className={`text-sm sm:text-base font-display font-semibold tabular-nums whitespace-nowrap ${prazo ? "" : "text-success"}`}>
+                      {formatMoney(v.valor)}
+                    </div>
+                    <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <button type="button" title="Editar venda" className="size-8 grid place-items-center rounded-full hover:bg-background"
+                        onClick={() => prazo
+                          ? editSale({ ...v.row, data: null, forma_pagamento: (v.row as { forma_recebimento?: string | null }).forma_recebimento ?? null }, "prazo")
+                          : editSale(v.row as Parameters<typeof editSale>[0], "vista")}>
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button type="button" title="Baixar OS" className="size-8 grid place-items-center rounded-full hover:bg-background"
+                        onClick={() => printPastSaleOS(v.row as Parameters<typeof printPastSaleOS>[0], v.tipo)}>
+                        <FileText className="size-3.5" />
+                      </button>
+                      <button type="button" title="Relatório de margem" className="size-8 grid place-items-center rounded-full hover:bg-background"
+                        onClick={() => prazo ? printSaleMarginReport(linhaPrazo, "prazo") : printSaleMarginReport(v.row as Parameters<typeof printSaleMarginReport>[0], "vista")}>
+                        <TrendingUp className="size-3.5" />
+                      </button>
+                      <button type="button" title="Cancelar venda" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive"
+                        onClick={() => cancelSale(v.row as Parameters<typeof cancelSale>[0], v.tipo)}>
+                        <Ban className="size-3.5" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
+        </section>
+      )}
+
+      {/* Relatório do período */}
+      <section className="rounded-3xl bg-gradient-to-b from-muted/50 to-transparent p-5 sm:p-6 space-y-4">
+        <div>
+          <h2 className="font-display font-semibold flex items-center gap-2"><TrendingUp className="size-4" /> Relatório de margem</h2>
+          <p className="text-xs text-muted-foreground">Faturamento, custos diretos e margem de cada venda no intervalo escolhido.</p>
+        </div>
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="space-y-1">
+            <Label className="text-xs">De</Label>
+            <Input type="date" value={reportFrom} onChange={(e) => setReportFrom(e.target.value)} className="h-10 rounded-full bg-background" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Até</Label>
+            <Input type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} className="h-10 rounded-full bg-background" />
+          </div>
+          <Button type="button" className="rounded-full h-10" onClick={printPeriodMarginReport}>
+            <Download className="size-4" /> Exportar Fluxo + Margem
+          </Button>
+          <Button type="button" variant="ghost" className="rounded-full h-10 text-muted-foreground" onClick={reprocessOldSales}>
+            Corrigir vendas antigas
+          </Button>
         </div>
       </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-display font-semibold">Vendas a prazo (contas a receber)</h2>
-        <div className="bg-card border rounded-2xl p-4">
-          {vendas?.rec.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhuma venda a prazo.</div>
-          ) : (
-            <div className="space-y-2">
-              {vendas?.rec.map((row) => (
-                <div key={row.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{(row as { os_code?: string | null }).os_code ? `OS ${(row as { os_code?: string | null }).os_code}` : (row.descricao || "").replace(/\s*@[\d.,]+(?:\|c[\d.,]+)?/g, "")}</p>
-                    <p className="text-xs text-muted-foreground">{row.cliente ?? "—"} • venc. {formatDate(row.vencimento)} • {row.status}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="font-display font-semibold mr-1">{formatMoney(Number(row.valor))}</div>
-                    <Button type="button" variant="outline" size="icon" title="Editar venda" onClick={() => editSale({ ...row, data: null, forma_pagamento: row.forma_recebimento ?? null }, "prazo")}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button type="button" variant="outline" size="icon" title="Baixar OS" onClick={() => printPastSaleOS(row, "prazo")}>
-                      <FileText className="size-4" />
-                    </Button>
-                    <Button type="button" variant="outline" size="icon" title="Relatório de margem" onClick={() => printSaleMarginReport({ ...row, data: null, forma_pagamento: null }, "prazo")}>
-                      <TrendingUp className="size-4" />
-                    </Button>
-                    <Button type="button" variant="outline" size="icon" title="Cancelar venda" className="text-destructive hover:text-destructive" onClick={() => cancelSale(row, "prazo")}>
-                      <Ban className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      
-
     </div>
   );
 }

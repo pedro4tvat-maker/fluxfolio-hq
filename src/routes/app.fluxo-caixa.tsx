@@ -12,8 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDownCircle, ArrowUpCircle, BarChart3, Columns2, Download, Filter, List, Maximize2, Search, Trash2, Pencil, Lock, Building2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, BarChart3, Download, Filter, List, Search, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { sugerirCategoria, type Historico, type Sugestao } from "@/lib/sugestao-categoria";
 import { FluxoGraficos } from "@/components/FluxoGraficos";
@@ -48,7 +47,7 @@ function FluxoCaixa() {
   const [search, setSearch] = useState("");
   const [openNew, setOpenNew] = useState(false);
   const [novoTipo, setNovoTipo] = useState<"entrada" | "saida">("entrada");
-  const [visao, setVisao] = useState<"ambos" | "lista" | "grafico">("ambos");
+  const [visao, setVisao] = useState<"lista" | "grafico">("grafico");
 
   // Atalhos: E = nova entrada, S = nova saída (fora de campos de texto e sem janela aberta)
   useEffect(() => {
@@ -269,7 +268,7 @@ function FluxoCaixa() {
             />
           </div>
           <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="Forma de visualizar">
-            {([["ambos", "Os dois", Columns2], ["lista", "Lista", List], ["grafico", "Gráfico", BarChart3]] as const).map(([v, r, Icone]) => (
+            {([["grafico", "Gráfico", BarChart3], ["lista", "Lista", List]] as const).map(([v, r, Icone]) => (
               <button
                 key={v}
                 type="button"
@@ -321,111 +320,20 @@ function FluxoCaixa() {
         </div>
       </div>
 
-      {/* Lançamentos: lista e gráfico juntos, ou foco em um deles */}
-      {visao === "ambos" ? (
-        <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr] items-start">
-          <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
-            <div className="flex items-center justify-between px-3 pt-2 pb-1">
-              <h2 className="font-display font-semibold">Lançamentos</h2>
-              <button type="button" onClick={() => setVisao("lista")} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1" title="Ver só a lista, com todas as colunas">
-                <Maximize2 className="size-3.5" /> Focar
-              </button>
-            </div>
-            <FluxoListaCompacta
-              itens={filtered}
-              carregando={isLoading}
-              categorias={categorias}
-              contas={contas}
-              onEditar={setEditingTx}
-              onExcluir={setConfirmDelete}
-            />
-          </section>
-          <section>
-            <div className="flex items-center justify-end px-1 pb-1">
-              <button type="button" onClick={() => setVisao("grafico")} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1" title="Ver só os gráficos, maiores">
-                <Maximize2 className="size-3.5" /> Focar
-              </button>
-            </div>
-            <FluxoGraficos lancamentos={filtered} categorias={categorias} compacto />
-          </section>
-        </div>
-      ) : visao === "grafico" ? (
+      {/* Lançamentos: gráfico ou lista */}
+      {visao === "grafico" ? (
         <FluxoGraficos lancamentos={filtered} categorias={categorias} />
       ) : (
-      <div className="bg-card rounded-3xl shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Conta</TableHead>
-                <TableHead>Forma</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Nenhum lançamento encontrado neste período.</TableCell></TableRow>
-              ) : filtered.map((t) => {
-                const cat = categorias.find((c) => c.id === t.categoria_id);
-                const conta = contas.find((c) => c.id === t.conta_id);
-                const isAuto = !!(t.payable_id || t.receivable_id);
-                return (
-                  <TableRow key={t.id}>
-                    <TableCell className="whitespace-nowrap">{formatDate(t.data)}</TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {t.descricao}
-                        {isAuto && <span title="Gerado por Contas a Pagar/Receber"><Lock className="size-3 text-muted-foreground" /></span>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{cat?.nome ?? "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{conta?.nome ?? "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{t.forma_pagamento ?? "—"}</TableCell>
-                    <TableCell>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full border ${
-                        t.status === "realizado" ? "bg-success/10 text-success border-success/20" :
-                        t.status === "previsto" ? "bg-warning/10 text-warning-foreground border-warning/30" :
-                        "bg-muted text-muted-foreground border-border"
-                      }`}>{t.status}</span>
-                    </TableCell>
-                    <TableCell className={`text-right font-display font-semibold whitespace-nowrap ${t.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
-                      {t.tipo === "entrada" ? "+" : "−"} {formatMoney(t.valor)}
-                      {!t.categoria_id && t.tipo === "saida" && <div className="text-[9px] text-amber-600 font-bold uppercase animate-pulse">Sem Categoria</div>}
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost" size="icon"
-                          title={isAuto ? "Lançamento automático (origem: Contas a Pagar/Receber). Edite com cuidado — a origem não será alterada." : "Editar"}
-                          onClick={() => setEditingTx(t)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost" size="icon"
-                          disabled={isAuto}
-                          title={isAuto ? "Lançamento automático. Edite em Contas a Pagar/Receber." : "Excluir"}
-                          onClick={() => setConfirmDelete(t)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+        <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+          <FluxoListaCompacta
+            itens={filtered}
+            carregando={isLoading}
+            categorias={categorias}
+            contas={contas}
+            onEditar={setEditingTx}
+            onExcluir={setConfirmDelete}
+          />
+        </section>
       )}
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
