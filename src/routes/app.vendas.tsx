@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ChevronsUpDown, Check, UserPlus, X, Plus, Trash2, FileText, TrendingUp, Download, Ban, Pencil, Building2 } from "lucide-react";
-import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { ContactForm } from "./app.crm";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -2058,14 +2057,6 @@ function VendasPage() {
 
       
 
-      {selected && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-display font-semibold">Documentos da área comercial</h2>
-          <div className="bg-card border rounded-2xl p-4">
-            <AttachmentsPanel companyId={selected} module="sales" />
-          </div>
-        </section>
-      )}
     </div>
   );
 }

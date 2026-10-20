@@ -13,10 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDownCircle, ArrowUpCircle, Download, Filter, Search, Trash2, Pencil, Lock, Building2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, BarChart3, Download, Filter, List, Search, Trash2, Pencil, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
-import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { sugerirCategoria, type Historico, type Sugestao } from "@/lib/sugestao-categoria";
+import { FluxoGraficos } from "@/components/FluxoGraficos";
 
 export const Route = createFileRoute("/app/fluxo-caixa")({ component: FluxoCaixa });
 
@@ -47,6 +47,7 @@ function FluxoCaixa() {
   const [search, setSearch] = useState("");
   const [openNew, setOpenNew] = useState(false);
   const [novoTipo, setNovoTipo] = useState<"entrada" | "saida">("entrada");
+  const [visao, setVisao] = useState<"lista" | "grafico">("lista");
 
   // Atalhos: E = nova entrada, S = nova saída (fora de campos de texto e sem janela aberta)
   useEffect(() => {
@@ -245,56 +246,75 @@ function FluxoCaixa() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-card border rounded-2xl p-4 shadow-card flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <Label className="text-xs text-muted-foreground">Buscar</Label>
-          <div className="relative">
-            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Descrição..." className="pl-9" />
+      {/* Busca, filtros e forma de visualizar */}
+      <div className="bg-card border rounded-2xl p-3 sm:p-4 shadow-card space-y-3">
+        <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+          <div className="relative flex-1">
+            <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar lançamento pela descrição..."
+              className="pl-10 h-11 rounded-xl bg-muted/40 border-transparent focus-visible:bg-background"
+            />
+          </div>
+          <div className="inline-flex rounded-xl bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="Forma de visualizar">
+            {(["lista", "grafico"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={visao === v}
+                onClick={() => setVisao(v)}
+                className={`px-4 h-9 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition-colors ${visao === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {v === "lista" ? <><List className="size-4" /> Lista</> : <><BarChart3 className="size-4" /> Gráfico</>}
+              </button>
+            ))}
           </div>
         </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">Período</Label>
-          <Select value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
-            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mes">Mês atual</SelectItem>
-              <SelectItem value="mes_passado">Mês passado</SelectItem>
-              <SelectItem value="30d">Últimos 30 dias</SelectItem>
-              <SelectItem value="tudo">Todo o histórico</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">Tipo</Label>
-          <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="entrada">Entradas</SelectItem>
-              <SelectItem value="saida">Saídas</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">Categoria</Label>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {([["mes", "Mês atual"], ["mes_passado", "Mês passado"], ["30d", "Últimos 30 dias"], ["tudo", "Tudo"]] as const).map(([v, r]) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setPeriod(v)}
+              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${period === v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
+            >
+              {r}
+            </button>
+          ))}
+          <span className="hidden sm:block w-px h-5 bg-border mx-1" />
+          {([["todos", "Todos"], ["entrada", "Entradas"], ["saida", "Saídas"]] as const).map(([v, r]) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setTipo(v)}
+              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${tipo === v ? "bg-foreground text-background border-foreground" : "bg-background hover:bg-muted"}`}
+            >
+              {r}
+            </button>
+          ))}
           <Select value={categoria} onValueChange={setCategoria}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[190px] rounded-full text-xs"><SelectValue placeholder="Categoria" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="todas">Todas</SelectItem>
+              <SelectItem value="todas">Todas as categorias</SelectItem>
               {categorias.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
             </SelectContent>
           </Select>
+          {(tipo !== "todos" || categoria !== "todas" || search) && (
+            <Button variant="ghost" size="sm" className="h-8 rounded-full text-xs" onClick={() => { setTipo("todos"); setCategoria("todas"); setSearch(""); }}>
+              <Filter className="size-3.5" /> Limpar filtros
+            </Button>
+          )}
         </div>
-        {(tipo !== "todos" || categoria !== "todas" || search) && (
-          <Button variant="ghost" onClick={() => { setTipo("todos"); setCategoria("todas"); setSearch(""); }}>
-            <Filter className="size-4" /> Limpar
-          </Button>
-        )}
       </div>
 
-      {/* Table */}
+      {/* Lista */}
+      {visao === "grafico" ? (
+        <FluxoGraficos lancamentos={filtered} categorias={categorias} />
+      ) : (
       <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
@@ -369,6 +389,7 @@ function FluxoCaixa() {
           </Table>
         </div>
       </div>
+      )}
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
@@ -385,14 +406,6 @@ function FluxoCaixa() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {selected && (
-        <section className="space-y-2">
-          <h2 className="font-display font-semibold">Documentos do fluxo de caixa</h2>
-          <div className="bg-card border rounded-2xl p-4 shadow-card">
-            <AttachmentsPanel companyId={selected} module="cash_flow" />
-          </div>
-        </section>
-      )}
     </div>
   );
 }

@@ -18,7 +18,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Package, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine, Scale } from "lucide-react";
 import { toast } from "sonner";
-import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { CurrencyInput } from "@/components/ui/currency-input";
 
 export const Route = createFileRoute("/app/estoque")({ component: EstoquePage });
@@ -725,14 +724,6 @@ function EstoquePage() {
         </DialogContent>
       </Dialog>
 
-      {selected && (
-        <section className="space-y-2 max-w-5xl">
-          <h2 className="font-display font-semibold">Documentos do estoque</h2>
-          <div className="bg-card border rounded-2xl p-4 shadow-card">
-            <AttachmentsPanel companyId={selected} module="products" />
-          </div>
-        </section>
-      )}
     </div>
   );
 }
