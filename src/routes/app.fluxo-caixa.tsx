@@ -212,16 +212,10 @@ function FluxoCaixa() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <CompanySwitcher />
-          <Button variant="outline" onClick={() => setConciliando((v) => !v)} title="Importe o extrato do banco e confira com os lançamentos">
+          <Button variant="outline" className="rounded-full" onClick={() => setConciliando((v) => !v)} title="Importe o extrato do banco e confira com os lançamentos">
             <Landmark className="size-4" /> Conciliar extrato
           </Button>
-          <Button variant="outline" onClick={handleExport}><Download className="size-4" /> Exportar CSV</Button>
-          <Button variant="outline" onClick={() => { setNovoTipo("entrada"); setOpenNew(true); }} title="Atalho: tecla E">
-            <ArrowUpCircle className="size-4 text-success" /> Entrada <kbd className="ml-1 hidden md:inline text-[10px] text-muted-foreground border rounded px-1">E</kbd>
-          </Button>
-          <Button variant="outline" onClick={() => { setNovoTipo("saida"); setOpenNew(true); }} title="Atalho: tecla S">
-            <ArrowDownCircle className="size-4 text-destructive" /> Saída <kbd className="ml-1 hidden md:inline text-[10px] text-muted-foreground border rounded px-1">S</kbd>
-          </Button>
+          <Button variant="ghost" className="rounded-full text-muted-foreground" onClick={handleExport}><Download className="size-4" /> Exportar</Button>
           <Dialog open={openNew} onOpenChange={setOpenNew}>
             {openNew && <TransactionDialog
               key={novoTipo}
@@ -248,6 +242,28 @@ function FluxoCaixa() {
             )}
           </Dialog>
         </div>
+      </div>
+
+      {/* Lançar entrada / saída */}
+      <div className="flex justify-center gap-3 sm:gap-4">
+        <button
+          type="button"
+          onClick={() => { setNovoTipo("entrada"); setOpenNew(true); }}
+          title="Atalho: tecla E"
+          className="flex-1 sm:flex-none sm:min-w-[210px] h-14 rounded-full bg-success text-white font-semibold text-base shadow-md hover:brightness-110 active:scale-[0.98] transition inline-flex items-center justify-center gap-2.5"
+        >
+          <ArrowUpCircle className="size-5" /> Nova entrada
+          <kbd className="hidden md:inline text-[10px] font-medium bg-white/20 rounded px-1.5 py-0.5">E</kbd>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setNovoTipo("saida"); setOpenNew(true); }}
+          title="Atalho: tecla S"
+          className="flex-1 sm:flex-none sm:min-w-[210px] h-14 rounded-full bg-destructive text-white font-semibold text-base shadow-md hover:brightness-110 active:scale-[0.98] transition inline-flex items-center justify-center gap-2.5"
+        >
+          <ArrowDownCircle className="size-5" /> Nova saída
+          <kbd className="hidden md:inline text-[10px] font-medium bg-white/20 rounded px-1.5 py-0.5">S</kbd>
+        </button>
       </div>
 
       {conciliando && <ConciliacaoExtrato onClose={() => setConciliando(false)} />}
