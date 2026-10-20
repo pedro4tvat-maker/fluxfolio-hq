@@ -10,7 +10,7 @@ import { BranchSwitcher } from "@/components/branch-switcher";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight, ShoppingCart, Percent, Box, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Clock, Calendar, DollarSign, FileText, BadgeCheck, Bell, Check, X } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, AlertCircle, PlusCircle, Sparkles, ArrowRight, ShoppingCart, Percent, Box, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Clock, Calendar, DollarSign, FileText, BadgeCheck, Bell, Check, X, Plus, Minus, FileBarChart, Upload, CalendarClock, Wallet } from "lucide-react";
 
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
@@ -610,7 +610,7 @@ function ClientDashboard() {
       ] = await Promise.all([
         withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado").gte("data", range.start).lte("data", range.end), branchId),
         withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado").gte("data", prevRange.start).lte("data", prevRange.end), branchId),
-        withBranch(supabase.from("transactions").select("tipo, valor").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado"), branchId),
+        withBranch(supabase.from("transactions").select("tipo, valor, data").eq("company_id", selected).is("deleted_at", null).eq("status", "realizado"), branchId),
         withBranch(supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", selected).is("deleted_at", null).neq("status", "pago").order("vencimento", { ascending: true }), branchId),
         withBranch(supabase.from("receivables").select("id, descricao, valor, vencimento, status, cliente").eq("company_id", selected).is("deleted_at", null).neq("status", "recebido").order("vencimento", { ascending: true }), branchId),
         supabase.from("financial_accounts").select("saldo_inicial").eq("company_id", selected),
@@ -645,6 +645,19 @@ function ClientDashboard() {
       const vendasCount = (vendasVista ?? []).length + (vendasPrazo ?? []).length;
       const ticketMedio = vendasCount > 0 ? vendasMes / vendasCount : null;
 
+      // Últimos 6 meses (entradas x saídas) para o gráfico
+      const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+      const serie6m = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(today.getFullYear(), today.getMonth() - 5 + i, 1);
+        return { chave: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, rotulo: MESES_CURTOS[d.getMonth()], Entradas: 0, Saídas: 0 };
+      });
+      for (const t of (allTx ?? []) as Array<{ tipo: string; valor: number; data: string | null }>) {
+        const m = serie6m.find((x) => x.chave === (t.data ?? "").slice(0, 7));
+        if (!m) continue;
+        if (t.tipo === "entrada") m.Entradas += Number(t.valor);
+        else m.Saídas += Number(t.valor);
+      }
+
       const totalMovsMes = (txMes ?? []).length + (txMesAnterior ?? []).length;
       const entradasDelta = entradasAnt > 0 ? ((entradas - entradasAnt) / entradasAnt) * 100 : null;
       const saidasDelta = saidasAnt > 0 ? ((saidas - saidasAnt) / saidasAnt) * 100 : null;
@@ -674,6 +687,7 @@ function ClientDashboard() {
         vendasCount,
         ticketMedio,
         hasAnyMovement: (allTx ?? []).length > 0,
+        serie6m,
       };
     },
   });
@@ -758,343 +772,227 @@ function ClientDashboard() {
   }
   const visibleAlerts = alerts.slice(0, 5);
 
+  const proximos = [
+    ...data.upcomingRec.map((r: any) => ({ id: `r-${r.id}`, tipo: "receber" as const, desc: r.cliente || r.descricao, venc: r.vencimento as string, valor: Number(r.valor) })),
+    ...data.upcomingPay.map((p: any) => ({ id: `p-${p.id}`, tipo: "pagar" as const, desc: p.descricao, venc: p.vencimento as string, valor: Number(p.valor) })),
+  ].sort((x, y) => x.venc.localeCompare(y.venc)).slice(0, 6);
+  const temSerie = data.serie6m.some((m: { Entradas: number; Saídas: number }) => m.Entradas > 0 || m.Saídas > 0);
+
   return (
-    <div className="space-y-10 max-w-6xl">
-      {/* 1. Cabeçalho */}
-      <header className="bg-primary/5 border border-primary/10 p-6 rounded-2xl">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-primary">{company.nome}</h1>
-              <CompanySwitcher />
-              <BranchSwitcher />
-            </div>
-            <p className="text-muted-foreground text-sm">
-              {greeting}. Veja os principais pontos da sua empresa hoje.
-            </p>
-            {branches.length > 1 && (
-              <p className="text-xs text-muted-foreground">Visualizando: <span className="text-foreground/80 font-medium">{branchLabel}</span></p>
-            )}
-          </div>
+    <div className="space-y-6 max-w-6xl">
+      {/* Cabeçalho compacto */}
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm text-muted-foreground">{greeting}</p>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight">Visão geral</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <CompanySwitcher />
+          {branches.length > 1 && <BranchSwitcher />}
         </div>
       </header>
 
-      {/* 2. Visão rápida */}
-      <section>
-        <SectionTitle>Visão rápida</SectionTitle>
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-          <QuickCard
-            to="/app/fluxo-caixa"
-            label="Faturamento do mês"
-            value={formatMoney(data.entradas)}
-            hint={data.entradasDelta != null ? `${data.entradasDelta >= 0 ? "+" : ""}${data.entradasDelta.toFixed(1)}% vs mês anterior` : "Sem histórico ainda"}
-            tone="success"
-            featured
-            className="md:col-span-2"
-          />
-          <QuickCard
-            to="/app/fluxo-caixa"
-            label="Saldo disponível"
-            value={formatMoney(data.saldo)}
-            hint="Disponível nas contas"
-            tone={data.saldo < 0 ? "danger" : "neutral"}
-          />
-          <QuickCard
-            to="/app/relatorios"
-            label="Resultado do mês"
-            value={formatMoney(data.resultado)}
-            hint={!data.hasAnyMovement ? "Sem movimentação" : data.resultado > 0 ? "Mês positivo" : data.resultado < 0 ? "Mês negativo" : "Equilibrado"}
-            tone={data.resultado > 0 ? "success" : data.resultado < 0 ? "danger" : "neutral"}
-          />
-          <QuickCard
-            to="/app/contas-receber"
-            label="A receber — 7 dias"
-            value={data.recNext7Count === 0 ? "—" : formatMoney(data.recNext7Total)}
-            hint={data.recNext7Count === 0 ? "Nenhum recebimento próximo" : `${data.recNext7Count} ${data.recNext7Count === 1 ? "recebimento" : "recebimentos"}`}
-            tone="neutral"
-            className="md:col-span-2"
-          />
-
-        </div>
-
-      </section>
-
-
-      {/* 3. Ações rápidas */}
-      <section>
-        <SectionTitle>Ações rápidas</SectionTitle>
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-          <QuickAction icon={ArrowDownCircle} label="Lançar entrada" to="/app/fluxo-caixa" tone="success" />
-          <QuickAction icon={ArrowUpCircle} label="Lançar saída" to="/app/fluxo-caixa" tone="danger" />
-          <QuickAction icon={ArrowUpCircle} label="Nova conta a pagar" to="/app/contas-pagar" />
-          <QuickAction icon={ArrowDownCircle} label="Nova conta a receber" to="/app/contas-receber" />
-          <QuickAction icon={ShoppingCart} label="Nova venda" to="/app/vendas" />
-          <QuickAction icon={FileText} label="Importar extrato" to="/app/importacoes" />
-        </div>
-      </section>
-
-      {/* 4. Pontos de atenção */}
-      <section>
-        <SectionTitle>Pontos de atenção</SectionTitle>
-        {visibleAlerts.length === 0 ? (
-          <div className="bg-card border rounded-2xl p-5 flex items-center gap-3">
-            <div className="size-9 rounded-full bg-success/10 grid place-items-center text-success shrink-0">
-              <Sparkles className="size-4" />
-            </div>
+      {/* Linha 1: resumo + gráfico | lançamento rápido */}
+      <div className="grid gap-5 lg:grid-cols-[1.7fr_1fr] items-stretch">
+        <section className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 sm:p-7 space-y-5">
+          <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
-              <p className="font-medium">Tudo certo por enquanto.</p>
-              <p className="text-sm text-muted-foreground">Nenhum ponto crítico identificado.</p>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Saldo disponível</div>
+              <div className={`font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums ${data.saldo < 0 ? "text-destructive" : ""}`}>{formatMoney(data.saldo)}</div>
+              <div className="text-xs text-muted-foreground mt-1">{company.nome}{branches.length > 1 ? ` · ${branchLabel}` : ""}</div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
+              {([
+                ["Entradas", data.entradas, data.entradasDelta, "text-success", false],
+                ["Saídas", data.saidas, data.saidasDelta, "text-destructive", true],
+                ["Resultado", data.resultado, null, data.resultado < 0 ? "text-destructive" : "text-success", false],
+              ] as const).map(([rotulo, valor, delta, cor, inverso]) => (
+                <Link key={rotulo} to="/app/fluxo-caixa" className="rounded-2xl bg-background/70 hover:bg-background px-3 py-2.5 transition-colors min-w-0">
+                  <div className={`text-[11px] font-medium ${cor}`}>{rotulo} do mês</div>
+                  <div className="font-display font-semibold text-sm sm:text-base tabular-nums truncate">{formatMoney(valor)}</div>
+                  {delta != null && (
+                    <div className={`text-[10px] ${(delta >= 0) !== inverso ? "text-success" : "text-destructive"}`}>
+                      {delta >= 0 ? "+" : ""}{delta.toFixed(0)}% vs mês passado
+                    </div>
+                  )}
+                </Link>
+              ))}
             </div>
           </div>
-        ) : (
-          <div className="bg-card border rounded-2xl divide-y overflow-hidden">
-            {visibleAlerts.map((a) => (
-              <AlertRow key={a.id} {...a} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* 5. Movimento do mês */}
-      <section>
-        <SectionTitle>Movimento do mês</SectionTitle>
-        <div className="bg-card border rounded-2xl p-6">
-          {data.entradas === 0 && data.saidas === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Nenhuma movimentação registrada ainda neste mês.
-            </p>
-          ) : (
-            <div className="space-y-6">
-              <FlowBar
-                label="Entradas"
-                value={data.entradas}
-                max={Math.max(data.entradas, data.saidas)}
-                color="bg-success"
-                delta={data.entradasDelta}
-              />
-              <FlowBar
-                label="Saídas"
-                value={data.saidas}
-                max={Math.max(data.entradas, data.saidas)}
-                color="bg-destructive"
-                delta={data.saidasDelta}
-                deltaInverse
-              />
-              <div className="pt-4 border-t flex items-end justify-between">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Resultado</div>
-                  <div className={`mt-1 font-display font-bold text-2xl tabular-nums ${data.resultado < 0 ? "text-destructive" : "text-success"}`}>
-                    {formatMoney(data.resultado)}
-                  </div>
-                </div>
-                {!data.hasComparison && (
-                  <p className="text-xs text-muted-foreground max-w-xs text-right">
-                    Ainda não há dados suficientes para comparar com o mês anterior.
-                  </p>
-                )}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-medium">Últimos 6 meses</h2>
+              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#5B8C3E]" />Entradas</span>
+                <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#C0573F]" />Saídas</span>
               </div>
             </div>
+            <div className="h-44">
+              {temSerie ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={data.serie6m} margin={{ left: -8, right: 6, top: 8, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="dEntradas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#5B8C3E" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#5B8C3E" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="dSaidas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#C0573F" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#C0573F" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="2 6" stroke="var(--border)" />
+                    <XAxis dataKey="rotulo" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+                    <YAxis tickFormatter={(v: number) => Math.abs(v) >= 1000 ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mil` : String(Math.round(v))} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={52} />
+                    <Tooltip
+                      cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
+                      content={({ active, payload, label }) => active && payload?.length ? (
+                        <div className="rounded-xl bg-popover/95 backdrop-blur border shadow-lg px-3 py-2 text-xs">
+                          <div className="font-semibold mb-1 capitalize">{label}</div>
+                          {payload.map((p) => (
+                            <div key={String(p.name)} className="flex items-center gap-2">
+                              <span className="size-2 rounded-full" style={{ background: p.color }} />
+                              <span className="text-muted-foreground">{p.name}</span>
+                              <span className="ml-auto font-medium tabular-nums">{formatMoney(Number(p.value))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    />
+                    <Area type="monotone" dataKey="Entradas" stroke="#5B8C3E" strokeWidth={2.5} fill="url(#dEntradas)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="Saídas" stroke="#C0573F" strokeWidth={2.5} fill="url(#dSaidas)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full grid place-items-center text-sm text-muted-foreground">O gráfico aparece assim que houver lançamentos.</div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <aside className="flex flex-col gap-5">
+          <section className="bg-card rounded-3xl shadow-card p-5">
+            <h2 className="font-display font-semibold">Lançar agora</h2>
+            <p className="text-xs text-muted-foreground mb-4">Registre em segundos, sem sair procurando.</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <Link to="/app/fluxo-caixa" search={{ novo: "entrada" }} className="rounded-2xl bg-success/10 hover:bg-success/15 text-success px-3 py-4 flex flex-col items-center gap-1.5 transition-colors">
+                <span className="size-9 rounded-full bg-success text-white grid place-items-center"><Plus className="size-4" /></span>
+                <span className="text-sm font-semibold">Entrada</span>
+              </Link>
+              <Link to="/app/fluxo-caixa" search={{ novo: "saida" }} className="rounded-2xl bg-destructive/10 hover:bg-destructive/15 text-destructive px-3 py-4 flex flex-col items-center gap-1.5 transition-colors">
+                <span className="size-9 rounded-full bg-destructive text-white grid place-items-center"><Minus className="size-4" /></span>
+                <span className="text-sm font-semibold">Saída</span>
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {([
+                ["/app/vendas", "Venda", ShoppingCart],
+                ["/app/contas-pagar", "A pagar", ArrowUpCircle],
+                ["/app/contas-receber", "A receber", ArrowDownCircle],
+                ["/app/importacoes", "Importar extrato", Upload],
+              ] as const).map(([to, rotulo, Icone]) => (
+                <Link key={to} to={to} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-muted/70 hover:bg-muted text-xs font-medium transition-colors">
+                  <Icone className="size-3.5 text-primary" /> {rotulo}
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <Link to="/app/executivo" className="group relative overflow-hidden rounded-3xl bg-primary text-primary-foreground p-5 shadow-card hover:shadow-lg transition-shadow flex-1 min-h-[140px] flex flex-col justify-between">
+            <div className="absolute -right-10 -top-10 size-40 rounded-full bg-white/10 pointer-events-none" />
+            <div className="relative flex items-center gap-2 text-xs font-medium uppercase tracking-wider opacity-90">
+              <Sparkles className="size-4" /> Diferencial
+            </div>
+            <div className="relative">
+              <div className="font-display font-bold text-xl leading-tight">Análise gerencial</div>
+              <div className="text-sm opacity-90 mt-1">Entenda, em linguagem simples, o que os números da sua empresa estão dizendo.</div>
+              <div className="inline-flex items-center gap-1.5 text-sm font-semibold mt-3">
+                Ver análise <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+              </div>
+            </div>
+          </Link>
+        </aside>
+      </div>
+
+      {/* Linha 2: próximos 7 dias | pontos de atenção */}
+      <div className="grid gap-5 lg:grid-cols-2 items-start">
+        <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+          <div className="flex items-center justify-between px-3 pt-2 pb-1">
+            <h2 className="font-display font-semibold">Próximos 7 dias</h2>
+            <span className="text-xs text-muted-foreground">
+              <span className="text-success">+{formatMoney(data.recNext7Total)}</span> · <span className="text-destructive">−{formatMoney(data.payNext7Total)}</span>
+            </span>
+          </div>
+          {proximos.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Nada vencendo nos próximos 7 dias.</p>
+          ) : (
+            <ul>
+              {proximos.map((it) => {
+                const receber = it.tipo === "receber";
+                return (
+                  <li key={it.id}>
+                    <Link to={receber ? "/app/contas-receber" : "/app/contas-pagar"} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-muted/60 transition-colors">
+                      <span className={`size-9 shrink-0 rounded-full grid place-items-center ${receber ? "bg-success/12 text-success" : "bg-destructive/10 text-destructive"}`}>
+                        <CalendarClock className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium truncate">{it.desc || (receber ? "Recebimento" : "Pagamento")}</div>
+                        <div className="text-xs text-muted-foreground">{receber ? "A receber" : "A pagar"} · vence {formatDate(it.venc)}</div>
+                      </div>
+                      <div className={`text-sm font-display font-semibold tabular-nums ${receber ? "text-success" : "text-destructive"}`}>
+                        {receber ? "+" : "−"} {formatMoney(it.valor)}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </div>
-      </section>
+        </section>
 
-
-      <section>
-        <SectionTitle>Resumo operacional</SectionTitle>
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          <SmallStat
-            label="Vendas do mês"
-            value={data.vendasCount === 0 ? "—" : formatMoney(data.vendasMes)}
-            hint={data.vendasCount === 0 ? "Cadastre vendas para acompanhar" : `${data.vendasCount} ${data.vendasCount === 1 ? "venda" : "vendas"}`}
-          />
-          <SmallStat
-            label="Ticket médio"
-            value={data.ticketMedio == null ? "—" : formatMoney(data.ticketMedio)}
-            hint={data.ticketMedio == null ? "Cadastre vendas para visualizar" : "Média por venda"}
-          />
-          <SmallStat
-            label="Estoque baixo"
-            value={String(data.estoqueAlerta)}
-            hint={data.estoqueAlerta === 0 ? "Tudo abastecido" : "Produtos no mínimo"}
-            tone={data.estoqueAlerta > 0 ? "warn" : "default"}
-          />
-          <SmallStat
-            label="Clientes em atraso"
-            value={String(data.clientesAtraso)}
-            hint={data.clientesAtraso === 0 ? "Nenhum em atraso" : "Com recebimentos vencidos"}
-            tone={data.clientesAtraso > 0 ? "warn" : "default"}
-          />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-/* =============== CLIENT — small building blocks =============== */
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-[11px] font-bold text-primary/70 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
-      <div className="h-px w-4 bg-primary/30" />
-      {children}
-    </h2>
-  );
-}
-
-
-function QuickCard({
-  label, value, hint, tone = "neutral", featured = false, className = "", to,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "success" | "danger" | "warn" | "neutral";
-  featured?: boolean;
-  className?: string;
-  to?: string;
-}) {
-  const valueTone =
-    tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning-foreground" : "";
-  const accent =
-    tone === "success" ? "from-success/15 via-success/5"
-    : tone === "danger" ? "from-destructive/15 via-destructive/5"
-    : tone === "warn" ? "from-warning/15 via-warning/5"
-    : "from-primary/10 via-primary/[0.03]";
-  const dot =
-    tone === "success" ? "bg-success" : tone === "danger" ? "bg-destructive" : tone === "warn" ? "bg-warning" : "bg-primary/50";
-  const interactive = to ? "cursor-pointer hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" : "";
-  const inner = (
-    <>
-      <div className={`absolute inset-0 bg-gradient-to-br ${accent} to-transparent opacity-80 pointer-events-none`} />
-      <div className={`absolute -right-16 -top-16 size-44 rounded-full bg-gradient-to-br ${accent} to-transparent blur-2xl opacity-60 pointer-events-none transition-opacity duration-500 group-hover:opacity-100`} />
-      <div className="relative">
-        <div className="flex items-start justify-between gap-3">
-          <div className={`uppercase tracking-[0.18em] text-muted-foreground font-semibold ${featured ? "text-xs" : "text-[10px]"}`}>{label}</div>
-          {to && <ArrowRight className={`size-4 text-muted-foreground/50 transition-all duration-300 group-hover:text-primary group-hover:translate-x-0.5 shrink-0`} />}
-        </div>
-        <div className={`mt-3 font-display font-bold leading-tight tabular-nums ${featured ? "text-[44px] md:text-[52px]" : "text-[28px]"} ${valueTone}`}>{value}</div>
-        {hint && <div className="text-xs text-muted-foreground mt-3 flex items-center gap-2">
-          <div className={`size-1.5 rounded-full ${dot}`} />
-          {hint}
-        </div>}
-      </div>
-    </>
-  );
-  const base = `group relative overflow-hidden bg-card border border-border/70 rounded-2xl shadow-sm hover:shadow-lg hover:border-primary/40 transition-all duration-300 ${featured ? "p-8" : "p-6"} ${interactive} ${className}`;
-  if (to) {
-    return <Link to={to} className={`block text-left ${base}`}>{inner}</Link>;
-  }
-  return <div className={base}>{inner}</div>;
-}
-
-
-
-function AlertRow({
-  tone, icon: Icon, title, desc, cta, to,
-}: {
-  tone: "danger" | "warn" | "info";
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  desc: string;
-  cta: string;
-  to: string;
-}) {
-  const iconBg =
-    tone === "danger" ? "bg-destructive/10 text-destructive"
-    : tone === "warn" ? "bg-warning/10 text-warning-foreground"
-    : "bg-primary/10 text-primary";
-  return (
-    <div className="flex items-center gap-4 p-4">
-      <div className={`size-10 rounded-full grid place-items-center shrink-0 ${iconBg}`}>
-        <Icon className="size-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium leading-tight">{title}</p>
-        <p className="text-sm text-muted-foreground mt-0.5">{desc}</p>
-      </div>
-      <Button asChild size="sm" variant="ghost" className="shrink-0">
-        <Link to={to}>{cta} <ArrowRight className="size-3 ml-1" /></Link>
-      </Button>
-    </div>
-  );
-}
-
-function FlowBar({
-  label, value, max, color, delta, deltaInverse,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  color: string;
-  delta: number | null;
-  deltaInverse?: boolean;
-}) {
-  const pct = max > 0 ? (value / max) * 100 : 0;
-  const positive = delta != null && delta >= 0;
-  // For "saidas" (deltaInverse), going up is bad
-  const deltaTone =
-    delta == null ? "" : (deltaInverse ? (positive ? "text-destructive" : "text-success") : (positive ? "text-success" : "text-destructive"));
-  const deltaLabel =
-    delta == null ? null
-    : `${positive ? "+" : ""}${delta.toFixed(0)}% vs mês anterior`;
-  return (
-    <div>
-      <div className="flex items-baseline justify-between mb-2 gap-3">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <div className="flex items-baseline gap-3">
-          {deltaLabel && <span className={`text-xs ${deltaTone}`}>{deltaLabel}</span>}
-          <span className="font-display font-semibold tabular-nums">{formatMoney(value)}</span>
-        </div>
-      </div>
-      <div className="h-2 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full ${color} transition-all`} style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }} />
+        <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+          <div className="px-3 pt-2 pb-1">
+            <h2 className="font-display font-semibold">Pontos de atenção</h2>
+          </div>
+          {visibleAlerts.length === 0 ? (
+            <div className="flex items-center gap-3 px-3 py-4">
+              <span className="size-9 rounded-full bg-success/10 grid place-items-center text-success shrink-0"><BadgeCheck className="size-4" /></span>
+              <div>
+                <p className="text-sm font-medium">Tudo certo por enquanto.</p>
+                <p className="text-xs text-muted-foreground">Nenhum ponto crítico identificado.</p>
+              </div>
+            </div>
+          ) : (
+            <ul>
+              {visibleAlerts.map((a) => {
+                const Icone = a.icon;
+                const cor = a.tone === "danger" ? "bg-destructive/10 text-destructive" : a.tone === "warn" ? "bg-warning/15 text-warning-foreground" : "bg-primary/10 text-primary";
+                return (
+                  <li key={a.id}>
+                    <Link to={a.to} className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-muted/60 transition-colors">
+                      <span className={`size-9 shrink-0 rounded-full grid place-items-center ${cor}`}><Icone className="size-4" /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium">{a.title}</div>
+                        <div className="text-xs text-muted-foreground">{a.desc}</div>
+                      </div>
+                      <ArrowRight className="size-4 text-muted-foreground shrink-0 transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {data.vendasCount > 0 && (
+            <div className="mx-3 mb-2 mt-1 rounded-2xl bg-muted/50 px-4 py-3 flex items-center justify-between gap-3 text-sm">
+              <span className="inline-flex items-center gap-2 text-muted-foreground"><Wallet className="size-4" /> Vendas do mês</span>
+              <span className="font-display font-semibold tabular-nums">{formatMoney(data.vendasMes)} <span className="text-xs font-normal text-muted-foreground">· {data.vendasCount} venda(s)</span></span>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
 }
-
-
-function QuickAction({
-  icon: Icon, label, to, tone,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  to: string;
-  tone?: "success" | "danger";
-}) {
-  const iconTone =
-    tone === "success" ? "text-success bg-success/10" : tone === "danger" ? "text-destructive bg-destructive/10" : "text-primary bg-primary/10";
-  return (
-    <Link
-      to={to}
-      className="group bg-card border rounded-xl p-3 hover:border-primary/40 transition-colors flex items-center gap-3"
-    >
-      <div className={`size-9 rounded-lg grid place-items-center shrink-0 ${iconTone}`}>
-        <Icon className="size-4" />
-      </div>
-      <span className="text-sm font-medium leading-tight">{label}</span>
-    </Link>
-  );
-}
-
-function SmallStat({
-  label, value, hint, tone = "default",
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "default" | "warn";
-}) {
-  return (
-    <div className="bg-card border rounded-xl p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-display font-bold text-lg tabular-nums ${tone === "warn" ? "text-warning-foreground" : ""}`}>{value}</div>
-      {hint && <div className="text-[11px] text-muted-foreground mt-0.5">{hint}</div>}
-    </div>
-  );
-}
-
-
 
 /* =============== LINK REQUESTS BELL =============== */
 function LinkRequestsBell() {

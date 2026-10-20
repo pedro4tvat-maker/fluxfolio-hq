@@ -18,7 +18,13 @@ import { sugerirCategoria, type Historico, type Sugestao } from "@/lib/sugestao-
 import { FluxoGraficos } from "@/components/FluxoGraficos";
 import { FluxoListaCompacta } from "@/components/FluxoListaCompacta";
 
-export const Route = createFileRoute("/app/fluxo-caixa")({ component: FluxoCaixa });
+export const Route = createFileRoute("/app/fluxo-caixa")({
+  // ?novo=entrada|saida abre a janela de lançamento direto (atalho do dashboard)
+  validateSearch: (s: Record<string, unknown>): { novo?: "entrada" | "saida" } => ({
+    novo: s.novo === "entrada" || s.novo === "saida" ? s.novo : undefined,
+  }),
+  component: FluxoCaixa,
+});
 
 const FORMAS = ["Dinheiro", "Pix", "Transferência bancária", "Boleto", "Cartão de débito", "Cartão de crédito", "Outro"];
 
@@ -66,6 +72,14 @@ function FluxoCaixa() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const { novo } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  useEffect(() => {
+    if (!novo) return;
+    setNovoTipo(novo);
+    setOpenNew(true);
+    navigate({ search: {}, replace: true });
+  }, [novo, navigate]);
   const [editingTx, setEditingTx] = useState<Tx | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Tx | null>(null);
 
