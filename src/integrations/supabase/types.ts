@@ -3859,6 +3859,7 @@ export type Database = {
           data: string
           deleted_at: string | null
           descricao: string
+          extrato_id: string | null
           forma_pagamento: string | null
           id: string
           import_batch_id: string | null
@@ -3890,6 +3891,7 @@ export type Database = {
           data?: string
           deleted_at?: string | null
           descricao: string
+          extrato_id?: string | null
           forma_pagamento?: string | null
           id?: string
           import_batch_id?: string | null
@@ -3921,6 +3923,7 @@ export type Database = {
           data?: string
           deleted_at?: string | null
           descricao?: string
+          extrato_id?: string | null
           forma_pagamento?: string | null
           id?: string
           import_batch_id?: string | null

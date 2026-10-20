@@ -136,7 +136,10 @@ type PreviewRow = {
   centro_custo_id: string | null;
   status: "ok" | "revisar" | "duplicado" | "conciliar" | "erro" | "ignorado";
   alerts: string[];
-  reconcileWith?: { type: "payable" | "receivable"; id: string; descricao: string };
+  // transaction = lançamento já registrado no sistema (manual ou baixa de conta) que corresponde à linha do extrato
+  reconcileWith?: { type: "payable" | "receivable" | "transaction"; id: string; descricao: string; previsto?: boolean };
+  // identificador único da transação no banco (FITID do OFX); evita importar a mesma linha duas vezes
+  extratoId: string | null;
   include: boolean;
 };
 
@@ -230,20 +233,41 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
     }
     const [payRes, recRes] = await Promise.all([
       supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).is("deleted_at", null).in("status", ["em_aberto", "vencido"]),
-      supabase.from("payables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).is("deleted_at", null).in("status", ["em_aberto", "vencido"]),
       supabase.from("receivables").select("id, descricao, valor, vencimento, status").eq("company_id", companyId!).is("deleted_at", null).in("status", ["em_aberto", "vencido"]),
     ]);
+    if (payRes.error || recRes.error) {
+      toast.error("Não foi possível carregar contas a pagar e a receber.");
+      return;
+    }
     const payables = payRes.data ?? [];
     const receivables = recRes.data ?? [];
 
-    const since = new Date(); since.setDate(since.getDate() - 180);
+    // Lançamentos existentes a partir de 5 dias antes da linha mais antiga do extrato
+    const datas = parsed.rows
+      .map((raw) => parseDate(mapping.data ? String(raw[mapping.data] ?? "") : ""))
+      .filter((d): d is string => !!d)
+      .sort();
+    const since = datas.length ? new Date(datas[0]) : new Date();
+    since.setDate(since.getDate() - (datas.length ? 5 : 180));
     const existRes = await supabase
       .from("transactions")
-      .select("data, valor, descricao, conta_id")
+      .select("id, data, valor, tipo, status, descricao, conta_id, import_batch_id, extrato_id, reconciliation_status")
       .eq("company_id", companyId!)
       .is("deleted_at", null)
       .gte("data", since.toISOString().slice(0, 10));
+    if (existRes.error) {
+      toast.error("Não foi possível carregar os lançamentos existentes.");
+      return;
+    }
     const existing = existRes.data ?? [];
+
+    // Só arquivos OFX trazem o FITID, o código único do banco para cada transação
+    const isOfx = !!file?.name.toLowerCase().endsWith(".ofx");
+    const fitidsJaImportados = new Set(
+      existing.filter((t) => t.extrato_id && t.conta_id === contaId).map((t) => t.extrato_id as string),
+    );
+    const fitidsDoArquivo = new Set<string>();
+    const usados = new Set<string>(); // lançamentos e contas já casados com outra linha deste extrato
 
     const rows: PreviewRow[] = parsed.rows.map((raw, idx) => {
       const dataStr = mapping.data ? String(raw[mapping.data] ?? "") : "";
@@ -273,19 +297,41 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
         }
       }
 
-      const isDup = existing.some((t: any) =>
-        t.data === data && Math.abs(Number(t.valor) - (absValor ?? 0)) < 0.01 &&
-        (t.conta_id === contaId || !contaId) &&
-        (t.descricao ?? "").toLowerCase().includes(desc.toLowerCase().slice(0, 12))
-      );
+      const extratoId = isOfx && doc.trim() ? doc.trim() : null;
+      const mesmoValor = (v: unknown) => absValor !== null && Math.abs(Number(v) - absValor) < 0.01;
+
+      // 1) Mesmo código do banco já importado antes (ou repetido no próprio arquivo)
+      let isDup = !!extratoId && (fitidsJaImportados.has(extratoId) || fitidsDoArquivo.has(extratoId));
+      if (extratoId) fitidsDoArquivo.add(extratoId);
+      // 2) Extratos sem código (CSV/XLSX/PDF) ou importados antes desta melhoria: mesma linha já importada
+      if (!isDup && !extratoId) {
+        isDup = existing.some((t) =>
+          t.import_batch_id && t.data === data && mesmoValor(t.valor) &&
+          (t.conta_id === contaId || !contaId) &&
+          (t.descricao ?? "").toLowerCase().includes(desc.toLowerCase().slice(0, 12))
+        );
+      }
 
       let reconcileWith: PreviewRow["reconcileWith"];
-      if (data && absValor && tipo === "saida") {
-        const hit = payables.find((p: any) => Math.abs(Number(p.valor) - absValor) < 0.01 && dateClose(p.vencimento, data));
-        if (hit) reconcileWith = { type: "payable", id: hit.id, descricao: hit.descricao };
-      } else if (data && absValor && tipo === "entrada") {
-        const hit = receivables.find((r: any) => Math.abs(Number(r.valor) - absValor) < 0.01 && dateClose(r.vencimento, data));
-        if (hit) reconcileWith = { type: "receivable", id: hit.id, descricao: hit.descricao };
+      if (!isDup && data && absValor && tipo) {
+        // 3) Lançamento já registrado no sistema (manual ou baixa de conta) que ainda não foi conferido com o banco
+        const lanc = existing.find((t) =>
+          !usados.has(t.id) && !t.import_batch_id && !t.extrato_id && !t.reconciliation_status &&
+          t.tipo === tipo && mesmoValor(t.valor) && (t.conta_id === contaId || !t.conta_id) &&
+          dateClose(t.data, data, 3)
+        );
+        if (lanc) {
+          reconcileWith = { type: "transaction", id: lanc.id, descricao: lanc.descricao, previsto: lanc.status === "previsto" };
+        } else if (tipo === "saida") {
+          // 4) Conta a pagar em aberto
+          const hit = payables.find((p) => !usados.has(p.id) && mesmoValor(p.valor) && dateClose(p.vencimento, data, 5));
+          if (hit) reconcileWith = { type: "payable", id: hit.id, descricao: hit.descricao };
+        } else {
+          // 4) Conta a receber em aberto
+          const hit = receivables.find((r) => !usados.has(r.id) && mesmoValor(r.valor) && dateClose(r.vencimento, data, 5));
+          if (hit) reconcileWith = { type: "receivable", id: hit.id, descricao: hit.descricao };
+        }
+        if (reconcileWith) usados.add(reconcileWith.id);
       }
 
       let status: PreviewRow["status"] = "ok";
@@ -306,6 +352,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
         status,
         alerts,
         reconcileWith,
+        extratoId,
         include: status !== "erro" && status !== "duplicado",
       };
     });
@@ -347,6 +394,25 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
         if (r.status === "duplicado" && !r.include) { dups++; continue; }
         if (r.status === "duplicado") dups++;
 
+        if (r.reconcileWith?.type === "transaction") {
+          // Lançamento que já existia: só marca como conferido com o banco (não cria outro).
+          // "auto_previsto" guarda que ele era previsto, para o desfazer voltar ao estado anterior.
+          const { error } = await supabase
+            .from("transactions")
+            .update({
+              reconciliation_status: r.reconcileWith.previsto ? "auto_previsto" : "auto",
+              reconciled_with_type: "import_batch",
+              reconciled_with_id: batch.id,
+              extrato_id: r.extratoId,
+              conta_id: contaId,
+              ...(r.reconcileWith.previsto && r.data ? { status: "realizado" as const, data: r.data } : {}),
+            })
+            .eq("id", r.reconcileWith.id);
+          if (error) { errors++; continue; }
+          reconciled++;
+          continue;
+        }
+
         if (r.reconcileWith) {
           if (r.reconcileWith.type === "payable") {
             const { error } = await supabase
@@ -370,6 +436,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
               reconciled_with_id: r.reconcileWith.id,
               reconciliation_status: "auto",
               branch_id: branchFinal,
+              extrato_id: r.extratoId,
             })
             .eq(linkCol, r.reconcileWith.id);
           reconciled++; imported++;
@@ -389,6 +456,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
           status: "realizado",
           observacoes: r.documento ? `Doc: ${r.documento}` : null,
           import_batch_id: batch.id,
+          extrato_id: r.extratoId,
         });
         if (error) { errors++; continue; }
         imported++;
@@ -403,7 +471,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
         status: "concluido",
       }).eq("id", batch.id);
 
-      toast.success(`Importação concluída: ${imported} de ${preview.length} registros.`);
+      toast.success(`Importação concluída: ${imported} lançamentos novos e ${reconciled} conciliados, de ${preview.length} linhas do extrato.`);
       onDone();
     } catch (e: any) {
       toast.error("Erro na importação: " + (e.message ?? e));
@@ -547,7 +615,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
                       <TableCell className="font-mono text-xs">{r.data ?? "—"}</TableCell>
                       <TableCell className="max-w-[280px] truncate">
                         {r.descricao}
-                        {r.reconcileWith && <div className="text-[10px] text-emerald-600">↳ Concilia com {r.reconcileWith.type === "payable" ? "conta a pagar" : "conta a receber"}: {r.reconcileWith.descricao}</div>}
+                        {r.reconcileWith && <div className="text-[10px] text-emerald-600">↳ Concilia com {r.reconcileWith.type === "payable" ? "conta a pagar" : r.reconcileWith.type === "receivable" ? "conta a receber" : r.reconcileWith.previsto ? "lançamento previsto" : "lançamento já registrado"}: {r.reconcileWith.descricao}</div>}
                       </TableCell>
                       <TableCell className="text-right font-mono">{r.valor !== null ? formatBRL(r.valor) : "—"}</TableCell>
                       <TableCell>{r.tipo ?? "—"}</TableCell>
@@ -578,9 +646,9 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
   );
 }
 
-function dateClose(d1: string, d2: string) {
+function dateClose(d1: string, d2: string, dias: number) {
   const a = new Date(d1).getTime(), b = new Date(d2).getTime();
-  return Math.abs(a - b) <= 1000 * 60 * 60 * 24 * 3; // 3-day window
+  return Math.abs(a - b) <= 1000 * 60 * 60 * 24 * dias;
 }
 
 function labelFor(f: BankFields) {
@@ -688,6 +756,24 @@ function HistoryView({ onBack }: { onBack: () => void }) {
         if (t.reconciled_with_type === "receivable" && t.reconciled_with_id) {
           await supabase.from("receivables").update({ status: "em_aberto", data_recebimento: null }).eq("id", t.reconciled_with_id);
         }
+      }
+      // Lançamentos que já existiam e só foram conferidos com este extrato: desfaz a conferência, sem apagar
+      const { data: conferidos } = await supabase
+        .from("transactions")
+        .select("id, reconciliation_status")
+        .eq("reconciled_with_type", "import_batch")
+        .eq("reconciled_with_id", batchId);
+      for (const t of conferidos ?? []) {
+        await supabase
+          .from("transactions")
+          .update({
+            reconciliation_status: null,
+            reconciled_with_type: null,
+            reconciled_with_id: null,
+            extrato_id: null,
+            ...(t.reconciliation_status === "auto_previsto" ? { status: "previsto" as const } : {}),
+          })
+          .eq("id", t.id);
       }
       const nowIso = new Date().toISOString();
       await supabase.from("transactions").update({ deleted_at: nowIso }).eq("import_batch_id", batchId);
