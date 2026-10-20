@@ -30,7 +30,7 @@ function ClientesGuard() {
   if (loading) return <div className="text-muted-foreground">Carregando...</div>;
   if (!isConsultant) {
     return (
-      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
+      <div className="bg-card rounded-3xl shadow-card p-10 text-center max-w-xl mx-auto">
         <h2 className="font-display font-semibold">Acesso restrito</h2>
         <p className="text-sm text-muted-foreground mt-1">Esta área é exclusiva para consultores.</p>
       </div>
@@ -143,7 +143,7 @@ function ClientesPage() {
     <div className="space-y-6 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Empresas</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Empresas</h1>
           <p className="text-muted-foreground text-sm mt-1">Gerencie os clientes acompanhados.</p>
         </div>
         {isConsultant && (
@@ -172,7 +172,7 @@ function ClientesPage() {
         )}
       </div>
 
-      <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
+      <div className="bg-card rounded-3xl shadow-card overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-muted-foreground">Carregando...</div>
         ) : !data || data.length === 0 ? (

@@ -95,7 +95,7 @@ function DocumentosGeradosPage() {
             <button
               key={d.id}
               onClick={() => navigate({ to: "/app/biblioteca/documento/$id", params: { id: d.id } })}
-              className="text-left bg-card border rounded-lg p-4 hover:bg-accent transition-colors flex items-center gap-4"
+              className="text-left bg-card rounded-3xl shadow-card p-4 hover:bg-accent transition-colors flex items-center gap-4"
             >
               <FileText className="size-5 text-primary" />
               <div className="flex-1 min-w-0">

@@ -217,7 +217,7 @@ function PendenciasPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold">{isConsultant ? "Central de Pendências" : "Minhas Pendências"}</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">{isConsultant ? "Central de Pendências" : "Minhas Pendências"}</h1>
           <p className="text-sm text-muted-foreground">Acompanhe o que cada cliente precisa enviar, fazer ou revisar.</p>
         </div>
         {isConsultant && (

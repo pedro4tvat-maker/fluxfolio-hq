@@ -285,9 +285,9 @@ function ConsultantPanel() {
   return (
     <div className="space-y-6 max-w-7xl animate-in fade-in duration-500 pb-12">
       {/* Header Simplificado */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold tracking-tight text-foreground">Painel do Consultor</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-foreground">Painel do Consultor</h1>
           <p className="text-muted-foreground text-sm mt-1">Bem-vindo de volta. Aqui está o resumo da sua consultoria hoje.</p>
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {consultancy?.consultancy_name && (
@@ -306,12 +306,12 @@ function ConsultantPanel() {
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <LinkRequestsBell />
-          <div className="flex bg-muted/50 p-1 rounded-lg border">
+          <div className="flex bg-muted p-1 rounded-full">
             <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/agenda">Agenda</Link></Button>
             <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/relatorios">Relatórios</Link></Button>
             <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-medium"><Link to="/app/diagnostico">Diagnóstico</Link></Button>
           </div>
-          <Button asChild size="sm" className="h-10 px-4 shadow-sm"><Link to="/app/clientes"><PlusCircle className="size-4 mr-2" /> Nova empresa</Link></Button>
+          <Button asChild className="h-11 px-5 shadow-sm"><Link to="/app/clientes"><PlusCircle className="size-4" /> Nova empresa</Link></Button>
         </div>
 
       </div>
@@ -351,8 +351,8 @@ function ConsultantPanel() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Prioridades e Agenda */}
         <div className="lg:col-span-2 space-y-6">
-          <section className="bg-card border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b flex items-center justify-between bg-muted/30">
+          <section className="bg-card rounded-3xl shadow-card overflow-hidden">
+            <div className="px-5 py-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold flex items-center gap-2"><Calendar className="size-4 text-primary" /> Prioridades e Agenda</h2>
               <Button asChild variant="ghost" size="sm" className="h-8 text-xs"><Link to="/app/agenda">Ver agenda completa</Link></Button>
             </div>
@@ -408,8 +408,8 @@ function ConsultantPanel() {
           </section>
 
           {/* Lista de Empresas */}
-          <section className="bg-card border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b flex items-center justify-between bg-muted/30">
+          <section className="bg-card rounded-3xl shadow-card overflow-hidden">
+            <div className="px-5 py-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold flex items-center gap-2"><Building2 className="size-4 text-primary" /> Empresas Acompanhadas</h2>
               <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{cias.length} TOTAL</span>
             </div>
@@ -487,7 +487,7 @@ function ConsultantPanel() {
 
         {/* Lateral: Saúde da Consultoria e Atalhos */}
         <div className="space-y-6">
-          <section className="bg-card border rounded-xl shadow-sm p-5">
+          <section className="bg-card rounded-3xl shadow-card p-5">
             <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><TrendingUp className="size-4 text-primary" /> Saúde Financeira</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b pb-3">
@@ -512,7 +512,7 @@ function ConsultantPanel() {
             <Button asChild variant="outline" className="w-full mt-6 text-xs h-9 bg-muted/50"><Link to="/app/consultoria">Gerenciar Consultoria</Link></Button>
           </section>
 
-          <section className="bg-primary/5 border border-primary/20 rounded-xl p-5">
+          <section className="bg-primary/5 rounded-3xl p-5">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-primary"><Sparkles className="size-4" /> Atalhos Rápidos</h3>
             <div className="grid grid-cols-2 gap-2">
               <QuickLink to="/app/agenda" icon={PlusCircle} label="Atividade" />
@@ -538,9 +538,9 @@ function ConsultantPanel() {
 
 function MetricCard({ label, value, icon: Icon, trend, variant = "default", to }: { label: string; value: string | number; icon: any; trend?: string; variant?: "default" | "destructive" | "warning"; to: string }) {
   return (
-    <Link to={to} className="bg-card border rounded-xl p-5 shadow-sm hover:shadow-md transition-all group">
+    <Link to={to} className="bg-card rounded-3xl shadow-card p-5 shadow-sm hover:shadow-md transition-all group">
       <div className="flex items-center justify-between mb-3">
-        <div className={`p-2 rounded-lg ${
+        <div className={`p-2 rounded-full ${
           variant === "destructive" ? "bg-destructive/10 text-destructive" : 
           variant === "warning" ? "bg-warning/10 text-warning-foreground" : 
           "bg-primary/10 text-primary"
@@ -550,13 +550,13 @@ function MetricCard({ label, value, icon: Icon, trend, variant = "default", to }
         <ArrowRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
       </div>
       <div className="space-y-1">
-        <div className={`text-2xl font-bold tracking-tight ${
+        <div className={`text-2xl font-display font-bold tabular-nums ${
           variant === "destructive" && Number(value) > 0 ? "text-destructive" : 
           variant === "warning" && Number(value) > 0 ? "text-warning-foreground" : "text-foreground"
         }`}>
           {value}
         </div>
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
+        <div className="text-xs font-medium text-muted-foreground">{label}</div>
         {trend && <div className="text-[10px] text-success font-semibold mt-1">{trend}</div>}
       </div>
     </Link>
@@ -565,9 +565,9 @@ function MetricCard({ label, value, icon: Icon, trend, variant = "default", to }
 
 function QuickLink({ to, icon: Icon, label }: { to: string; icon: any; label: string }) {
   return (
-    <Link to={to} className="flex flex-col items-center justify-center p-3 bg-card border rounded-lg hover:border-primary/40 hover:bg-primary/5 transition-all text-center">
+    <Link to={to} className="flex flex-col items-center justify-center p-3 bg-background rounded-2xl hover:bg-primary/10 transition-colors text-center">
       <Icon className="size-4 text-primary mb-1.5" />
-      <span className="text-[10px] font-bold uppercase text-foreground leading-none">{label}</span>
+      <span className="text-xs font-medium text-foreground leading-none">{label}</span>
     </Link>
   );
 }
@@ -698,7 +698,7 @@ function ClientDashboard() {
   }
   if (!companies.length) {
     return (
-      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
+      <div className="bg-card rounded-3xl shadow-card p-10 text-center max-w-xl mx-auto">
         <Building2 className="size-12 mx-auto text-muted-foreground/40" />
         <h3 className="font-display font-semibold mt-4">Nenhuma empresa encontrada</h3>
         <p className="text-sm text-muted-foreground mt-1">
@@ -1059,7 +1059,7 @@ function LinkRequestsBell() {
             </div>
           ) : (
             pending.map((r: any) => (
-              <div key={r.id} className="p-3 border-b last:border-0 hover:bg-muted/30">
+              <div key={r.id} className="p-3 border-b border-border/50 last:border-0 hover:bg-muted/40">
                 <div className="font-medium text-sm">{r.companies?.nome_fantasia || r.companies?.nome || "Empresa"}</div>
                 <div className="text-xs text-muted-foreground mt-0.5">
                   {r.companies?.responsavel ? `${r.companies.responsavel} · ` : ""}

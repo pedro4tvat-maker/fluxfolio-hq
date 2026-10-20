@@ -263,7 +263,7 @@ function Inner() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Agenda do Consultor</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Agenda do Consultor</h1>
           <p className="text-muted-foreground text-sm">Organize reuniões, entregas, tarefas e prazos da sua consultoria.</p>
           <div className="text-xs text-muted-foreground mt-1">Visão: <span className="font-medium text-foreground">{sectionLabel}</span></div>
         </div>
@@ -361,7 +361,7 @@ function ActivityTable({ items, companyMap, onEdit, onDelete, onStatus, onReagen
 }) {
   const t = today();
   return (
-    <div className="bg-card border rounded-xl overflow-hidden">
+    <div className="bg-card rounded-3xl shadow-card overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -475,7 +475,7 @@ function ReunioesTab({ activities, companyMap, companies, onEdit, onDelete, onSt
         <KpiCard icon={<Check className="size-4" />} title="Concluídas no mês" value={kpis.mes} tone="emerald" />
       </div>
 
-      <div className="bg-card border rounded-xl p-3 flex flex-wrap gap-2 items-end justify-between">
+      <div className="bg-card rounded-3xl shadow-card p-3 flex flex-wrap gap-2 items-end justify-between">
         <div className="flex flex-wrap gap-2 items-end">
           <div>
             <Label className="text-xs">Empresa</Label>
@@ -497,7 +497,7 @@ function ReunioesTab({ activities, companyMap, companies, onEdit, onDelete, onSt
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-card border rounded-xl p-10 text-center text-muted-foreground">
+        <div className="bg-card rounded-3xl shadow-card p-10 text-center text-muted-foreground">
           Sem reuniões para mostrar.
           <div className="mt-3"><Button size="sm" variant="outline" onClick={onNew}><Plus className="size-3" /> Nova reunião</Button></div>
         </div>
@@ -581,7 +581,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
     for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
     while (cells.length % 7 !== 0) cells.push(null);
     return (
-      <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden border">
+      <div className="grid grid-cols-7 gap-px bg-border/60 rounded-2xl overflow-hidden">
         {weekdays.map((w) => <div key={w} className="bg-muted text-xs font-medium text-muted-foreground p-2 text-center">{w}</div>)}
         {cells.map((d, i) => {
           if (!d) return <div key={i} className="bg-card min-h-[100px]" />;
@@ -636,7 +636,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
           const key = iso(d);
           const items = (byDate.get(key) ?? []).sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
           return (
-            <div key={key} className="bg-card border rounded-lg p-2 min-h-[260px]">
+            <div key={key} className="bg-card rounded-3xl shadow-card p-2 min-h-[260px]">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs">
                   <div className="text-muted-foreground">{weekdays[d.getDay()]}</div>
@@ -662,7 +662,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
   const renderDia = () => {
     const items = (byDate.get(selectedDate) ?? []).sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
     return (
-      <div className="bg-card border rounded-xl p-4">
+      <div className="bg-card rounded-3xl shadow-card p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="font-semibold">{new Date(selectedDate + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</div>
           <Button size="sm" onClick={() => onNewOnDate(selectedDate)}><Plus className="size-3" /> Nova atividade</Button>
@@ -689,7 +689,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
   const monthLabel = cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   return (
-    <div className="bg-card border rounded-xl p-4 space-y-4">
+    <div className="bg-card rounded-3xl shadow-card p-4 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <div className="font-display font-semibold capitalize">{view === "mes" ? monthLabel : new Date(selectedDate + "T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</div>
@@ -700,7 +700,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex border rounded-md overflow-hidden">
+          <div className="flex rounded-full bg-muted p-1 overflow-hidden">
             {(["dia", "semana", "mes"] as const).map((v) => (
               <button key={v} onClick={() => setView(v)}
                 className={`px-3 py-1 text-xs capitalize ${view === v ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>{v}</button>
@@ -801,7 +801,7 @@ function PorClienteTab({ activities, companies, selected, onNewForCompany, onEdi
   }, [activities, companies, t]);
 
   if (summaries.length === 0) {
-    return <div className="bg-card border rounded-xl p-10 text-center text-muted-foreground">Nenhuma atividade cadastrada.</div>;
+    return <div className="bg-card rounded-3xl shadow-card p-10 text-center text-muted-foreground">Nenhuma atividade cadastrada.</div>;
   }
 
   return (
@@ -809,11 +809,11 @@ function PorClienteTab({ activities, companies, selected, onNewForCompany, onEdi
       {summaries.map((s) => {
         const isOpen = expanded === s.key;
         return (
-          <div key={s.key} className="bg-card border rounded-xl overflow-hidden">
+          <div key={s.key} className="bg-card rounded-3xl shadow-card overflow-hidden">
             <button className="w-full p-4 text-left hover:bg-muted/40 transition" onClick={() => setExpanded(isOpen ? null : s.key)}>
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="size-9 rounded-md bg-primary/10 text-primary grid place-items-center"><Building2 className="size-4" /></div>
+                  <div className="size-9 rounded-full bg-primary/10 text-primary grid place-items-center"><Building2 className="size-4" /></div>
                   <div className="min-w-0">
                     <div className="font-display font-semibold truncate">{s.nome}</div>
                     {s.cnpj && <div className="text-xs text-muted-foreground">{s.cnpj}</div>}
@@ -847,7 +847,7 @@ function PorClienteTab({ activities, companies, selected, onNewForCompany, onEdi
                 {s.items.length === 0 ? (
                   <div className="text-sm text-muted-foreground py-4 text-center">Nenhuma atividade cadastrada para esta empresa.</div>
                 ) : (
-                  <ul className="divide-y bg-card rounded-lg border">
+                  <ul className="divide-y divide-border/50 bg-card rounded-3xl shadow-card">
                     {s.items.map((a) => {
                       const overdue = isOverdue(a);
                       const done = a.status === "concluida";

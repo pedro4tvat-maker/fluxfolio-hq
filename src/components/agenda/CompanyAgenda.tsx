@@ -167,7 +167,7 @@ export function CompanyAgenda({ section }: { section: string }) {
 
   if (!companyId) {
     return (
-      <div className="bg-card border rounded-2xl p-10 text-center max-w-xl mx-auto">
+      <div className="bg-card rounded-3xl shadow-card p-10 text-center max-w-xl mx-auto">
         <h2 className="font-display font-semibold">Nenhuma empresa selecionada</h2>
         <p className="text-sm text-muted-foreground mt-1">Selecione uma empresa para usar a agenda.</p>
       </div>
@@ -252,7 +252,7 @@ function CalendarView({ activities, onNewOnDate, onSelect }: {
   const tk = todayKey();
 
   return (
-    <div className="bg-card border rounded-xl p-4 space-y-4">
+    <div className="bg-card rounded-3xl shadow-card p-4 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="font-display font-semibold capitalize">
           {cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
@@ -264,7 +264,7 @@ function CalendarView({ activities, onNewOnDate, onSelect }: {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden border">
+      <div className="grid grid-cols-7 gap-px bg-border/60 rounded-2xl overflow-hidden">
         {weekdays.map((w) => (
           <div key={w} className="bg-muted text-[11px] font-medium text-muted-foreground text-center py-1">{w}</div>
         ))}
@@ -346,7 +346,7 @@ function ActivityRow({ a, onEdit, onConclude, onArchive }: {
   onArchive: (id: string) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 border rounded-lg p-3">
+    <div className="flex items-start justify-between gap-3 rounded-2xl bg-muted/40 p-3">
       <div className="min-w-0">
         <div className="font-medium truncate">{a.title}</div>
         <div className="text-xs text-muted-foreground mt-0.5">
@@ -378,7 +378,7 @@ function UpcomingList({ activities, onEdit, onConclude, onArchive }: {
     .filter((a) => new Date(a.activity_date).getTime() >= now - 86400000 && a.status !== "cancelada")
     .slice(0, 20);
   return (
-    <div className="bg-card border rounded-xl p-4">
+    <div className="bg-card rounded-3xl shadow-card p-4">
       <div className="font-display font-semibold mb-3">Próximas atividades</div>
       {items.length === 0 ? (
         <div className="text-sm text-muted-foreground py-4 text-center">Nenhuma atividade futura cadastrada.</div>
@@ -398,7 +398,7 @@ function MeetingsList({ activities, onEdit, onConclude, onArchive }: {
   onArchive: (id: string) => void;
 }) {
   return (
-    <div className="bg-card border rounded-xl p-4">
+    <div className="bg-card rounded-3xl shadow-card p-4">
       <div className="font-display font-semibold mb-3">Reuniões</div>
       {activities.length === 0 ? (
         <div className="text-sm text-muted-foreground py-4 text-center">Nenhuma reunião cadastrada.</div>

@@ -185,8 +185,8 @@ function Relatorios() {
   if (!currentCompanyId) {
     return (
       <div className="space-y-6 max-w-5xl">
-        <h1 className="text-2xl md:text-3xl font-display font-bold">Relatórios</h1>
-        <div className="bg-card border rounded-2xl p-8 text-center text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-display font-bold">Relatórios</h1>
+        <div className="bg-card rounded-3xl shadow-card p-8 text-center text-muted-foreground">
           <FileBarChart className="size-10 mx-auto opacity-40" />
           <p className="mt-3">Selecione uma empresa para visualizar relatórios.</p>
         </div>
@@ -198,7 +198,7 @@ function Relatorios() {
     <div className="space-y-6 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">
             {isConsultant ? "Central de Relatórios" : "Relatórios"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -211,13 +211,13 @@ function Relatorios() {
       </div>
 
       {/* Filter bar */}
-      <div className="bg-card border rounded-2xl p-4 shadow-card flex flex-wrap gap-3 items-end">
+      <div className="bg-card rounded-3xl shadow-card p-4 flex flex-wrap gap-3 items-end">
         {isConsultant && (
           <Field label="Empresa">
             <select
               value={currentCompanyId ?? ""}
               onChange={(e) => select(e.target.value)}
-              className="rounded-lg border px-3 py-2 text-sm bg-background min-w-[220px]"
+              className="rounded-full border px-4 py-2 text-sm bg-card shadow-sm min-w-[220px]"
             >
               {allCompanies.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
@@ -235,7 +235,7 @@ function Relatorios() {
           <select
             value={costCenterId}
             onChange={(e) => setCostCenterId(e.target.value)}
-            className="rounded-lg border px-3 py-2 text-sm bg-background min-w-[180px]"
+            className="rounded-full border px-4 py-2 text-sm bg-card shadow-sm min-w-[180px]"
           >
             <option value="">Todos</option>
             {costCenters.map((c) => (
@@ -277,7 +277,7 @@ function Relatorios() {
 
       {/* Active report view */}
       {active && (
-        <div className="bg-card border rounded-2xl p-5 shadow-card space-y-4">
+        <div className="bg-card rounded-3xl shadow-card p-5 space-y-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <Button variant="ghost" size="sm" onClick={() => setActive(null)}>← Voltar aos relatórios</Button>
             <span className="text-xs text-muted-foreground">{isFetching ? "Carregando..." : "Período: " + inicio + " → " + fim}</span>
@@ -328,7 +328,7 @@ function DateInput({ value, onCommit }: { value: string; onCommit: (v: string) =
         setDraft(e.target.value);
         if (isFullDate(e.target.value)) onCommit(e.target.value);
       }}
-      className="rounded-lg border px-3 py-2 text-sm bg-background"
+      className="rounded-full border px-4 py-2 text-sm bg-card shadow-sm"
     />
   );
 }
@@ -421,7 +421,7 @@ function Table({ rows, moneyCols = [] as string[] }: { rows: Record<string, unkn
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs uppercase text-muted-foreground border-b">
+          <tr className="text-left text-xs text-muted-foreground border-b border-border/50">
             {headers.map((h) => <th key={h} className="py-2 pr-4 font-medium">{h}</th>)}
           </tr>
         </thead>
@@ -450,7 +450,7 @@ function KpiGrid({ items }: { items: { label: string; value: number; money?: boo
   return (
     <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
       {items.map((it) => (
-        <div key={it.label} className="rounded-xl border p-4">
+        <div key={it.label} className="rounded-2xl bg-muted/40 p-4">
           <div className="text-xs text-muted-foreground">{it.label}</div>
           <div className="text-xl font-semibold mt-1">
             {it.money ? formatMoney(it.value) : `${it.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}${it.suffix ?? ""}`}
@@ -482,7 +482,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
         <>
           <Header title="DRE Gerencial" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="dre" />
           {r.semClassificacao > 0 && (
-            <div className="rounded-xl border-amber-500/30 bg-amber-500/10 border p-3 text-sm flex gap-2 items-start">
+            <div className="rounded-2xl bg-amber-500/10 p-3 text-sm flex gap-2 items-start">
               <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
               <span>Existem <strong>{r.semClassificacao}</strong> categorias sem classificação financeira. Isso pode afetar a precisão da DRE. Configure-as no Centro de Custos.</span>
             </div>
@@ -514,7 +514,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
         <>
           <Header title="Fluxo de Caixa Projetado" onExport={onExport} onExportPDF={onExportPDF} rows={r.projecao} name="fluxo_projetado" />
           {r.summary.riscoNegativo && (
-            <div className="rounded-xl border-destructive/30 bg-destructive/10 border p-3 text-sm flex gap-2 items-start">
+            <div className="rounded-2xl bg-destructive/10 p-3 text-sm flex gap-2 items-start">
               <AlertTriangle className="size-4 text-destructive shrink-0 mt-0.5" />
               <span>Atenção: a projeção indica saldo negativo em algum dia dos próximos 60 dias.</span>
             </div>
@@ -602,7 +602,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
       return (
         <>
           <Header title="Capital de Giro" onExport={onExport} onExportPDF={onExportPDF} rows={r.rows} name="capital_giro" />
-          <div className="rounded-xl border p-3 text-sm">Situação: <strong>{r.situacao}</strong></div>
+          <div className="rounded-2xl bg-muted/40 p-3 text-sm">Situação: <strong>{r.situacao}</strong></div>
           <Table rows={r.rows} />
         </>
       );

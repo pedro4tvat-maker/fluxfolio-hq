@@ -240,13 +240,13 @@ function CorrecaoOSPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-display font-bold">Correção de Centro de Estoque das OSs</h1>
+        <h1 className="text-2xl sm:text-3xl font-display font-bold">Correção de Centro de Estoque das OSs</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Vendas com OS duplicada e sem centro de estoque vinculado. Atribua o centro correto para que a nova OS use o prefixo certo. Nada do estoque, financeiro ou itens é alterado — somente o <code>os_code</code>.
         </p>
       </div>
 
-      <div className="bg-card border rounded-2xl p-4 grid gap-3 md:grid-cols-6">
+      <div className="bg-card rounded-3xl shadow-card p-4 grid gap-3 md:grid-cols-6">
         <div className="space-y-1 md:col-span-2">
           <Label>Cliente</Label>
           <Input value={fCliente} onChange={(e) => setFCliente(e.target.value)} placeholder="Buscar..." />
@@ -283,7 +283,7 @@ function CorrecaoOSPage() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-2xl overflow-hidden">
+      <div className="bg-card rounded-3xl shadow-card overflow-hidden">
         <div className="flex items-center justify-between p-3 border-b">
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
@@ -366,7 +366,7 @@ function CorrecaoOSPage() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-2xl overflow-hidden">
+      <div className="bg-card rounded-3xl shadow-card overflow-hidden">
         <div className="p-3 border-b font-medium">Histórico de renumerações</div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[800px]">

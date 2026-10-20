@@ -87,18 +87,18 @@ function DocumentosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-display font-bold">Documentos e Anexos</h1>
+        <h1 className="text-2xl sm:text-3xl font-display font-bold">Documentos e Anexos</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Visão consolidada de todos os arquivos anexados nos módulos desta empresa.
         </p>
       </div>
 
-      <div className="bg-card border rounded-2xl p-4 space-y-4">
+      <div className="bg-card rounded-3xl shadow-card p-4 space-y-4">
         <h2 className="text-base font-display font-semibold">Anexar arquivo geral</h2>
         <AttachmentsPanel companyId={selected} module="other" />
       </div>
 
-      <div className="bg-card border rounded-2xl p-4 space-y-3">
+      <div className="bg-card rounded-3xl shadow-card p-4 space-y-3">
         <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="size-4 absolute left-3 top-2.5 text-muted-foreground" />
@@ -112,7 +112,7 @@ function DocumentosPage() {
           </Select>
         </div>
 
-        <div className="border rounded-xl overflow-hidden">
+        <div className="rounded-3xl bg-card shadow-card overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
               <tr>

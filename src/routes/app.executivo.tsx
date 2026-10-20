@@ -319,7 +319,7 @@ function Executivo() {
   if (!currentCompanyId) {
     return (
       <div className="space-y-6 max-w-4xl">
-        <h1 className="text-2xl md:text-3xl font-display font-bold">Análise Gerencial</h1>
+        <h1 className="text-2xl sm:text-3xl font-display font-bold">Análise Gerencial</h1>
         <p className="text-muted-foreground">Selecione uma empresa.</p>
       </div>
     );
@@ -333,7 +333,7 @@ function Executivo() {
       <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
         <div className="flex items-center gap-2">
           <Link to="/app/relatorios"><Button variant="ghost" size="sm"><ArrowLeft className="size-4" /> Voltar</Button></Link>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Análise Gerencial</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Análise Gerencial</h1>
         </div>
         <div className="flex gap-2 flex-wrap">
           {isConsultant && <Button onClick={saveDiagnosis} variant="outline"><Save className="size-4" /> Salvar</Button>}
@@ -343,25 +343,25 @@ function Executivo() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-card border rounded-2xl p-4 shadow-card flex flex-wrap gap-3 items-end print:hidden">
+      <div className="bg-card rounded-3xl shadow-card p-4 flex flex-wrap gap-3 items-end print:hidden">
         {isConsultant && (
           <Field label="Empresa">
-            <select value={currentCompanyId} onChange={(e) => select(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background min-w-[220px]">
+            <select value={currentCompanyId} onChange={(e) => select(e.target.value)} className="rounded-full border px-4 py-2 text-sm bg-card shadow-sm min-w-[220px]">
               {allCompanies.map((c: any) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </Field>
         )}
         <Field label="Período — início">
-          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background" />
+          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="rounded-full border px-4 py-2 text-sm bg-card shadow-sm" />
         </Field>
         <Field label="Período — fim">
-          <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="rounded-lg border px-3 py-2 text-sm bg-background" />
+          <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="rounded-full border px-4 py-2 text-sm bg-card shadow-sm" />
         </Field>
         <div className="ml-auto"><BranchSwitcher /></div>
       </div>
 
       {/* Cabeçalho do relatório */}
-      <div className="bg-card border rounded-2xl p-6 shadow-card print:border-0 print:shadow-none print:rounded-none print:p-2">
+      <div className="bg-card rounded-3xl shadow-card p-6 print:border-0 print:shadow-none print:rounded-none print:p-2">
         <div className="flex items-center gap-3 border-b pb-4 mb-4" style={{ borderColor: BRAND.support }}>
           <FileText className="size-6" style={{ color: BRAND.primary }} />
           <div className="flex-1">
@@ -495,7 +495,7 @@ function Executivo() {
 
                 {/* Tabela comparativa */}
                 <SectionTitle>Tabela comparativa mensal</SectionTitle>
-                <div className="overflow-x-auto border rounded-lg">
+                <div className="overflow-x-auto rounded-2xl bg-card shadow-card">
                   <table className="w-full text-sm">
                     <thead style={{ backgroundColor: BRAND.sand }}>
                       <tr>
@@ -559,7 +559,7 @@ function Executivo() {
             {inconsist.length > 0 && (
               <>
                 <SectionTitle>Inconsistências encontradas</SectionTitle>
-                <div className="overflow-x-auto border rounded-lg">
+                <div className="overflow-x-auto rounded-2xl bg-card shadow-card">
                   <table className="w-full text-sm">
                     <thead style={{ backgroundColor: BRAND.sand }}>
                       <tr>
@@ -591,7 +591,7 @@ function Executivo() {
 
             {/* IA */}
             <SectionTitle>Análise consultiva com IA</SectionTitle>
-            <div className="border rounded-lg p-4" style={{ backgroundColor: BRAND.sand }}>
+            <div className="rounded-2xl bg-muted/40 p-4" style={{ backgroundColor: BRAND.sand }}>
               {!iaAnalysis && !iaLoading && (
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <p className="text-sm text-muted-foreground">
@@ -626,7 +626,7 @@ function Executivo() {
       </div>
 
       {/* Diagnóstico do consultor */}
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4 print:hidden">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-4 print:hidden">
         <h2 className="font-display text-xl font-bold">Diagnóstico do Consultor</h2>
         {!isConsultant && !saved && (
           <p className="text-sm text-muted-foreground">Aguardando preenchimento pelo consultor.</p>
@@ -696,7 +696,7 @@ function Kpi({ label, value, delta }: { label: string; value: string; delta?: nu
   const showDelta = typeof delta === "number" && isFinite(delta);
   const positive = showDelta && (delta as number) >= 0;
   return (
-    <div className="rounded-lg border p-3 bg-card" style={{ borderColor: BRAND.neutral }}>
+    <div className="rounded-2xl bg-muted/40 p-3" style={{ borderColor: BRAND.neutral }}>
       <div className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</div>
       <div className="font-semibold text-lg mt-0.5" style={{ color: BRAND.graphite }}>{value}</div>
       {showDelta && (
@@ -711,7 +711,7 @@ function Kpi({ label, value, delta }: { label: string; value: string; delta?: nu
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border p-3 bg-card" style={{ borderColor: BRAND.neutral }}>
+    <div className="rounded-2xl bg-muted/40 p-3" style={{ borderColor: BRAND.neutral }}>
       <div className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: BRAND.graphite }}>{title}</div>
       {children}
     </div>
@@ -741,7 +741,7 @@ function ConsultantField({ label, value, onChange, readOnly }: { label: string; 
     <div>
       <label className="block text-sm font-medium mb-1">{label}</label>
       {readOnly ? (
-        <div className="rounded-lg border bg-muted/30 p-3 text-sm whitespace-pre-wrap min-h-[60px]">{value || <span className="text-muted-foreground">Não preenchido.</span>}</div>
+        <div className="rounded-2xl bg-muted/40 p-3 text-sm whitespace-pre-wrap min-h-[60px]">{value || <span className="text-muted-foreground">Não preenchido.</span>}</div>
       ) : (
         <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} />
       )}

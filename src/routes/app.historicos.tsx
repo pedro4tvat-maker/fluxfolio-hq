@@ -290,7 +290,7 @@ function Historicos() {
         />
       </div>
 
-      <div className="border rounded-xl overflow-x-auto bg-card">
+      <div className="rounded-3xl overflow-x-auto bg-card shadow-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-xs uppercase text-muted-foreground">
             <tr>

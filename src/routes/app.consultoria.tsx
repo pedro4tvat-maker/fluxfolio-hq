@@ -57,7 +57,7 @@ function ConsultoriaPage() {
   if (loading) return <div className="text-muted-foreground">Carregando...</div>;
   if (!isConsultant) {
     return (
-      <div className="bg-card border rounded-2xl p-10 text-center max-w-xl mx-auto">
+      <div className="bg-card rounded-3xl shadow-card p-10 text-center max-w-xl mx-auto">
         <h2 className="font-display font-semibold">Acesso restrito</h2>
         <p className="text-sm text-muted-foreground mt-1">Esta área é exclusiva para consultores.</p>
       </div>
@@ -89,7 +89,7 @@ function Inner() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold">Minha Consultoria</h1>
+        <h1 className="text-2xl sm:text-3xl font-display font-bold">Minha Consultoria</h1>
         <p className="text-muted-foreground text-sm">{currentLabel}</p>
       </div>
       <Tabs value={section} onValueChange={(v) => navigate({ search: { section: v as Section }, replace: true })}>
@@ -176,14 +176,14 @@ function DashboardTab({ consultantId }: { consultantId: string }) {
 function KpiCard({ icon: Icon, label, value, tone }: { icon: any; label: string; value: string; tone?: "success" | "danger" }) {
   const color = tone === "success" ? "text-emerald-600" : tone === "danger" ? "text-rose-600" : "text-foreground";
   return (
-    <div className="bg-card border rounded-2xl p-4 shadow-card">
+    <div className="bg-card rounded-3xl shadow-card p-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="size-4" /> {label}</div>
       <div className={`mt-2 font-display font-bold text-xl ${color}`}>{value}</div>
     </div>
   );
 }
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return <div className="bg-card border rounded-2xl p-5 shadow-card"><h3 className="font-display font-semibold mb-3">{title}</h3>{children}</div>;
+  return <div className="bg-card rounded-3xl shadow-card p-5"><h3 className="font-display font-semibold mb-3">{title}</h3>{children}</div>;
 }
 function Empty({ text }: { text: string }) { return <div className="text-sm text-muted-foreground py-6 text-center">{text}</div>; }
 
@@ -217,7 +217,7 @@ function ReceitasTab({ consultantId }: { consultantId: string }) {
           <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="size-4" /> Nova receita</Button>
         </div>
       </div>
-      <div className="bg-card border rounded-2xl shadow-card overflow-x-auto">
+      <div className="bg-card rounded-3xl shadow-card overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
             <TableHead>Vencimento</TableHead><TableHead>Descrição</TableHead><TableHead>Cliente</TableHead>
@@ -350,7 +350,7 @@ function DespesasTab({ consultantId }: { consultantId: string }) {
           <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="size-4" /> Nova despesa</Button>
         </div>
       </div>
-      <div className="bg-card border rounded-2xl shadow-card overflow-x-auto">
+      <div className="bg-card rounded-3xl shadow-card overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
             <TableHead>Vencimento</TableHead><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead>
@@ -474,7 +474,7 @@ function ContratosTab({ consultantId }: { consultantId: string }) {
         <div className="text-sm text-muted-foreground">{items.length} contrato(s)</div>
         <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="size-4" /> Novo contrato</Button>
       </div>
-      <div className="bg-card border rounded-2xl shadow-card overflow-x-auto">
+      <div className="bg-card rounded-3xl shadow-card overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
             <TableHead>Cliente</TableHead><TableHead>Plano</TableHead><TableHead className="text-right">Valor mensal</TableHead>
@@ -596,7 +596,7 @@ function ClientesContratantesTab({ consultantId }: { consultantId: string }) {
   };
 
   return (
-    <div className="bg-card border rounded-2xl shadow-card overflow-x-auto">
+    <div className="bg-card rounded-3xl shadow-card overflow-x-auto">
       <Table>
         <TableHeader><TableRow>
           <TableHead>Cliente</TableHead><TableHead>CNPJ</TableHead><TableHead>Responsável</TableHead>
@@ -782,10 +782,10 @@ function SolicitacoesTab() {
   });
 
   if (isLoading) return <div className="text-muted-foreground text-sm">Carregando...</div>;
-  if (pending.length === 0) return <div className="bg-card border rounded-2xl p-10 text-center"><BadgeCheck className="size-10 mx-auto text-muted-foreground/40" /><p className="mt-3 text-muted-foreground text-sm">Nenhuma solicitação pendente.</p></div>;
+  if (pending.length === 0) return <div className="bg-card rounded-3xl shadow-card p-10 text-center"><BadgeCheck className="size-10 mx-auto text-muted-foreground/40" /><p className="mt-3 text-muted-foreground text-sm">Nenhuma solicitação pendente.</p></div>;
 
   return (
-    <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
+    <div className="bg-card rounded-3xl shadow-card overflow-hidden">
       <Table>
         <TableHeader><TableRow><TableHead>Empresa</TableHead><TableHead>CNPJ</TableHead><TableHead>Responsável</TableHead><TableHead>Solicitada em</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
         <TableBody>
@@ -833,14 +833,14 @@ function PerfilTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-card border rounded-2xl p-6 shadow-card">
+      <div className="bg-card rounded-3xl shadow-card p-6">
         <h3 className="font-display font-semibold mb-3 flex items-center gap-2"><BadgeCheck className="size-4 text-primary" /> Código de convite</h3>
         <div className="grid md:grid-cols-2 gap-3">
           <div><Label className="text-xs">Código</Label><div className="flex gap-2 mt-1"><Input readOnly value={data!.invite_code} className="font-mono font-semibold" /><Button variant="outline" onClick={() => copy(data!.invite_code, "Código")}><Copy className="size-4" /></Button></div></div>
           <div><Label className="text-xs">Link</Label><div className="flex gap-2 mt-1"><Input readOnly value={inviteUrl} className="text-xs" /><Button variant="outline" onClick={() => copy(inviteUrl, "Link")}><Link2 className="size-4" /></Button></div></div>
         </div>
       </div>
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-4">
         <h3 className="font-display font-semibold">Dados da consultoria</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <Field label="Nome da consultoria" required><Input value={form.consultancy_name ?? ""} onChange={(e) => setForm({ ...form, consultancy_name: e.target.value })} /></Field>

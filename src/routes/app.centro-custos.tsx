@@ -96,13 +96,13 @@ function CentroCustosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-display font-bold">Centro de Custos</h1>
+        <h1 className="text-2xl sm:text-3xl font-display font-bold">Centro de Custos</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Agrupe receitas e despesas por área. A <strong>Classificação (DRE)</strong> define em que linha do relatório esse centro aparece — você pode reutilizar uma classificação existente ou criar uma nova linha digitando um nome novo.
         </p>
       </div>
 
-      <form onSubmit={adicionar} className="bg-card border rounded-2xl p-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+      <form onSubmit={adicionar} className="bg-card rounded-3xl shadow-card p-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
         <div className="space-y-1">
           <Label>Novo centro de custo</Label>
           <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Marketing, Operação" />
@@ -123,7 +123,7 @@ function CentroCustosPage() {
         {classificacoesExistentes.map((c) => <option key={c} value={c} />)}
       </datalist>
 
-      <div className="bg-card border rounded-2xl overflow-hidden">
+      <div className="bg-card rounded-3xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-muted/50 text-xs uppercase">

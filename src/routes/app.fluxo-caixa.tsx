@@ -196,7 +196,7 @@ function FluxoCaixa() {
 
   if (!companies.length) {
     return (
-      <div className="max-w-2xl mx-auto bg-card border rounded-2xl p-10 text-center shadow-card">
+      <div className="max-w-2xl mx-auto bg-card rounded-3xl shadow-card p-10 text-center">
         <Building2 className="size-12 mx-auto text-muted-foreground/40" />
         <h2 className="font-display font-semibold mt-4">Nenhuma empresa disponível</h2>
         <p className="text-sm text-muted-foreground mt-1">Cadastre uma empresa em Empresas para começar a lançar movimentações.</p>
@@ -208,7 +208,7 @@ function FluxoCaixa() {
     <div className="space-y-6 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Fluxo de caixa</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Fluxo de caixa</h1>
           <p className="text-muted-foreground text-sm mt-1">Lançamentos de entradas e saídas da empresa.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

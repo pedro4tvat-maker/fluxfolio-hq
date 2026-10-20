@@ -325,7 +325,7 @@ function PlanoAcaoPage() {
 
   if (!companyId) {
     return (
-      <div className="bg-card border rounded-2xl p-10 text-center max-w-xl mx-auto">
+      <div className="bg-card rounded-3xl shadow-card p-10 text-center max-w-xl mx-auto">
         <p className="text-muted-foreground">Selecione uma empresa para acessar o Plano de Ação.</p>
         <Button asChild className="mt-4"><Link to="/app">Voltar</Link></Button>
       </div>
@@ -634,7 +634,7 @@ function ActionDialog({ open, onClose, editing, onSave, saving }: {
             <Label>Observações</Label>
             <Textarea value={form.notes ?? ""} onChange={(e) => update({ notes: e.target.value })} />
           </div>
-          <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+          <div className="rounded-2xl bg-muted/40 p-3 space-y-2 bg-muted/30">
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={!!form.allow_client_view} onCheckedChange={(v) => update({ allow_client_view: !!v })} />
               Permitir que o cliente visualize esta ação
@@ -717,7 +717,7 @@ function CommentsDialog({ action, onClose, user, canComment }: { action: Action;
         <DialogHeader><DialogTitle>Comentários — {action.title}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           {canComment && (
-            <div className="space-y-2 border rounded-lg p-3">
+            <div className="space-y-2 rounded-2xl bg-muted/40 p-3">
               <div className="flex gap-2">
                 <Select value={type} onValueChange={setType}>
                   <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
@@ -819,7 +819,7 @@ function SuggestionsDialog({ diagnosticId, companyId, consultantId, createdBy, o
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Revise e desmarque o que não quiser criar:</p>
             {items.map((s, idx) => (
-              <label key={idx} className="flex items-start gap-2 border rounded-lg p-3 cursor-pointer">
+              <label key={idx} className="flex items-start gap-2 rounded-2xl bg-muted/40 p-3 cursor-pointer">
                 <Checkbox checked={s.selected} onCheckedChange={(v) => {
                   const cp = [...items]; cp[idx] = { ...cp[idx], selected: !!v }; setItems(cp);
                 }} />

@@ -132,7 +132,7 @@ function PrecificacaoPage() {
     <div className="space-y-6 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Precificação e Margem</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Precificação e Margem</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Calcule preço de venda considerando custos diretos, despesas variáveis, rateio de custos fixos e margem desejada.
           </p>
@@ -143,7 +143,7 @@ function PrecificacaoPage() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-2xl overflow-hidden shadow-card">
+      <div className="bg-card rounded-3xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
@@ -164,7 +164,7 @@ function PrecificacaoPage() {
               ) : records.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma precificação cadastrada ainda. Clique em "Nova precificação" para começar.</td></tr>
               ) : records.map((r) => (
-                <tr key={r.id} className="border-t hover:bg-muted/30">
+                <tr key={r.id} className="border-t border-border/50 hover:bg-muted/40">
                   <td className="px-4 py-2 font-medium">{r.nome}</td>
                   <td className="px-4 py-2 text-muted-foreground text-xs">{r.categoria ?? "—"}</td>
                   <td className="px-4 py-2 text-right">{formatMoney(custoTotal(r))}</td>
@@ -431,7 +431,7 @@ function PricingForm({
             )}
 
             {Number(form.preco_atual ?? 0) > 0 && Number(form.preco_atual ?? 0) < calc.precoMinimo && (
-              <div className="mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+              <div className="mt-3 p-3 rounded-2xl bg-destructive/10 text-destructive text-sm">
                 ⚠️ Preço atual ({formatMoney(Number(form.preco_atual))}) está abaixo do preço mínimo ({formatMoney(calc.precoMinimo)}) — você está vendendo no prejuízo.
               </div>
             )}
@@ -471,7 +471,7 @@ function PricingForm({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border rounded-xl p-4">
+    <div className="rounded-2xl bg-muted/40 p-4">
       <h3 className="font-display font-semibold mb-3">{title}</h3>
       {children}
     </div>

@@ -612,7 +612,7 @@ function Page() {
 
           {/* Painel de detalhes */}
           {selectedSale && (
-            <div className="rounded-lg border bg-muted/30 p-3 grid md:grid-cols-3 gap-3 text-sm">
+            <div className="rounded-2xl bg-muted/40 p-3 grid md:grid-cols-3 gap-3 text-sm">
               <div><div className="text-xs text-muted-foreground">Tipo</div>{selectedSale.type === "vista" ? "À vista" : "A prazo"}</div>
               <div><div className="text-xs text-muted-foreground">Forma de pagamento</div>{selectedSale.forma_pagamento ?? "—"}</div>
               <div><div className="text-xs text-muted-foreground">OS atual</div><span className="font-mono">{selectedSale.os_code ?? "—"}</span></div>

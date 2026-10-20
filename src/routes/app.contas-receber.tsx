@@ -154,7 +154,7 @@ function ContasAReceber() {
 
   if (!companies.length) {
     return (
-      <div className="max-w-2xl mx-auto bg-card border rounded-2xl p-10 text-center shadow-card">
+      <div className="max-w-2xl mx-auto bg-card rounded-3xl shadow-card p-10 text-center">
         <Building2 className="size-12 mx-auto text-muted-foreground/40" />
         <h2 className="font-display font-semibold mt-4">Nenhuma empresa disponível</h2>
       </div>

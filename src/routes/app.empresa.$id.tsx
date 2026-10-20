@@ -90,7 +90,7 @@ function EmpresaResumo() {
   if (authLoading || accessLoading) return <div className="text-muted-foreground">Verificando acesso...</div>;
   if (!hasAccess) {
     return (
-      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
+      <div className="bg-card rounded-3xl shadow-card p-10 text-center max-w-xl mx-auto">
         <Building2 className="size-12 mx-auto text-muted-foreground/40" />
         <h3 className="font-display font-semibold mt-4">Empresa não encontrada</h3>
         <p className="text-sm text-muted-foreground mt-1">Você não tem acesso a esta empresa.</p>
@@ -102,7 +102,7 @@ function EmpresaResumo() {
   if (isLoading) return <div className="text-muted-foreground">Carregando empresa...</div>;
   if (!data) {
     return (
-      <div className="bg-card border rounded-2xl p-10 text-center shadow-card max-w-xl mx-auto">
+      <div className="bg-card rounded-3xl shadow-card p-10 text-center max-w-xl mx-auto">
         <Building2 className="size-12 mx-auto text-muted-foreground/40" />
         <h3 className="font-display font-semibold mt-4">Empresa não encontrada</h3>
         <Button asChild className="mt-4"><Link to="/app">Voltar ao painel</Link></Button>
@@ -117,7 +117,7 @@ function EmpresaResumo() {
           <Link to="/app" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
             <ArrowLeft className="size-3" /> Painel do consultor
           </Link>
-          <h1 className="text-2xl md:text-3xl font-display font-bold mt-1">{data.company.nome}</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold mt-1">{data.company.nome}</h1>
           {data.company.responsavel && (
             <p className="text-muted-foreground text-sm">{data.company.responsavel} · {data.company.segmento ?? "—"}</p>
           )}
@@ -145,7 +145,7 @@ function EmpresaResumo() {
         <h2 className="font-display font-semibold mb-3">Acessar módulos da empresa</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {modules.map((m) => (
-            <Link key={m.to} to={m.to} className="bg-card border rounded-2xl p-4 shadow-card hover:shadow-elevated transition flex items-center gap-3">
+            <Link key={m.to} to={m.to} className="bg-card rounded-3xl shadow-card p-4 hover:shadow-elevated transition flex items-center gap-3">
               <m.icon className="size-5 text-primary" />
               <span className="font-medium">{m.label}</span>
             </Link>
@@ -164,7 +164,7 @@ function EmpresaResumo() {
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: "success" | "warning" | "danger" }) {
   const c = tone === "success" ? "text-success" : tone === "danger" ? "text-destructive" : tone === "warning" ? "text-warning-foreground" : "";
   return (
-    <div className="bg-card border rounded-2xl p-5 shadow-card">
+    <div className="bg-card rounded-3xl shadow-card p-5">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className={`font-display font-bold text-2xl mt-2 ${c}`}>{value}</div>
     </div>

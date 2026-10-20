@@ -89,11 +89,11 @@ function ConsultantSettingsPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold">Configurações</h1>
+        <h1 className="text-2xl sm:text-3xl font-display font-bold">Configurações</h1>
         <p className="text-muted-foreground text-sm">Dados da sua consultoria, código de convite e acesso.</p>
       </div>
 
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="font-display font-semibold flex items-center gap-2"><BadgeCheck className="size-4 text-primary" /> Código de convite</h3>
           <Button variant="outline" size="sm" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>Gerar novo código</Button>
@@ -117,7 +117,7 @@ function ConsultantSettingsPage() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-4">
         <h3 className="font-display font-semibold">Dados da consultoria</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <FormField label="Nome da consultoria" required value={form.consultancy_name ?? ""} onChange={(v) => setForm({ ...form, consultancy_name: v })} />
@@ -139,7 +139,7 @@ function ConsultantSettingsPage() {
 
       <AtaBrandCard consultant={data as any} />
 
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-3">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-3">
         <h3 className="font-display font-semibold">Acesso da conta</h3>
         <div className="grid md:grid-cols-2 gap-3 text-sm">
           <div><span className="text-muted-foreground">E-mail de login:</span> <strong>{user?.email}</strong></div>
@@ -167,7 +167,7 @@ function ConfiguracoesPage() {
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Configurações da empresa</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Configurações da empresa</h1>
           <p className="text-muted-foreground text-sm">Gerencie dados cadastrais, filiais e estruturas auxiliares.</p>
         </div>
         <CompanySwitcher />
@@ -264,7 +264,7 @@ function ConsultantLinkSection({ companyId }: { companyId: string }) {
   if (link && link.status === "approved") {
     const c: any = link.consultants;
     return (
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h3 className="font-display font-semibold">Consultor vinculado</h3>
@@ -285,7 +285,7 @@ function ConsultantLinkSection({ companyId }: { companyId: string }) {
   if (link && link.status === "pending") {
     const c: any = link.consultants;
     return (
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-3">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-medium px-2 py-1 rounded-full bg-warning/10 text-warning-foreground border border-warning/30">Aguardando aprovação</span>
         </div>
@@ -297,7 +297,7 @@ function ConsultantLinkSection({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-4">
         <div>
           <h3 className="font-display font-semibold">Vincular consultor</h3>
           <p className="text-sm text-muted-foreground">Sua empresa ainda não está vinculada a um consultor. Use o código de convite ou busque pelo nome.</p>
@@ -389,7 +389,7 @@ function CompanyForm({ companyId }: { companyId: string }) {
   };
 
   return (
-    <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+    <div className="bg-card rounded-3xl shadow-card p-6 space-y-4">
       <div className="grid md:grid-cols-2 gap-4">
         <FormField label="Razão social" value={form.nome ?? ""} onChange={(v) => set("nome", v)} required />
         <FormField label="Nome fantasia" value={form.nome_fantasia ?? ""} onChange={(v) => set("nome_fantasia", v)} />
@@ -491,7 +491,7 @@ function BranchesSection({ companyId }: { companyId: string }) {
       {isLoading ? (
         <div className="text-muted-foreground text-sm">Carregando filiais…</div>
       ) : (
-        <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
+        <div className="bg-card rounded-3xl shadow-card overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -765,7 +765,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
       <RecoveryToolsCard />
 
       {/* Categorias */}
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-4">
         <div>
           <h3 className="font-display font-semibold">Categorias do fluxo de caixa</h3>
           <p className="text-sm text-muted-foreground mt-1">Adicione novas categorias e configure como cada uma alimenta a DRE.</p>
@@ -792,7 +792,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2">
-          <label className="flex items-start gap-2 rounded-xl border p-3 cursor-pointer hover:bg-muted/30">
+          <label className="flex items-start gap-2 rounded-2xl bg-muted/40 p-3 cursor-pointer hover:bg-muted/30">
             <input
               type="checkbox"
               className="mt-0.5"
@@ -806,7 +806,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
               </span>
             </span>
           </label>
-          <label className="flex items-start gap-2 rounded-xl border p-3 cursor-pointer hover:bg-muted/30">
+          <label className="flex items-start gap-2 rounded-2xl bg-muted/40 p-3 cursor-pointer hover:bg-muted/30">
             <input
               type="checkbox"
               className="mt-0.5"
@@ -830,7 +830,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b">
+              <tr className="text-left text-xs text-muted-foreground border-b border-border/50">
                 <th className="py-2 px-3 font-medium">Categoria</th>
                 <th className="py-2 px-3 font-medium">Tipo</th>
                 <th className="py-2 px-3 font-medium text-center">Variável (CMV)</th>
@@ -844,7 +844,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
             </thead>
             <tbody>
               {categories?.map((c) => (
-                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
+                <tr key={c.id} className="border-b border-border/50 last:border-0 hover:bg-muted/40">
                   <td className="py-3 px-3 font-medium">{c.nome}</td>
                   <td className="py-3 px-3">
                     <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${c.tipo === "entrada" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
@@ -893,7 +893,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
       </div>
 
       {/* Centros de custo */}
-      <div className="bg-card border rounded-2xl p-6 shadow-card space-y-4">
+      <div className="bg-card rounded-3xl shadow-card p-6 space-y-4">
         <div>
           <h3 className="font-display font-semibold">Centros de custo</h3>
           <p className="text-sm text-muted-foreground mt-1">Adicione centros de custo para atrelar aos lançamentos do fluxo de caixa.</p>
@@ -921,7 +921,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-muted-foreground border-b">
+              <tr className="text-left text-xs text-muted-foreground border-b border-border/50">
                 <th className="py-2 px-3 font-medium">Centro de custo</th>
                 <th className="py-2 px-3 font-medium">Classificação KPI</th>
                 <th className="py-2 px-3 font-medium text-center w-10"></th>
@@ -929,7 +929,7 @@ function ExtrasSection({ companyId }: { companyId: string }) {
             </thead>
             <tbody>
               {costCenters?.map((c) => (
-                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
+                <tr key={c.id} className="border-b border-border/50 last:border-0 hover:bg-muted/40">
                   <td className="py-3 px-3 font-medium">{c.nome}</td>
                   <td className="py-3 px-3 text-muted-foreground">{c.kpi_classification ?? "—"}</td>
                   <td className="py-3 px-3 text-center">
