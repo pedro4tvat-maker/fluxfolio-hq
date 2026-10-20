@@ -15,8 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Package, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine, Scale } from "lucide-react";
+import { AlertTriangle, Package, PackageX, TrendingDown, TrendingUp, Plus, Pencil, Trash2, Download, ArrowDownToLine, ArrowUpFromLine, Scale, Search, Boxes, History } from "lucide-react";
 import { toast } from "sonner";
 import { CurrencyInput } from "@/components/ui/currency-input";
 
@@ -70,6 +69,7 @@ function EstoquePage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "low" | "out">("all");
   const [filterLocation, setFilterLocation] = useState<string>("all");
+  const [aba, setAba] = useState<"produtos" | "movimentacoes">("produtos");
 
   const [productOpen, setProductOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -404,175 +404,207 @@ function EstoquePage() {
     return <div className="text-muted-foreground p-10 text-center">Selecione uma empresa para gerenciar o estoque.</div>;
   }
 
+  const lucroPotencial = kpis.venda - kpis.valor;
+  const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const gruposMov: { data: string; itens: Movement[] }[] = [];
+  for (const m of movements ?? []) {
+    const g = gruposMov[gruposMov.length - 1];
+    if (g && g.data === m.data) g.itens.push(m);
+    else gruposMov.push({ data: m.data, itens: [m] });
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-6 max-w-6xl">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold">Controle de Estoque</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Controle de Estoque</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Cadastre produtos, registre entradas e saídas e acompanhe alertas de estoque mínimo.
+            Cadastre produtos, registre entradas e saídas e acompanhe o estoque mínimo.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportCsv}><Download className="size-4 mr-1" /> Exportar CSV</Button>
-          <Button variant="outline" onClick={() => openNewMovement()}>
-            <ArrowDownToLine className="size-4 mr-1" /> Movimentação
+          <Button variant="ghost" className="rounded-full h-11 text-muted-foreground" onClick={exportCsv}><Download className="size-4" /> Exportar</Button>
+          <Button variant="outline" className="rounded-full h-11 px-5" onClick={() => openNewMovement()}>
+            <ArrowDownToLine className="size-4" /> Movimentação
           </Button>
-          <Button onClick={openNewProduct}><Plus className="size-4 mr-1" /> Novo produto</Button>
+          <Button className="rounded-full h-11 px-5 shadow-sm" onClick={openNewProduct}><Plus className="size-4" /> Novo produto</Button>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={<Package className="size-4" />} label="Produtos cadastrados" value={String(kpis.total)} />
-        <KpiCard
-          icon={<AlertTriangle className="size-4" />}
-          label="Estoque baixo"
-          value={String(kpis.lowCount)}
-          tone={kpis.lowCount > 0 ? "warn" : "default"}
-        />
-        <KpiCard
-          icon={<AlertTriangle className="size-4" />}
-          label="Sem estoque"
-          value={String(kpis.outCount)}
-          tone={kpis.outCount > 0 ? "danger" : "default"}
-        />
-        <KpiCard icon={<TrendingUp className="size-4" />} label="Valor em estoque (custo)" value={formatMoney(kpis.valor)} />
-      </div>
-
-      <div className="bg-card border rounded-2xl p-4 space-y-3">
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[220px] space-y-1">
-            <Label>Buscar</Label>
-            <Input placeholder="Nome, categoria ou fornecedor" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Status</Label>
-            <Select value={filterStatus} onValueChange={(v: "all" | "low" | "out") => setFilterStatus(v)}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="low">Estoque baixo</SelectItem>
-                <SelectItem value="out">Sem estoque</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Centro de estoque</Label>
-            <Select value={filterLocation} onValueChange={setFilterLocation}>
-              <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos (estoque geral)</SelectItem>
-                {(locations ?? []).map((l) => (
-                  <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Resumo do estoque */}
+      <div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-5 sm:px-7 sm:py-6 grid gap-5 lg:grid-cols-[1.1fr_1.6fr] lg:items-center">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Valor em estoque (custo)</div>
+          <div className="font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums">{formatMoney(kpis.valor)}</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Vale {formatMoney(kpis.venda)} a preço de venda · lucro potencial{" "}
+            <b className={lucroPotencial >= 0 ? "text-success" : "text-destructive"}>{formatMoney(lucroPotencial)}</b>
           </div>
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-muted-foreground border-b">
-              <tr>
-                <th className="py-2 pr-3">Produto</th>
-                <th className="py-2 pr-3">Categoria</th>
-                <th className="py-2 pr-3 text-right">Qtd.</th>
-                <th className="py-2 pr-3 text-right">Mín.</th>
-                <th className="py-2 pr-3 text-right">Custo</th>
-                <th className="py-2 pr-3 text-right">Venda</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr><td colSpan={8} className="py-6 text-muted-foreground">Carregando...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="py-6 text-muted-foreground">Nenhum produto encontrado.</td></tr>
-              ) : (
-                filtered.map((p) => {
-                  const qtd = getQty(p);
-                  const min = Number(p.estoque_minimo);
-                  const status: "ok" | "low" | "out" = qtd <= 0 ? "out" : qtd <= min ? "low" : "ok";
-                  return (
-                    <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="py-2 pr-3">
-                        <div className="font-medium">{p.nome}</div>
-                        {p.fornecedor && <div className="text-xs text-muted-foreground">{p.fornecedor}</div>}
-                      </td>
-                      <td className="py-2 pr-3 text-muted-foreground">{p.categoria ?? "—"}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{qtd}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">{min}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{formatMoney(Number(p.custo_unitario))}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{formatMoney(Number(p.preco_venda))}</td>
-                      <td className="py-2 pr-3">
-                        {status === "out" ? (
-                          <Badge variant="destructive">Sem estoque</Badge>
-                        ) : status === "low" ? (
-                          <Badge className="bg-warning text-warning-foreground hover:bg-warning/90">Baixo</Badge>
-                        ) : (
-                          <Badge variant="secondary">OK</Badge>
-                        )}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <div className="flex justify-end gap-1">
-                          <Button size="icon" variant="ghost" title="Entrada" onClick={() => { setMoveForm({ ...emptyMovement, product_id: p.id, tipo: "entrada" }); setMoveOpen(true); }}>
-                            <ArrowDownToLine className="size-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" title="Saída" onClick={() => { setMoveForm({ ...emptyMovement, product_id: p.id, tipo: "saida" }); setMoveOpen(true); }}>
-                            <ArrowUpFromLine className="size-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" title="Ajustar quantidade" onClick={() => openAdjustQuantity(p)}>
-                            <Scale className="size-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" title="Editar" onClick={() => openEditProduct(p)}>
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" title="Excluir" onClick={() => handleDeleteProduct(p)}>
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-3 gap-2.5">
+          {([
+            ["all", "Produtos", kpis.total, Boxes, "text-foreground"],
+            ["low", "Estoque baixo", kpis.lowCount, AlertTriangle, kpis.lowCount > 0 ? "text-warning-foreground" : "text-muted-foreground"],
+            ["out", "Sem estoque", kpis.outCount, PackageX, kpis.outCount > 0 ? "text-destructive" : "text-muted-foreground"],
+          ] as const).map(([v, rotulo, n, Icone, cor]) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => { setFilterStatus(v); setAba("produtos"); }}
+              className={`text-left rounded-2xl px-3.5 py-3 transition-colors ${filterStatus === v ? "bg-background shadow-sm ring-1 ring-primary/30" : "bg-background/60 hover:bg-background"}`}
+              title={v === "all" ? "Mostrar todos os produtos" : `Mostrar só: ${rotulo.toLowerCase()}`}
+            >
+              <div className={`flex items-center gap-1.5 text-[11px] font-medium ${cor}`}><Icone className="size-3.5" /> {rotulo}</div>
+              <div className="font-display font-bold text-2xl tabular-nums mt-0.5">{n}</div>
+            </button>
+          ))}
         </div>
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-display font-semibold">Movimentações recentes</h2>
-        <div className="bg-card border rounded-2xl p-4">
-          {!movements || movements.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhuma movimentação registrada.</div>
+      {/* Busca e filtros */}
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="relative flex-1">
+          <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, categoria ou fornecedor..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 h-11 rounded-full bg-card border shadow-sm"
+          />
+        </div>
+        <Select value={filterLocation} onValueChange={setFilterLocation}>
+          <SelectTrigger className="h-11 w-full lg:w-[230px] rounded-full bg-card shadow-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os centros de estoque</SelectItem>
+            {(locations ?? []).map((l) => (
+              <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="O que mostrar">
+          {([["produtos", "Produtos", Package], ["movimentacoes", "Movimentações", History]] as const).map(([v, r, Icone]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={aba === v}
+              onClick={() => setAba(v)}
+              className={`px-3.5 h-9 rounded-full text-sm font-medium inline-flex items-center gap-1.5 transition-colors ${aba === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Icone className="size-4" /> {r}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {aba === "produtos" ? (
+        <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-10">Carregando...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">Nenhum produto encontrado.</p>
           ) : (
-            <div className="space-y-2">
-              {movements.map((m) => {
-                const p = productMap.get(m.product_id);
-                const isIn = m.tipo === "entrada";
+            <ul>
+              {filtered.map((p) => {
+                const qtd = getQty(p);
+                const min = Number(p.estoque_minimo);
+                const status: "ok" | "low" | "out" = qtd <= 0 ? "out" : qtd <= min ? "low" : "ok";
+                const referencia = Math.max(min * 2, qtd, 1);
+                const cor = status === "out" ? "bg-destructive" : status === "low" ? "bg-warning" : "bg-success";
+                const custo = Number(p.custo_unitario);
+                const venda = Number(p.preco_venda);
+                const margem = venda > 0 ? ((venda - custo) / venda) * 100 : null;
                 return (
-                  <div key={m.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`rounded-full p-2 ${isIn ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                        {isIn ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
+                  <li key={p.id} className="group flex items-center gap-3 sm:gap-4 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                    <span className={`size-10 shrink-0 rounded-full grid place-items-center ${status === "out" ? "bg-destructive/10 text-destructive" : status === "low" ? "bg-warning/15 text-warning-foreground" : "bg-primary/10 text-primary"}`}>
+                      {status === "out" ? <PackageX className="size-4" /> : status === "low" ? <AlertTriangle className="size-4" /> : <Package className="size-4" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium text-sm truncate">{p.nome}</span>
+                        {status !== "ok" && (
+                          <span className={`shrink-0 rounded-full px-2 py-px text-[10px] font-medium ${status === "out" ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-warning-foreground"}`}>
+                            {status === "out" ? "Sem estoque" : "Estoque baixo"}
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-medium">{p?.nome ?? "Produto removido"}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(m.data)} • {m.motivo ?? "—"}</p>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {[p.categoria, p.fornecedor].filter(Boolean).join(" · ") || "Sem categoria"}
+                        <span className="hidden sm:inline"> · custo {formatMoney(custo)} · venda {formatMoney(venda)}{margem !== null ? ` (${margem.toFixed(0)}% margem)` : ""}</span>
                       </div>
                     </div>
-                    <div className={`font-display font-semibold tabular-nums ${isIn ? "text-success" : "text-destructive"}`}>
-                      {isIn ? "+" : "-"}{Number(m.quantidade)}
+                    <div className="w-24 sm:w-32 shrink-0 text-right">
+                      <div className="font-display font-semibold tabular-nums">
+                        {qtd} <span className="text-xs font-normal text-muted-foreground">un.</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted mt-1 overflow-hidden" title={`Mínimo: ${min}`}>
+                        <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.min(Math.max(qtd, 0) / referencia, 1) * 100}%`, opacity: 0.75 }} />
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">mín. {min}</div>
                     </div>
-                  </div>
+                    <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <button type="button" title="Entrada" className="size-8 grid place-items-center rounded-full hover:bg-background text-success" onClick={() => { setMoveForm({ ...emptyMovement, product_id: p.id, tipo: "entrada" }); setMoveOpen(true); }}>
+                        <ArrowDownToLine className="size-3.5" />
+                      </button>
+                      <button type="button" title="Saída" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive" onClick={() => { setMoveForm({ ...emptyMovement, product_id: p.id, tipo: "saida" }); setMoveOpen(true); }}>
+                        <ArrowUpFromLine className="size-3.5" />
+                      </button>
+                      <button type="button" title="Ajustar quantidade" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => openAdjustQuantity(p)}>
+                        <Scale className="size-3.5" />
+                      </button>
+                      <button type="button" title="Editar" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => openEditProduct(p)}>
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button type="button" title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => handleDeleteProduct(p)}>
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+          {gruposMov.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">Nenhuma movimentação registrada.</p>
+          ) : (
+            gruposMov.map((g) => {
+              const [ano, mes, dia] = g.data.split("-");
+              return (
+                <div key={g.data} className="pt-2">
+                  <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    {dia} {MESES[Number(mes) - 1]} {ano !== String(new Date().getFullYear()) ? ano : ""}
+                  </div>
+                  <ul>
+                    {g.itens.map((m) => {
+                      const prod = productMap.get(m.product_id);
+                      const isIn = m.tipo === "entrada";
+                      return (
+                        <li key={m.id} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-muted/60 transition-colors">
+                          <span className={`size-9 shrink-0 rounded-full grid place-items-center ${isIn ? "bg-success/12 text-success" : "bg-destructive/10 text-destructive"}`}>
+                            {isIn ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-sm truncate">{prod?.nome ?? "Produto removido"}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {[isIn ? "Entrada" : "Saída", m.motivo, m.custo_unitario ? `custo ${formatMoney(Number(m.custo_unitario))}` : null].filter(Boolean).join(" · ")}
+                            </div>
+                          </div>
+                          <div className={`font-display font-semibold tabular-nums ${isIn ? "text-success" : "text-destructive"}`}>
+                            {isIn ? "+" : "−"}{Number(m.quantidade)}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })
+          )}
+        </section>
+      )}
 
       <Dialog open={productOpen} onOpenChange={setProductOpen}>
         <DialogContent className="max-w-2xl">
@@ -724,24 +756,6 @@ function EstoquePage() {
         </DialogContent>
       </Dialog>
 
-    </div>
-  );
-}
-
-function KpiCard({ icon, label, value, tone = "default" }: { icon: React.ReactNode; label: string; value: string; tone?: "default" | "warn" | "danger" }) {
-  const toneClass =
-    tone === "danger"
-      ? "border-destructive/30 bg-destructive/5"
-      : tone === "warn"
-      ? "border-warning/30 bg-warning/5"
-      : "";
-  return (
-    <div className={`bg-card border rounded-2xl p-4 ${toneClass}`}>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="mt-2 text-2xl font-display font-bold tabular-nums">{value}</div>
     </div>
   );
 }
