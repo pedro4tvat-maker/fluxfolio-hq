@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Boxes } from "lucide-react";
+import { Plus, Pencil, Trash2, Boxes, Users, Warehouse, ClipboardCheck, ArrowLeftRight, Download, Star, Phone, Mail, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/revendedores")({ component: RevendedoresPage });
@@ -20,6 +20,11 @@ const LOCATION_TYPES = [
   "principal", "deposito", "loja", "filial", "revendedor", "consignado", "producao", "transito", "outros",
 ] as const;
 type LocType = (typeof LOCATION_TYPES)[number];
+const LOC_ROTULO: Record<string, string> = {
+  principal: "Principal", deposito: "Depósito", loja: "Loja", filial: "Filial", revendedor: "Revendedor",
+  consignado: "Consignado", producao: "Produção", transito: "Em trânsito", outros: "Outros",
+};
+const iniciais = (nome: string) => nome.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
 
 type StockLocationRow = {
   id: string;
@@ -47,33 +52,33 @@ function RevendedoresPage() {
   if (!selected) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold">Revendedores e Centros de Estoque</h1>
+        <h1 className="text-2xl font-display font-bold">Revendedores e Centros de Estoque</h1>
         <p className="text-sm text-muted-foreground mt-2">Selecione uma empresa para continuar.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-6 max-w-6xl">
       <div>
-        <h1 className="text-2xl font-bold">Revendedores e Centros de Estoque</h1>
-        <p className="text-sm text-muted-foreground">
-          Gerencie locais de estoque, revendedores e acompanhe a prestação de contas.
+        <h1 className="text-2xl sm:text-3xl font-display font-bold">Revendedores e Centros de Estoque</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Cadastre revendedores, organize os locais de estoque e acompanhe a prestação de contas.
         </p>
       </div>
-      <Tabs defaultValue="locations">
-        <TabsList>
-          <TabsTrigger value="locations">Centros de Estoque</TabsTrigger>
-          <TabsTrigger value="resellers">Revendedores</TabsTrigger>
-          <TabsTrigger value="settlement">Prestação de Contas</TabsTrigger>
+      <Tabs defaultValue="resellers">
+        <TabsList className="h-auto rounded-full bg-muted p-1 flex-wrap justify-start">
+          <TabsTrigger value="resellers" className="rounded-full px-4 h-9 gap-1.5 data-[state=active]:shadow-sm"><Users className="size-4" /> Revendedores</TabsTrigger>
+          <TabsTrigger value="settlement" className="rounded-full px-4 h-9 gap-1.5 data-[state=active]:shadow-sm"><ClipboardCheck className="size-4" /> Prestação de contas</TabsTrigger>
+          <TabsTrigger value="locations" className="rounded-full px-4 h-9 gap-1.5 data-[state=active]:shadow-sm"><Warehouse className="size-4" /> Centros de estoque</TabsTrigger>
         </TabsList>
-        <TabsContent value="locations" className="mt-4">
+        <TabsContent value="locations" className="mt-5">
           <LocationsTab companyId={selected} />
         </TabsContent>
-        <TabsContent value="resellers" className="mt-4">
+        <TabsContent value="resellers" className="mt-5">
           <ResellersTab companyId={selected} />
         </TabsContent>
-        <TabsContent value="settlement" className="mt-4">
+        <TabsContent value="settlement" className="mt-5">
           <SettlementTab companyId={selected} />
         </TabsContent>
       </Tabs>
@@ -178,11 +183,13 @@ function LocationsTab({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">Locais onde seus produtos ficam guardados: loja, depósito, revendedor...</p>
+        <div className="flex gap-2">
         <TransferDialog companyId={companyId} locations={locations} />
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openCreate}><Plus className="size-4" /> Novo centro</Button>
+            <Button className="rounded-full h-10 px-5 shadow-sm" onClick={openCreate}><Plus className="size-4" /> Novo centro</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Editar centro" : "Novo centro de estoque"}</DialogTitle></DialogHeader>
@@ -192,7 +199,7 @@ function LocationsTab({ companyId }: { companyId: string }) {
                 <Label>Tipo</Label>
                 <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as LocType })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{LOCATION_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <SelectContent>{LOCATION_TYPES.map((t) => <SelectItem key={t} value={t}>{LOC_ROTULO[t] ?? t}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div><Label>Responsável</Label><Input value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} /></div>
@@ -204,29 +211,37 @@ function LocationsTab({ companyId }: { companyId: string }) {
             <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button onClick={save}>Salvar</Button></DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Responsável</TableHead><TableHead>Status</TableHead><TableHead className="w-44 text-right">Ações</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
-              locations.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nenhum centro cadastrado.</TableCell></TableRow> :
-              locations.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell className="font-medium">{l.nome} {l.is_default && <span className="text-xs text-muted-foreground">(padrão)</span>}</TableCell>
-                  <TableCell>{l.tipo}</TableCell>
-                  <TableCell>{l.responsavel ?? "-"}</TableCell>
-                  <TableCell>{l.ativa ? "Ativo" : "Inativo"}</TableCell>
-                  <TableCell className="text-right">
-                    <StockViewDialog companyId={companyId} location={l} />
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(l)}><Pencil className="size-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove(l)}><Trash2 className="size-4 text-destructive" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </div>
+      <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+        {isLoading ? <p className="text-sm text-muted-foreground text-center py-10">Carregando...</p> :
+          locations.length === 0 ? <p className="text-sm text-muted-foreground text-center py-10">Nenhum centro cadastrado.</p> : (
+          <ul>
+            {locations.map((l) => (
+              <li key={l.id} className="group flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                <span className={`size-10 shrink-0 rounded-full grid place-items-center ${l.ativa ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  <Warehouse className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-sm truncate">{l.nome}</span>
+                    {l.is_default && <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-px text-[10px] font-medium"><Star className="size-2.5" /> Padrão</span>}
+                    {!l.ativa && <span className="shrink-0 rounded-full bg-muted text-muted-foreground px-2 py-px text-[10px] font-medium">Inativo</span>}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {[LOC_ROTULO[l.tipo] ?? l.tipo, l.responsavel ? `responsável: ${l.responsavel}` : null].filter(Boolean).join(" · ")}
+                  </div>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <StockViewDialog companyId={companyId} location={l} />
+                  <button type="button" title="Editar" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => openEdit(l)}><Pencil className="size-3.5" /></button>
+                  <button type="button" title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive" onClick={() => remove(l)}><Trash2 className="size-3.5" /></button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
@@ -301,9 +316,12 @@ function ResellersTab({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {resellers.filter((r) => r.ativo).length} revendedor(es) ativo(s)
+        </p>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button onClick={openCreate}><Plus className="size-4" /> Novo revendedor</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="rounded-full h-10 px-5 shadow-sm" onClick={openCreate}><Plus className="size-4" /> Novo revendedor</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Editar revendedor" : "Novo revendedor"}</DialogTitle></DialogHeader>
             <div className="space-y-3">
@@ -333,27 +351,42 @@ function ResellersTab({ companyId }: { companyId: string }) {
           </DialogContent>
         </Dialog>
       </div>
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Centro vinculado</TableHead><TableHead>Comissão</TableHead><TableHead>Status</TableHead><TableHead className="w-28 text-right">Ações</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Carregando...</TableCell></TableRow> :
-              resellers.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nenhum revendedor cadastrado.</TableCell></TableRow> :
-              resellers.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.nome}</TableCell>
-                  <TableCell>{locations.find((l) => l.id === r.stock_location_id)?.nome ?? "-"}</TableCell>
-                  <TableCell>{Number(r.commission_pct)}%</TableCell>
-                  <TableCell>{r.ativo ? "Ativo" : "Inativo"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil className="size-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove(r)}><Trash2 className="size-4 text-destructive" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </div>
+      <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+        {isLoading ? <p className="text-sm text-muted-foreground text-center py-10">Carregando...</p> :
+          resellers.length === 0 ? <p className="text-sm text-muted-foreground text-center py-10">Nenhum revendedor cadastrado.</p> : (
+          <ul>
+            {resellers.map((r) => {
+              const centro = locations.find((l) => l.id === r.stock_location_id)?.nome;
+              return (
+                <li key={r.id} className="group flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                  <span className={`size-10 shrink-0 rounded-full grid place-items-center text-sm font-semibold ${r.ativo ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    {iniciais(r.nome) || <Users className="size-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-sm truncate">{r.nome}</span>
+                      {!r.ativo && <span className="shrink-0 rounded-full bg-muted text-muted-foreground px-2 py-px text-[10px] font-medium">Inativo</span>}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate flex items-center gap-3">
+                      {centro ? <span className="inline-flex items-center gap-1"><Warehouse className="size-3" /> {centro}</span> : <span className="text-warning-foreground">Sem centro vinculado</span>}
+                      {r.telefone && <span className="hidden sm:inline-flex items-center gap-1"><Phone className="size-3" /> {r.telefone}</span>}
+                      {r.email && <span className="hidden md:inline-flex items-center gap-1 truncate"><Mail className="size-3" /> {r.email}</span>}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-display font-semibold tabular-nums">{Number(r.commission_pct)}%</div>
+                    <div className="text-[10px] text-muted-foreground">comissão</div>
+                  </div>
+                  <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <button type="button" title="Editar" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => openEdit(r)}><Pencil className="size-3.5" /></button>
+                    <button type="button" title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive" onClick={() => remove(r)}><Trash2 className="size-3.5" /></button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
@@ -621,7 +654,8 @@ function SettlementTab({ companyId }: { companyId: string }) {
 
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <div className="rounded-3xl bg-gradient-to-b from-muted/50 to-transparent p-5 sm:p-6 space-y-4">
       <div className="grid md:grid-cols-4 gap-3">
         <div>
           <Label>Revendedor</Label>
@@ -648,20 +682,40 @@ function SettlementTab({ companyId }: { companyId: string }) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => applyPreset("mes")}>Mês atual</Button>
-        <Button variant="outline" size="sm" onClick={() => applyPreset("90d")}>Últimos 90 dias</Button>
-        <Button variant="outline" size="sm" onClick={() => applyPreset("ano")}>Ano</Button>
-        <Button variant="outline" size="sm" onClick={() => applyPreset("tudo")}>Tudo</Button>
+        {([["mes", "Mês atual"], ["90d", "Últimos 90 dias"], ["ano", "Ano"], ["tudo", "Tudo"]] as const).map(([v, r]) => {
+          const ativo = periodRange(v).from === dateFrom && periodRange(v).to === dateTo;
+          return (
+            <button key={v} type="button" onClick={() => applyPreset(v)}
+              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${ativo ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}>
+              {r}
+            </button>
+          );
+        })}
+      </div>
       </div>
 
       {!reseller ? (
-        <p className="text-sm text-muted-foreground">Escolha um revendedor para ver a prestação de contas.</p>
+        <div className="rounded-3xl bg-card shadow-card p-10 text-center">
+          <ClipboardCheck className="size-10 mx-auto text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground mt-3">Escolha um revendedor acima para ver a prestação de contas.</p>
+        </div>
       ) : !locationId ? (
-        <p className="text-sm text-warning">Este revendedor não tem centro de estoque vinculado. Edite o cadastro na aba "Revendedores".</p>
+        <div className="rounded-3xl bg-warning/10 p-6 text-sm text-warning-foreground flex items-center gap-3">
+          <AlertTriangle className="size-5 shrink-0" />
+          Este revendedor não tem centro de estoque vinculado. Edite o cadastro na aba "Revendedores".
+        </div>
       ) : (
         <>
-          <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={() => exportSettlementPDF({
+          <div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-5 sm:px-7 sm:py-6 space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Líquido para a empresa</div>
+                <div className="font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums">{formatMoney(liquido)}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Vendido {formatMoney(totalVendidoValor)} · comissão de {reseller.nome}: <b className="text-foreground">{formatMoney(totalComissao)}</b>
+                </div>
+              </div>
+            <Button variant="outline" className="rounded-full bg-background" onClick={() => exportSettlementPDF({
               resellerNome: reseller.nome, dateFrom, dateTo,
               dateBasis: dateBasis === "venda" ? "Data da venda" : "Vencimento",
               totals: { totalEnviados, totalVendidos, totalDevolvidos, totalEmPosse, totalVendidoValor, totalComissao, liquido },
@@ -671,26 +725,33 @@ function SettlementTab({ companyId }: { companyId: string }) {
                 atribuidasTotal: audit?.atribuidasTotal ?? 0,
                 orphans, semMovimento,
               },
-            })}>Exportar PDF</Button>
+            })}><Download className="size-4" /> Exportar PDF</Button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <Card label="Enviados" value={totalEnviados.toString()} />
+              <Card label="Vendidos" value={totalVendidos.toString()} />
+              <Card label="Devolvidos" value={totalDevolvidos.toString()} />
+              <Card label="Em posse" value={totalEmPosse.toString()} highlight />
+            </div>
           </div>
 
           {/* Conferência de integridade */}
-          <div className="border rounded-lg p-4 space-y-3">
+          <div className={`rounded-3xl p-5 space-y-3 ${orphans.length > 0 ? "bg-destructive/5" : "bg-card shadow-card"}`}>
             <div className="flex items-baseline justify-between flex-wrap gap-2">
-              <h3 className="text-sm font-semibold">Conferência de integridade (histórico completo)</h3>
+              <h3 className="font-display font-semibold">Conferência das vendas</h3>
               <span className="text-xs text-muted-foreground">
                 {audit?.atribuidasQtd ?? 0} vendas atribuídas · {formatMoney(audit?.atribuidasTotal ?? 0)}
               </span>
             </div>
 
             {orphans.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Todas as vendas com saída do estoque deste revendedor estão atribuídas a ele.</p>
+              <p className="text-sm text-success">Tudo certo: todas as vendas que saíram do estoque deste revendedor estão atribuídas a ele.</p>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-destructive font-medium">
                   {orphans.length} venda(s) saíram do estoque deste revendedor sem estar atribuídas a ele — total oculto de {formatMoney(orphansTotal)}.
                 </p>
-                <div className="border rounded-lg">
+                <div className="bg-background rounded-2xl overflow-hidden">
                   <Table>
                     <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead /></TableRow></TableHeader>
                     <TableBody>
@@ -718,7 +779,7 @@ function SettlementTab({ companyId }: { companyId: string }) {
                 <summary className="cursor-pointer text-warning font-medium">
                   {semMovimento.length} venda(s) atribuídas sem baixa de estoque no centro deste revendedor (conferir)
                 </summary>
-                <div className="border rounded-lg mt-2">
+                <div className="bg-background rounded-2xl overflow-hidden mt-2">
                   <Table>
                     <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
                     <TableBody>
@@ -738,18 +799,9 @@ function SettlementTab({ companyId }: { companyId: string }) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card label="Enviados" value={totalEnviados.toString()} />
-            <Card label="Vendidos (vendas do período)" value={totalVendidos.toString()} />
-            <Card label="Devolvidos" value={totalDevolvidos.toString()} />
-            <Card label="Em posse" value={totalEmPosse.toString()} highlight />
-            <Card label="Valor vendido (período)" value={formatMoney(totalVendidoValor)} />
-            <Card label="Comissão" value={formatMoney(totalComissao)} />
-            <Card label="Líquido para empresa" value={formatMoney(liquido)} highlight />
-          </div>
 
           {(defasagem !== 0 || vendasSemMovimentoPeriodo > 0) && (
-            <div className="border rounded-lg p-3 text-xs text-warning space-y-1">
+            <div className="rounded-2xl bg-warning/10 px-4 py-3 text-xs text-warning-foreground space-y-1">
               {defasagem !== 0 && (
                 <p>
                   Defasagem de datas: {Math.abs(defasagem)} unidade(s) das vendas do período tiveram a baixa de estoque registrada
@@ -764,12 +816,12 @@ function SettlementTab({ companyId }: { companyId: string }) {
           )}
 
           <div>
-            <h3 className="text-sm font-semibold mb-2">Produtos no centro do revendedor</h3>
+            <h3 className="font-display font-semibold mb-1">Produtos no centro do revendedor</h3>
             <p className="text-xs text-muted-foreground mb-2">
               "Vendidos" e "Valor vendido" seguem as vendas do período (vínculo venda → baixa de estoque). "Enviados", "Devolvidos",
               "Transf./Saídas" e "Em posse" seguem a movimentação física ocorrida no período.
             </p>
-            <div className="border rounded-lg">
+            <div className="bg-card rounded-3xl shadow-card overflow-hidden">
               <Table>
                 <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Enviados</TableHead><TableHead className="text-right">Vendidos</TableHead><TableHead className="text-right">Devolvidos</TableHead><TableHead className="text-right">Transf./Saídas</TableHead><TableHead className="text-right">Em posse</TableHead><TableHead className="text-right">Valor vendido</TableHead></TableRow></TableHeader>
                 <TableBody>
@@ -792,8 +844,8 @@ function SettlementTab({ companyId }: { companyId: string }) {
 
 
           <div>
-            <h3 className="text-sm font-semibold mb-2">Vendas atribuídas ao revendedor</h3>
-            <div className="border rounded-lg">
+            <h3 className="font-display font-semibold mb-2">Vendas atribuídas ao revendedor</h3>
+            <div className="bg-card rounded-3xl shadow-card overflow-hidden">
               <Table>
                 <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Comissão</TableHead></TableRow></TableHeader>
                 <TableBody>
@@ -820,9 +872,9 @@ function SettlementTab({ companyId }: { companyId: string }) {
 
 function Card({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={`border rounded-lg p-3 ${highlight ? "bg-accent/30" : ""}`}>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-lg font-bold">{value}</div>
+    <div className={`rounded-2xl px-3.5 py-3 ${highlight ? "bg-background shadow-sm ring-1 ring-primary/25" : "bg-background/70"}`}>
+      <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
+      <div className="font-display font-bold text-xl tabular-nums mt-0.5">{value}</div>
     </div>
   );
 }
@@ -887,14 +939,14 @@ function StockViewDialog({ companyId, location }: { companyId: string; location:
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="ghost" size="icon" title="Ver estoque"><Boxes className="size-4" /></Button></DialogTrigger>
+      <DialogTrigger asChild><button type="button" title="Ver estoque deste centro" className="size-8 grid place-items-center rounded-full hover:bg-background"><Boxes className="size-3.5" /></button></DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader><DialogTitle>Estoque · {location.nome}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-2 gap-3 mb-2">
           <Card label="Itens em estoque" value={String(totalItens)} />
           <Card label="Valor (a custo)" value={formatMoney(valorEstoque)} />
         </div>
-        <div className="border rounded-lg max-h-[60vh] overflow-auto">
+        <div className="bg-muted/30 rounded-2xl max-h-[60vh] overflow-auto">
           <Table>
             <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-right">Saldo</TableHead><TableHead className="text-right">Custo unit.</TableHead><TableHead className="text-right">Preço venda</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
             <TableBody>
@@ -996,7 +1048,7 @@ function TransferDialog({ companyId, locations }: { companyId: string; locations
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="outline">Transferir estoque</Button></DialogTrigger>
+      <DialogTrigger asChild><Button variant="outline" className="rounded-full h-10"><ArrowLeftRight className="size-4" /> Transferir</Button></DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Transferência entre centros de estoque</DialogTitle></DialogHeader>
         <div className="space-y-3">
