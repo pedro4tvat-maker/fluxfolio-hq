@@ -1,22 +1,44 @@
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMoney } from "@/lib/format";
 
 type Lanc = { data: string; tipo: "entrada" | "saida"; valor: number; status: string; categoria_id: string | null };
 
-const VERDE = "#4E7A35";
-const VERMELHO = "#B4513C";
-const TONS = ["#4E6B2E", "#6B8E3A", "#8AA663", "#A9BF7E", "#C3D39D", "#B5733A", "#C99260", "#DDB389"];
+const VERDE = "#5B8C3E";
+const VERMELHO = "#C0573F";
+const TONS = ["#4E6B2E", "#7A9A45", "#A7BE74", "#B5733A", "#D39A62", "#8C7B5A", "#C9B98F", "#9AA88A"];
 
 const moedaCurta = (v: number) =>
-  Math.abs(v) >= 1000 ? `R$ ${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : `R$ ${Math.round(v)}`;
+  Math.abs(v) >= 1000 ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : `${Math.round(v)}`;
 
-// Visão em gráfico dos lançamentos já filtrados: entradas x saídas no tempo e
-// para onde foi o dinheiro (saídas por categoria). Considera só o que foi realizado.
-export function FluxoGraficos({ lancamentos, categorias }: { lancamentos: Lanc[]; categorias: { id: string; nome: string }[] }) {
-  const realizados = lancamentos.filter((t) => t.status === "realizado");
+function DicaGrafico({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl bg-popover/95 backdrop-blur border shadow-lg px-3 py-2 text-xs">
+      {label && <div className="font-semibold mb-1">{label}</div>}
+      {payload.map((p) => (
+        <div key={p.name} className="flex items-center gap-2">
+          <span className="size-2 rounded-full" style={{ background: p.color }} />
+          <span className="text-muted-foreground">{p.name}</span>
+          <span className="ml-auto font-medium tabular-nums">{formatMoney(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const porPeriodo = useMemo(() => {
+// Gráficos dos lançamentos já filtrados (só realizados): evolução de entradas x saídas
+// em curvas suaves e a divisão das saídas por categoria em rosca.
+export function FluxoGraficos({
+  lancamentos, categorias, compacto = false,
+}: {
+  lancamentos: Lanc[];
+  categorias: { id: string; nome: string }[];
+  compacto?: boolean;
+}) {
+  const realizados = useMemo(() => lancamentos.filter((t) => t.status === "realizado"), [lancamentos]);
+
+  const serie = useMemo(() => {
     if (realizados.length === 0) return { dados: [], porMes: false };
     const datas = realizados.map((t) => t.data).sort();
     const dias = (new Date(datas[datas.length - 1]).getTime() - new Date(datas[0]).getTime()) / 86_400_000;
@@ -34,7 +56,7 @@ export function FluxoGraficos({ lancamentos, categorias }: { lancamentos: Lanc[]
     return { dados: [...mapa.values()].sort((a, b) => a.chave.localeCompare(b.chave)), porMes };
   }, [realizados]);
 
-  const porCategoria = useMemo(() => {
+  const cats = useMemo(() => {
     const nomes = new Map(categorias.map((c) => [c.id, c.nome]));
     const mapa = new Map<string, number>();
     for (const t of realizados) {
@@ -44,60 +66,89 @@ export function FluxoGraficos({ lancamentos, categorias }: { lancamentos: Lanc[]
     }
     const total = [...mapa.values()].reduce((s, v) => s + v, 0);
     const lista = [...mapa.entries()].map(([nome, valor]) => ({ nome, valor })).sort((a, b) => b.valor - a.valor);
-    const top = lista.slice(0, 7);
-    const resto = lista.slice(7).reduce((s, x) => s + x.valor, 0);
+    const top = lista.slice(0, 5);
+    const resto = lista.slice(5).reduce((s, x) => s + x.valor, 0);
     if (resto > 0) top.push({ nome: "Outras", valor: resto });
-    return { dados: top.map((x) => ({ ...x, pct: total > 0 ? (x.valor / total) * 100 : 0 })), total };
+    return { dados: top.map((x, i) => ({ ...x, cor: TONS[i % TONS.length], pct: total > 0 ? (x.valor / total) * 100 : 0 })), total };
   }, [realizados, categorias]);
 
   if (realizados.length === 0) {
     return (
-      <div className="bg-card border rounded-2xl shadow-card p-10 text-center text-muted-foreground">
+      <div className="rounded-3xl bg-muted/40 p-10 text-center text-sm text-muted-foreground">
         Nenhum lançamento realizado neste período para mostrar em gráfico.
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="bg-card border rounded-2xl shadow-card p-5">
-        <h3 className="font-display font-semibold">Entradas x saídas {porPeriodo.porMes ? "por mês" : "por dia"}</h3>
-        <p className="text-xs text-muted-foreground mb-3">Somente lançamentos realizados.</p>
-        <div className="h-72">
+    <div className={`grid gap-5 ${compacto ? "" : "lg:grid-cols-[1.4fr_1fr]"}`}>
+      {/* Evolução */}
+      <div className="rounded-3xl bg-gradient-to-b from-muted/50 to-transparent p-5">
+        <div className="flex items-baseline justify-between gap-3 mb-2">
+          <h3 className="font-display font-semibold">Como o dinheiro andou</h3>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: VERDE }} />Entradas</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: VERMELHO }} />Saídas</span>
+          </div>
+        </div>
+        <div className={compacto ? "h-48" : "h-72"}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={porPeriodo.dados} margin={{ left: 0, right: 8, top: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-              <XAxis dataKey="rotulo" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tickFormatter={moedaCurta} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={70} />
-              <Tooltip formatter={(v: number) => formatMoney(v)} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="Entradas" fill={VERDE} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="Saídas" fill={VERMELHO} radius={[3, 3, 0, 0]} />
-            </BarChart>
+            <AreaChart data={serie.dados} margin={{ left: -8, right: 6, top: 8, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gEntradas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={VERDE} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={VERDE} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gSaidas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={VERMELHO} stopOpacity={0.28} />
+                  <stop offset="100%" stopColor={VERMELHO} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} strokeDasharray="2 6" stroke="var(--border)" />
+              <XAxis dataKey="rotulo" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={18} />
+              <YAxis tickFormatter={moedaCurta} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={52} />
+              <Tooltip content={<DicaGrafico />} cursor={{ stroke: "var(--border)", strokeWidth: 1 }} />
+              <Area type="monotone" dataKey="Entradas" stroke={VERDE} strokeWidth={2.5} fill="url(#gEntradas)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="Saídas" stroke={VERMELHO} strokeWidth={2.5} fill="url(#gSaidas)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-card border rounded-2xl shadow-card p-5">
-        <h3 className="font-display font-semibold">Para onde foi o dinheiro</h3>
-        <p className="text-xs text-muted-foreground mb-3">Saídas por categoria · total {formatMoney(porCategoria.total)}</p>
-        {porCategoria.dados.length === 0 ? (
+      {/* Para onde foi */}
+      <div className="rounded-3xl bg-gradient-to-b from-muted/50 to-transparent p-5">
+        <h3 className="font-display font-semibold mb-2">Para onde foi o dinheiro</h3>
+        {cats.dados.length === 0 ? (
           <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma saída no período.</p>
         ) : (
-          <div className="space-y-2.5">
-            {porCategoria.dados.map((c, i) => (
-              <div key={c.nome}>
-                <div className="flex justify-between text-sm mb-1 gap-3">
-                  <span className="truncate">{c.nome}</span>
-                  <span className="shrink-0 tabular-nums text-muted-foreground">
-                    {formatMoney(c.valor)} · {c.pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
-                  </span>
-                </div>
-                <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${Math.max(c.pct, 1.5)}%`, background: TONS[i % TONS.length] }} />
+          <div className={`flex ${compacto ? "flex-row" : "flex-col sm:flex-row"} items-center gap-5`}>
+            <div className="relative shrink-0" style={{ width: compacto ? 132 : 170, height: compacto ? 132 : 170 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={cats.dados} dataKey="valor" nameKey="nome" innerRadius="68%" outerRadius="100%" paddingAngle={3} cornerRadius={8} stroke="none">
+                    {cats.dados.map((c) => <Cell key={c.nome} fill={c.cor} />)}
+                  </Pie>
+                  <Tooltip content={<DicaGrafico />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 grid place-items-center text-center pointer-events-none">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Saídas</div>
+                  <div className="font-display font-bold text-sm tabular-nums">{formatMoney(cats.total)}</div>
                 </div>
               </div>
-            ))}
+            </div>
+            <ul className="flex-1 w-full space-y-2 text-sm">
+              {cats.dados.map((c) => (
+                <li key={c.nome} className="flex items-center gap-2.5">
+                  <span className="size-2.5 rounded-full shrink-0" style={{ background: c.cor }} />
+                  <span className="truncate">{c.nome}</span>
+                  <span className="ml-auto shrink-0 tabular-nums text-muted-foreground text-xs">
+                    {c.pct.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

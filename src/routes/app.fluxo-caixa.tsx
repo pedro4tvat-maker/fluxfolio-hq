@@ -13,10 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDownCircle, ArrowUpCircle, BarChart3, Download, Filter, List, Search, Trash2, Pencil, Lock, Building2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, BarChart3, Columns2, Download, Filter, List, Maximize2, Search, Trash2, Pencil, Lock, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { sugerirCategoria, type Historico, type Sugestao } from "@/lib/sugestao-categoria";
 import { FluxoGraficos } from "@/components/FluxoGraficos";
+import { FluxoListaCompacta } from "@/components/FluxoListaCompacta";
 
 export const Route = createFileRoute("/app/fluxo-caixa")({ component: FluxoCaixa });
 
@@ -47,7 +48,7 @@ function FluxoCaixa() {
   const [search, setSearch] = useState("");
   const [openNew, setOpenNew] = useState(false);
   const [novoTipo, setNovoTipo] = useState<"entrada" | "saida">("entrada");
-  const [visao, setVisao] = useState<"lista" | "grafico">("lista");
+  const [visao, setVisao] = useState<"ambos" | "lista" | "grafico">("ambos");
 
   // Atalhos: E = nova entrada, S = nova saída (fora de campos de texto e sem janela aberta)
   useEffect(() => {
@@ -229,25 +230,34 @@ function FluxoCaixa() {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="bg-card border rounded-2xl p-5 shadow-card">
-          <div className="flex items-center gap-2 text-success text-sm font-medium"><ArrowUpCircle className="size-4" /> Entradas</div>
-          <div className="font-display font-bold text-2xl mt-2">{formatMoney(totals.entradas)}</div>
+      {/* Resumo do período */}
+      <div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-5 sm:px-7 sm:py-6 grid gap-5 md:grid-cols-[1.1fr_2fr] md:items-center">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Saldo do período</div>
+          <div className={`font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums ${totals.saldo < 0 ? "text-destructive" : "text-success"}`}>{formatMoney(totals.saldo)}</div>
+          <div className="text-xs text-muted-foreground mt-1">{totals.count} lançamento(s) no filtro</div>
         </div>
-        <div className="bg-card border rounded-2xl p-5 shadow-card">
-          <div className="flex items-center gap-2 text-destructive text-sm font-medium"><ArrowDownCircle className="size-4" /> Saídas</div>
-          <div className="font-display font-bold text-2xl mt-2">{formatMoney(totals.saidas)}</div>
-        </div>
-        <div className="bg-card border rounded-2xl p-5 shadow-card">
-          <div className="text-muted-foreground text-sm font-medium">Saldo do período</div>
-          <div className={`font-display font-bold text-2xl mt-2 ${totals.saldo < 0 ? "text-destructive" : "text-success"}`}>{formatMoney(totals.saldo)}</div>
-          <div className="text-xs text-muted-foreground mt-1">{totals.count} lançamento(s)</div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {([
+            ["Entradas", totals.entradas, "bg-success", "text-success", ArrowUpCircle],
+            ["Saídas", totals.saidas, "bg-destructive", "text-destructive", ArrowDownCircle],
+          ] as const).map(([rotulo, valor, barra, cor, Icone]) => {
+            const maior = Math.max(totals.entradas, totals.saidas, 1);
+            return (
+              <div key={rotulo} className="rounded-2xl bg-background/70 px-4 py-3">
+                <div className={`flex items-center gap-1.5 text-xs font-medium ${cor}`}><Icone className="size-3.5" /> {rotulo}</div>
+                <div className="font-display font-semibold text-xl tabular-nums mt-0.5">{formatMoney(valor)}</div>
+                <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden">
+                  <div className={`h-full rounded-full ${barra}`} style={{ width: `${(valor / maior) * 100}%`, opacity: 0.75 }} />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Busca, filtros e forma de visualizar */}
-      <div className="bg-card border rounded-2xl p-3 sm:p-4 shadow-card space-y-3">
+      <div className="space-y-3">
         <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
           <div className="relative flex-1">
             <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -255,20 +265,20 @@ function FluxoCaixa() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar lançamento pela descrição..."
-              className="pl-10 h-11 rounded-xl bg-muted/40 border-transparent focus-visible:bg-background"
+              className="pl-10 h-11 rounded-full bg-card border shadow-sm"
             />
           </div>
-          <div className="inline-flex rounded-xl bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="Forma de visualizar">
-            {(["lista", "grafico"] as const).map((v) => (
+          <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="Forma de visualizar">
+            {([["ambos", "Os dois", Columns2], ["lista", "Lista", List], ["grafico", "Gráfico", BarChart3]] as const).map(([v, r, Icone]) => (
               <button
                 key={v}
                 type="button"
                 role="tab"
                 aria-selected={visao === v}
                 onClick={() => setVisao(v)}
-                className={`px-4 h-9 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition-colors ${visao === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`px-3.5 h-9 rounded-full text-sm font-medium inline-flex items-center gap-1.5 transition-colors ${visao === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {v === "lista" ? <><List className="size-4" /> Lista</> : <><BarChart3 className="size-4" /> Gráfico</>}
+                <Icone className="size-4" /> {r}
               </button>
             ))}
           </div>
@@ -311,11 +321,38 @@ function FluxoCaixa() {
         </div>
       </div>
 
-      {/* Lista */}
-      {visao === "grafico" ? (
+      {/* Lançamentos: lista e gráfico juntos, ou foco em um deles */}
+      {visao === "ambos" ? (
+        <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr] items-start">
+          <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+            <div className="flex items-center justify-between px-3 pt-2 pb-1">
+              <h2 className="font-display font-semibold">Lançamentos</h2>
+              <button type="button" onClick={() => setVisao("lista")} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1" title="Ver só a lista, com todas as colunas">
+                <Maximize2 className="size-3.5" /> Focar
+              </button>
+            </div>
+            <FluxoListaCompacta
+              itens={filtered}
+              carregando={isLoading}
+              categorias={categorias}
+              contas={contas}
+              onEditar={setEditingTx}
+              onExcluir={setConfirmDelete}
+            />
+          </section>
+          <section>
+            <div className="flex items-center justify-end px-1 pb-1">
+              <button type="button" onClick={() => setVisao("grafico")} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1" title="Ver só os gráficos, maiores">
+                <Maximize2 className="size-3.5" /> Focar
+              </button>
+            </div>
+            <FluxoGraficos lancamentos={filtered} categorias={categorias} compacto />
+          </section>
+        </div>
+      ) : visao === "grafico" ? (
         <FluxoGraficos lancamentos={filtered} categorias={categorias} />
       ) : (
-      <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
+      <div className="bg-card rounded-3xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
