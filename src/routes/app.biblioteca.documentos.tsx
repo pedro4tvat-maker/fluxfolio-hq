@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -68,28 +69,20 @@ function DocumentosGeradosPage() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-6 flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por título ou empresa..." className="pl-9" />
-          </div>
-          <Select value={type} onValueChange={setType}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">Todos os tipos</SelectItem>
-              {DOCUMENT_TYPES.map((d) => <SelectItem key={d.key} value={d.key}>{d.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">Todos os status</SelectItem>
-              {STATUS_OPTIONS.map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1">
+          <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por título ou empresa..." className="pl-10 h-11 rounded-full bg-card border shadow-sm" />
+        </div>
+        <FiltroBotao
+          grupos={[
+            { titulo: "Tipo de documento", valor: type, padrao: "__all", onChange: setType, formato: "lista",
+              opcoes: [["__all", "Todos os tipos"], ...DOCUMENT_TYPES.map((d) => [d.key, d.label] as [string, string])] },
+            { titulo: "Status", valor: status, padrao: "__all", onChange: setStatus,
+              opcoes: [["__all", "Todos"], ...STATUS_OPTIONS.map((o) => [o.v, o.l] as [string, string])] },
+          ]}
+        />
+      </div>
 
       <div className="grid gap-2">
         {filtered.length === 0 && (

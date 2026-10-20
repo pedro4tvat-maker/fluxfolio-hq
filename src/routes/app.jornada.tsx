@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -282,49 +283,21 @@ function JornadaPage() {
       </div>
 
       {/* Filtros */}
-      <Card>
-        <CardContent className="p-4 flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[220px]">
-            <label className="text-xs text-muted-foreground">Buscar</label>
-            <div className="relative">
-              <Search className="size-4 absolute left-2 top-2.5 text-muted-foreground" />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Empresa, CNPJ ou responsável" className="pl-8" />
-            </div>
-          </div>
-          <div className="min-w-[200px]">
-            <label className="text-xs text-muted-foreground">Fase</label>
-            <Select value={stageFilter} onValueChange={setStageFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas as fases</SelectItem>
-                {stages.map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="min-w-[200px]">
-            <label className="text-xs text-muted-foreground">Status</label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos</SelectItem>
-                <SelectItem value="em_dia">Em dia</SelectItem>
-                <SelectItem value="atencao">Atenção</SelectItem>
-                <SelectItem value="atrasado">Atrasado</SelectItem>
-                <SelectItem value="critico">Crítico</SelectItem>
-                <SelectItem value="pausado">Pausado</SelectItem>
-                <SelectItem value="concluido">Concluído</SelectItem>
-                <SelectItem value="atrasados">Com atrasos</SelectItem>
-                <SelectItem value="pendencias">Com pendências</SelectItem>
-                <SelectItem value="sem_acao">Sem próxima ação</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setStageFilter("__all__"); setStatusFilter("__all__"); }}>
-            Limpar
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1">
+          <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar empresa, CNPJ ou responsável..." className="pl-10 h-11 rounded-full bg-card border shadow-sm" />
+        </div>
+        <FiltroBotao
+          grupos={[
+            { titulo: "Fase", valor: stageFilter, padrao: "__all__", onChange: setStageFilter, formato: "lista",
+              opcoes: [["__all__", "Todas as fases"], ...stages.map((s) => [s.v, s.l] as [string, string])] },
+            { titulo: "Status", valor: statusFilter, padrao: "__all__", onChange: setStatusFilter,
+              opcoes: [["__all__", "Todos"], ["em_dia", "Em dia"], ["atencao", "Atenção"], ["atrasado", "Atrasado"], ["critico", "Crítico"],
+                ["pausado", "Pausado"], ["concluido", "Concluído"], ["atrasados", "Com atrasos"], ["pendencias", "Com pendências"], ["sem_acao", "Sem próxima ação"]] },
+          ]}
+        />
+      </div>
 
       {/* Tabela / Kanban */}
       <Tabs defaultValue="tabela">

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -315,35 +316,22 @@ function BibliotecaPage() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-6 grid gap-3 md:grid-cols-5">
-          <div className="md:col-span-2 relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Buscar título, descrição, tag..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas categorias</SelectItem>
-              {CATEGORIES.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos tipos</SelectItem>
-              {TYPES.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos status</SelectItem>
-              {STATUSES.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1">
+          <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar título, descrição, tag..." className="pl-10 h-11 rounded-full bg-card border shadow-sm" />
+        </div>
+        <FiltroBotao
+          grupos={[
+            { titulo: "Categoria", valor: filterCategory, padrao: "all", onChange: setFilterCategory, formato: "lista",
+              opcoes: [["all", "Todas as categorias"], ...CATEGORIES.map((c) => [c.v, c.l] as [string, string])] },
+            { titulo: "Tipo", valor: filterType, padrao: "all", onChange: setFilterType, formato: "lista",
+              opcoes: [["all", "Todos os tipos"], ...TYPES.map((c) => [c.v, c.l] as [string, string])] },
+            { titulo: "Status", valor: filterStatus, padrao: "all", onChange: setFilterStatus,
+              opcoes: [["all", "Todos"], ...STATUSES.map((c) => [c.v, c.l] as [string, string])] },
+          ]}
+        />
+      </div>
 
       {filtered.length === 0 ? (
         <Card><CardContent className="pt-6 text-center text-muted-foreground">

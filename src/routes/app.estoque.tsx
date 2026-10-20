@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { formatDate, formatMoney, downloadCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -472,15 +473,14 @@ function EstoquePage() {
             className="pl-10 h-11 rounded-full bg-card border shadow-sm"
           />
         </div>
-        <Select value={filterLocation} onValueChange={setFilterLocation}>
-          <SelectTrigger className="h-11 w-full lg:w-[230px] rounded-full bg-card shadow-sm"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os centros de estoque</SelectItem>
-            {(locations ?? []).map((l) => (
-              <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FiltroBotao
+          grupos={[
+            { titulo: "Situação do estoque", valor: filterStatus, padrao: "all", onChange: (v) => setFilterStatus(v as typeof filterStatus),
+              opcoes: [["all", "Todos"], ["low", "Estoque baixo"], ["out", "Sem estoque"]] },
+            { titulo: "Centro de estoque", valor: filterLocation, padrao: "all", onChange: setFilterLocation, formato: "lista",
+              opcoes: [["all", "Todos os centros"], ...(locations ?? []).map((l) => [l.id, l.nome] as [string, string])] },
+          ]}
+        />
         <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="O que mostrar">
           {([["produtos", "Produtos", Package], ["movimentacoes", "Movimentações", History]] as const).map(([v, r, Icone]) => (
             <button

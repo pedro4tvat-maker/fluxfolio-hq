@@ -6,6 +6,7 @@ import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { formatDate, formatMoney, downloadCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -164,7 +165,6 @@ function ContasAPagar() {
   const hoje = new Date().toISOString().slice(0, 10);
   const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   const catNome = new Map(categorias.map((c) => [c.id, c.nome]));
-  const filtrosAtivos = query || status !== "todos" || periodo !== "todos" || categoria !== "todas" || centro !== "todos";
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -216,51 +216,23 @@ function ContasAPagar() {
       </div>
 
       {/* Busca e filtros */}
-      <div className="space-y-3">
-        <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
-          <div className="relative flex-1">
-            <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10 h-11 rounded-full bg-card border shadow-sm" placeholder="Buscar por descrição ou fornecedor..." />
-          </div>
-          <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto">
-            {([["todos", "Todas"], ["em_aberto", "Em aberto"], ["pago", "Pagas"]] as const).map(([v, r]) => (
-              <button key={v} type="button" onClick={() => setStatus(v)}
-                className={`px-4 h-9 rounded-full text-sm font-medium transition-colors ${status === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                {r}
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1">
+          <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10 h-11 rounded-full bg-card border shadow-sm" placeholder="Buscar por descrição ou fornecedor..." />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {([["todos", "Qualquer data"], ["vencidos", "Só vencidas"], ["7d", "Próximos 7 dias"], ["30d", "Próximos 30 dias"]] as const).map(([v, r]) => (
-            <button key={v} type="button" onClick={() => setPeriodo(v)}
-              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${periodo === v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}>
-              {r}
-            </button>
-          ))}
-          <Select value={categoria} onValueChange={setCategoria}>
-            <SelectTrigger className="h-8 w-[180px] rounded-full text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as categorias</SelectItem>
-              {categorias.filter((c) => c.tipo === "saida").map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          {centros.length > 0 && (
-            <Select value={centro} onValueChange={setCentro}>
-              <SelectTrigger className="h-8 w-[180px] rounded-full text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os centros de custo</SelectItem>
-                {centros.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-          {filtrosAtivos && (
-            <button type="button" className="h-8 px-3 rounded-full text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => { setQuery(""); setStatus("todos"); setPeriodo("todos"); setCategoria("todas"); setCentro("todos"); }}>
-              Limpar filtros
-            </button>
-          )}
-        </div>
+        <FiltroBotao
+          grupos={[
+            { titulo: "Situação", valor: status, padrao: "todos", onChange: (v) => setStatus(v as typeof status),
+              opcoes: [["todos", "Todas"], ["em_aberto", "Em aberto"], ["pago", "Pagas"]] },
+            { titulo: "Vencimento", valor: periodo, padrao: "todos", onChange: (v) => setPeriodo(v as typeof periodo),
+              opcoes: [["todos", "Qualquer data"], ["vencidos", "Só vencidas"], ["7d", "Próximos 7 dias"], ["30d", "Próximos 30 dias"]] },
+            { titulo: "Categoria", valor: categoria, padrao: "todas", onChange: setCategoria, formato: "lista",
+              opcoes: [["todas", "Todas as categorias"], ...categorias.filter((c) => c.tipo === "saida").map((c) => [c.id, c.nome] as [string, string])] },
+            ...(centros.length > 0 ? [{ titulo: "Centro de custo", valor: centro, padrao: "todos", onChange: setCentro, formato: "lista" as const,
+              opcoes: [["todos", "Todos os centros de custo"], ...centros.map((c) => [c.id, c.nome] as [string, string])] as [string, string][] }] : []),
+          ]}
+        />
       </div>
 
       {/* Lista */}

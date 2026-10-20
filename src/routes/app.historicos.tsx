@@ -8,6 +8,7 @@ import { useSelectedBranch } from "@/hooks/use-selected-branch";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -277,27 +278,16 @@ function Historicos() {
         </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap items-end">
-        <div>
-          <Label className="text-xs">Ano</Label>
-          <Select value={String(yearFilter)} onValueChange={(v) => setYearFilter(v === "all" ? "all" : Number(v))}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="text-xs">Status</Label>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {STATUS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex justify-end">
+        <FiltroBotao
+          resumo={yearFilter === "all" ? "Todos os anos" : String(yearFilter)}
+          grupos={[
+            { titulo: "Ano", valor: String(yearFilter), padrao: "all", onChange: (v) => setYearFilter(v === "all" ? "all" : Number(v)),
+              opcoes: [["all", "Todos"], ...years.map((y) => [String(y), String(y)] as [string, string])] },
+            { titulo: "Status", valor: statusFilter, padrao: "all", onChange: setStatusFilter,
+              opcoes: [["all", "Todos"], ...STATUS.map((s) => [s.value, s.label] as [string, string])] },
+          ]}
+        />
       </div>
 
       <div className="border rounded-xl overflow-x-auto bg-card">

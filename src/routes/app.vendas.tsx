@@ -6,6 +6,7 @@ import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { formatDate, formatMoney, monthRange } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -2084,46 +2085,27 @@ function VendasPage() {
         />
       )}
 
-      {/* Busca, período e tipo de venda */}
+      {/* Busca e filtros */}
       {selected && (
-        <div className="space-y-3">
-          <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
-            <div className="relative flex-1">
-              <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Buscar por cliente, OS ou produto..."
-                className="pl-10 h-11 rounded-full bg-card border shadow-sm"
-              />
-            </div>
-            <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="Tipo de venda">
-              {([["todas", "Todas"], ["vista", "À vista"], ["prazo", "A prazo"]] as const).map(([v, r]) => (
-                <button
-                  key={v}
-                  type="button"
-                  role="tab"
-                  aria-selected={aba === v}
-                  onClick={() => setAba(v)}
-                  className={`px-4 h-9 rounded-full text-sm font-medium transition-colors ${aba === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="relative flex-1">
+            <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por cliente, OS ou produto..."
+              className="pl-10 h-11 rounded-full bg-card border shadow-sm"
+            />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {([["mes", "Mês atual"], ["mes_passado", "Mês passado"], ["30d", "Últimos 30 dias"], ["tudo", "Tudo"]] as const).map(([v, r]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setPeriodo(v)}
-                className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${periodo === v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          <FiltroBotao
+            resumo={({ mes: "Mês atual", mes_passado: "Mês passado", "30d": "Últimos 30 dias", tudo: "Tudo" } as const)[periodo]}
+            grupos={[
+              { titulo: "Período", valor: periodo, padrao: "mes", onChange: (v) => setPeriodo(v as typeof periodo),
+                opcoes: [["mes", "Mês atual"], ["mes_passado", "Mês passado"], ["30d", "Últimos 30 dias"], ["tudo", "Tudo"]] },
+              { titulo: "Tipo de venda", valor: aba, padrao: "todas", onChange: (v) => setAba(v as typeof aba),
+                opcoes: [["todas", "Todas"], ["vista", "À vista"], ["prazo", "A prazo"]] },
+            ]}
+          />
         </div>
       )}
 

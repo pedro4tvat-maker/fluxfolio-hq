@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSelectedCompany } from "@/hooks/use-selected-company";
 import { Button } from "@/components/ui/button";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -112,7 +113,6 @@ function CRMPage() {
   }
 
   const contagem = (t: string) => contacts.filter((c) => c.tipo === t).length;
-  const filtrosAtivos = search || tipoFilter !== "all" || statusFilter !== "all";
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -147,26 +147,20 @@ function CRMPage() {
         </div>
       </div>
 
-      {/* Busca e situação */}
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+      {/* Busca e filtros */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
         <div className="relative flex-1">
           <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input className="pl-10 h-11 rounded-full bg-card border shadow-sm" placeholder="Buscar por nome, CPF/CNPJ, e-mail ou telefone..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {([["all", "Todos"], ...STATUSES.map((st) => [st, labelStatus(st)])] as [string, string][]).map(([v, r]) => (
-            <button key={v} type="button" onClick={() => setStatusFilter(v)}
-              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${statusFilter === v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}>
-              {r}
-            </button>
-          ))}
-          {filtrosAtivos && (
-            <button type="button" className="h-8 px-3 rounded-full text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => { setSearch(""); setTipoFilter("all"); setStatusFilter("all"); }}>
-              Limpar
-            </button>
-          )}
-        </div>
+        <FiltroBotao
+          grupos={[
+            { titulo: "Tipo", valor: tipoFilter, padrao: "all", onChange: setTipoFilter,
+              opcoes: [["all", "Todos"], ...TIPOS.map((t) => [t, labelTipo(t)] as [string, string])] },
+            { titulo: "Situação", valor: statusFilter, padrao: "all", onChange: setStatusFilter,
+              opcoes: [["all", "Todas"], ...STATUSES.map((st) => [st, labelStatus(st)] as [string, string])] },
+          ]}
+        />
       </div>
 
       {/* Lista */}

@@ -7,6 +7,7 @@ import { CompanySwitcher } from "@/components/company-switcher";
 import { formatMoney, formatDate, monthRange, downloadCSV } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { FiltroBotao } from "@/components/FiltroBotao";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -295,18 +296,29 @@ function FluxoCaixa() {
       </div>
 
       {/* Busca, filtros e forma de visualizar */}
-      <div className="space-y-3">
-        <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
-          <div className="relative flex-1">
-            <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar lançamento pela descrição..."
-              className="pl-10 h-11 rounded-full bg-card border shadow-sm"
-            />
-          </div>
-          <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto" role="tablist" aria-label="Forma de visualizar">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1">
+          <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar lançamento pela descrição..."
+            className="pl-10 h-11 rounded-full bg-card border shadow-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <FiltroBotao
+            resumo={({ mes: "Mês atual", mes_passado: "Mês passado", "30d": "Últimos 30 dias", tudo: "Tudo" } as const)[period]}
+            grupos={[
+              { titulo: "Período", valor: period, padrao: "mes", onChange: (v) => setPeriod(v as typeof period),
+                opcoes: [["mes", "Mês atual"], ["mes_passado", "Mês passado"], ["30d", "Últimos 30 dias"], ["tudo", "Tudo"]] },
+              { titulo: "Tipo", valor: tipo, padrao: "todos", onChange: (v) => setTipo(v as typeof tipo),
+                opcoes: [["todos", "Todos"], ["entrada", "Entradas"], ["saida", "Saídas"]] },
+              { titulo: "Categoria", valor: categoria, padrao: "todas", onChange: setCategoria, formato: "lista",
+                opcoes: [["todas", "Todas as categorias"], ...categorias.map((c) => [c.id, c.nome] as [string, string])] },
+            ]}
+          />
+          <div className="inline-flex rounded-full bg-muted p-1" role="tablist" aria-label="Forma de visualizar">
             {([["grafico", "Gráfico", BarChart3], ["lista", "Lista", List]] as const).map(([v, r, Icone]) => (
               <button
                 key={v}
@@ -316,46 +328,10 @@ function FluxoCaixa() {
                 onClick={() => setVisao(v)}
                 className={`px-3.5 h-9 rounded-full text-sm font-medium inline-flex items-center gap-1.5 transition-colors ${visao === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                <Icone className="size-4" /> {r}
+                <Icone className="size-4" /> <span className="hidden sm:inline">{r}</span>
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {([["mes", "Mês atual"], ["mes_passado", "Mês passado"], ["30d", "Últimos 30 dias"], ["tudo", "Tudo"]] as const).map(([v, r]) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setPeriod(v)}
-              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${period === v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
-            >
-              {r}
-            </button>
-          ))}
-          <span className="hidden sm:block w-px h-5 bg-border mx-1" />
-          {([["todos", "Todos"], ["entrada", "Entradas"], ["saida", "Saídas"]] as const).map(([v, r]) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setTipo(v)}
-              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${tipo === v ? "bg-foreground text-background border-foreground" : "bg-background hover:bg-muted"}`}
-            >
-              {r}
-            </button>
-          ))}
-          <Select value={categoria} onValueChange={setCategoria}>
-            <SelectTrigger className="h-8 w-[190px] rounded-full text-xs"><SelectValue placeholder="Categoria" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as categorias</SelectItem>
-              {categorias.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          {(tipo !== "todos" || categoria !== "todas" || search) && (
-            <Button variant="ghost" size="sm" className="h-8 rounded-full text-xs" onClick={() => { setTipo("todos"); setCategoria("todas"); setSearch(""); }}>
-              <Filter className="size-3.5" /> Limpar filtros
-            </Button>
-          )}
         </div>
       </div>
 
