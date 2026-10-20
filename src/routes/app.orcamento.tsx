@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/orcamento")({ component: OrcamentoPage });
@@ -112,101 +111,134 @@ function OrcamentoPage() {
   }
 
 
+  const NOMES_MES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const mudarMes = (delta: number) => {
+    const d = new Date(ano, mes - 1 + delta, 1);
+    setMes(d.getMonth() + 1);
+    setAno(d.getFullYear());
+  };
+  const pctTotal = totalOrcado > 0 ? (totalRealizado / totalOrcado) * 100 : 0;
+  const grupos = [
+    { tipo: "saida", titulo: "Despesas", itens: rows.filter((r) => r.tipo !== "entrada") },
+    { tipo: "entrada", titulo: "Receitas", itens: rows.filter((r) => r.tipo === "entrada") },
+  ].filter((g) => g.itens.length > 0);
+
   return (
     <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold">Orçamento</h1>
-          <p className="text-sm text-muted-foreground mt-1">Orçado × realizado por categoria, com acompanhamento mensal.</p>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Orçamento</h1>
+          <p className="text-sm text-muted-foreground mt-1">Defina quanto pretende gastar ou faturar em cada categoria e acompanhe mês a mês.</p>
         </div>
-        <div className="flex items-end gap-2">
-          <div className="space-y-1">
-            <Label className="text-xs">Mês</Label>
-            <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
-              <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-              <SelectContent>{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <SelectItem key={m} value={String(m)}>{m.toString().padStart(2, "0")}</SelectItem>)}</SelectContent>
-            </Select>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center rounded-full bg-card shadow-sm border h-11 px-1">
+            <button type="button" onClick={() => mudarMes(-1)} className="size-9 grid place-items-center rounded-full hover:bg-muted" aria-label="Mês anterior"><ChevronLeft className="size-4" /></button>
+            <span className="px-2 text-sm font-medium min-w-[130px] text-center">{NOMES_MES[mes - 1]} {ano}</span>
+            <button type="button" onClick={() => mudarMes(1)} className="size-9 grid place-items-center rounded-full hover:bg-muted" aria-label="Próximo mês"><ChevronRight className="size-4" /></button>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Ano</Label>
-            <Input type="number" className="w-24" value={ano} onChange={(e) => setAno(Number(e.target.value))} />
-          </div>
-          <Button onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Novo orçamento"}</Button>
+          <Button className="rounded-full h-11 px-5 shadow-sm" onClick={() => setOpen((v) => !v)}>
+            {open ? <><X className="size-4" /> Fechar</> : <><Plus className="size-4" /> Nova meta</>}
+          </Button>
         </div>
       </div>
 
       {open && (
-        <form onSubmit={save} className="bg-card border rounded-2xl p-4 grid gap-3 md:grid-cols-3">
-          <div className="space-y-1 md:col-span-2">
+        <form onSubmit={save} className="bg-card rounded-3xl shadow-card p-5 grid gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+          <div className="space-y-1">
             <Label>Categoria</Label>
             <Select value={form.categoria_id} onValueChange={(v) => setForm({ ...form, categoria_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>{categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome} ({c.tipo})</SelectItem>)}</SelectContent>
+              <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome} · {c.tipo === "entrada" ? "receita" : "despesa"}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Valor orçado</Label>
-            <Input type="number" min="0" step="0.01" value={form.valor_orcado} onChange={(e) => setForm({ ...form, valor_orcado: e.target.value })} />
+            <Label>Valor previsto para {NOMES_MES[mes - 1].toLowerCase()}</Label>
+            <Input type="number" min="0" step="0.01" className="rounded-xl" value={form.valor_orcado} onChange={(e) => setForm({ ...form, valor_orcado: e.target.value })} />
           </div>
-          <div className="md:col-span-3 flex justify-end">
-            <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
-          </div>
+          <Button type="submit" className="rounded-full" disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
         </form>
       )}
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <KPI label="Total orçado" value={formatMoney(totalOrcado)} />
-        <KPI label="Total realizado" value={formatMoney(totalRealizado)} />
-        <KPI label="% utilizado" value={`${totalOrcado > 0 ? ((totalRealizado / totalOrcado) * 100).toFixed(1) : 0}%`} />
-      </div>
-
-      <div className="bg-card border rounded-2xl p-4">
-        {isLoading ? (
-          <div className="text-muted-foreground">Carregando...</div>
-        ) : rows.length === 0 ? (
-          <div className="text-sm text-muted-foreground">Nenhum orçamento para {mes.toString().padStart(2, "0")}/{ano}.</div>
-        ) : (
-          <div className="space-y-4">
-            {rows.map((r) => (
-              <div key={r.id} className="space-y-2 border-b last:border-0 pb-3 last:pb-0">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{r.categoria} <span className="text-xs text-muted-foreground">({r.tipo})</span></p>
-                    <p className="text-xs text-muted-foreground">{formatMoney(r.realizado)} de {formatMoney(r.orcado)}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {editingId === r.id ? (
-                      <>
-                        <Input type="number" min="0" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8 w-28" autoFocus />
-                        <Button size="sm" className="h-8" onClick={() => salvarEdicao(r.id)}>Salvar</Button>
-                        <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditingId(null)}>Cancelar</Button>
-                      </>
-                    ) : (
-                      <>
-                        <span className={`text-sm font-display font-semibold ${r.pct > 100 ? "text-destructive" : r.pct > 80 ? "text-warning" : "text-success"}`}>
-                          {r.pct.toFixed(1)}%
-                        </span>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditValue(String(r.orcado)); }} aria-label="Editar"><Pencil className="size-4" /></Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => excluir(r.id)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <Progress value={Math.min(r.pct, 100)} />
-              </div>
-            ))}
+      {/* Resumo do mês */}
+      <div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-5 sm:px-7 sm:py-6 space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Realizado no mês</div>
+            <div className="font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums">{formatMoney(totalRealizado)}</div>
+            <div className="text-xs text-muted-foreground mt-1">de {formatMoney(totalOrcado)} previstos</div>
           </div>
-        )}
+          <div className="text-right">
+            <div className={`font-display font-bold text-2xl tabular-nums ${pctTotal > 100 ? "text-destructive" : ""}`}>{pctTotal.toFixed(0)}%</div>
+            <div className="text-xs text-muted-foreground">do orçamento usado</div>
+          </div>
+        </div>
+        <div className="h-2.5 rounded-full bg-background/70 overflow-hidden">
+          <div className={`h-full rounded-full ${pctTotal > 100 ? "bg-destructive" : pctTotal > 80 ? "bg-warning" : "bg-primary"}`} style={{ width: `${Math.min(pctTotal, 100)}%` }} />
+        </div>
       </div>
-    </div>
-  );
-}
 
-function KPI({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-card border rounded-2xl p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-display font-bold text-2xl">{value}</div>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground text-center py-10">Carregando...</p>
+      ) : rows.length === 0 ? (
+        <div className="bg-card rounded-3xl shadow-card p-10 text-center">
+          <p className="font-medium">Nenhuma meta para {NOMES_MES[mes - 1].toLowerCase()} de {ano}.</p>
+          <p className="text-sm text-muted-foreground mt-1">Clique em "Nova meta" e defina quanto pretende gastar ou faturar em cada categoria.</p>
+        </div>
+      ) : (
+        <div className={`grid gap-5 ${grupos.length > 1 ? "lg:grid-cols-2" : ""} items-start`}>
+          {grupos.map((g) => (
+            <section key={g.tipo} className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+              <h2 className="font-display font-semibold px-3 pt-2 pb-1">{g.titulo}</h2>
+              <ul>
+                {g.itens.map((r) => {
+                  const receita = g.tipo === "entrada";
+                  const diferenca = r.orcado - r.realizado;
+                  const cor = receita
+                    ? (r.pct >= 100 ? "bg-success" : "bg-primary")
+                    : (r.pct > 100 ? "bg-destructive" : r.pct > 80 ? "bg-warning" : "bg-success");
+                  const texto = receita
+                    ? (diferenca <= 0 ? `Meta batida (+${formatMoney(-diferenca)})` : `Faltam ${formatMoney(diferenca)}`)
+                    : (diferenca >= 0 ? `Sobram ${formatMoney(diferenca)}` : `Passou ${formatMoney(-diferenca)}`);
+                  const corTexto = receita
+                    ? (diferenca <= 0 ? "text-success" : "text-muted-foreground")
+                    : (diferenca >= 0 ? "text-muted-foreground" : "text-destructive");
+                  return (
+                    <li key={r.id} className="group rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{r.categoria}</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">{formatMoney(r.realizado)} de {formatMoney(r.orcado)}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {editingId === r.id ? (
+                            <>
+                              <Input type="number" min="0" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8 w-28 rounded-full" autoFocus />
+                              <Button size="sm" className="h-8 rounded-full" onClick={() => salvarEdicao(r.id)}>Salvar</Button>
+                              <button type="button" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => setEditingId(null)} aria-label="Cancelar"><X className="size-3.5" /></button>
+                            </>
+                          ) : (
+                            <>
+                              <span className={`text-xs font-medium mr-1 ${corTexto}`}>{texto}</span>
+                              <button type="button" className="size-8 grid place-items-center rounded-full hover:bg-background sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={() => { setEditingId(r.id); setEditValue(String(r.orcado)); }} aria-label="Editar"><Pencil className="size-3.5" /></button>
+                              <button type="button" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={() => excluir(r.id)} aria-label="Excluir"><Trash2 className="size-3.5" /></button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
+                          <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.min(r.pct, 100)}%`, opacity: 0.8 }} />
+                        </div>
+                        <span className="text-xs tabular-nums text-muted-foreground w-10 text-right">{r.pct.toFixed(0)}%</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

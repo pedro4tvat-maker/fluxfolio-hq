@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Building2, Search, PlusCircle, Download, CheckCircle2, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
@@ -76,13 +75,23 @@ function ContasAReceber() {
     });
   }, [data, query, status, categoria, centro, periodo]);
 
-  const totals = useMemo(() => {
+  const resumo = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
-    const aberto = filtered.filter((p) => p.status !== "recebido").reduce((s, p) => s + Number(p.valor), 0);
-    const vencido = filtered.filter((p) => p.status !== "recebido" && p.vencimento < today).reduce((s, p) => s + Number(p.valor), 0);
-    const recebido = filtered.filter((p) => p.status === "recebido").reduce((s, p) => s + Number(p.valor), 0);
-    return { aberto, vencido, recebido };
-  }, [filtered]);
+    const in7 = new Date(); in7.setDate(in7.getDate() + 7);
+    const s7 = in7.toISOString().slice(0, 10);
+    const mes = today.slice(0, 7);
+    const abertas = data.filter((p) => p.status !== "recebido");
+    const vencidas = abertas.filter((p) => p.vencimento < today);
+    const semana = abertas.filter((p) => p.vencimento >= today && p.vencimento <= s7);
+    const feitasMes = data.filter((p) => p.status === "recebido" && (p.data_recebimento ?? "").slice(0, 7) === mes);
+    const soma = (l: Receivable[]) => l.reduce((t, p) => t + Number(p.valor), 0);
+    return {
+      aberto: soma(abertas), qtdAberto: abertas.length,
+      vencido: soma(vencidas), qtdVencido: vencidas.length,
+      semana: soma(semana), qtdSemana: semana.length,
+      feitoMes: soma(feitasMes),
+    };
+  }, [data]);
 
   const markReceived = useMutation({
     mutationFn: async (p: Receivable) => {
@@ -150,118 +159,164 @@ function ContasAReceber() {
     );
   }
 
+  const hoje = new Date().toISOString().slice(0, 10);
+  const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const catNome = new Map(categorias.map((c) => [c.id, c.nome]));
+  const filtrosAtivos = query || status !== "todos" || periodo !== "todos" || categoria !== "todas" || centro !== "todos";
+
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-6 max-w-6xl">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Contas a receber</h1>
-          <p className="text-muted-foreground text-sm mt-1">Acompanhe recebimentos, baixe-os e gere entradas automáticas no caixa.</p>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold">Contas a receber</h1>
+          <p className="text-muted-foreground text-sm mt-1">Acompanhe o que seus clientes devem e dê baixa com um clique: a entrada já vai para o caixa.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleExport}><Download className="size-4" /> Exportar CSV</Button>
+          <Button variant="ghost" className="rounded-full h-11 text-muted-foreground" onClick={handleExport}><Download className="size-4" /> Exportar</Button>
           <Dialog open={openNew} onOpenChange={setOpenNew}>
-            <DialogTrigger asChild><Button><PlusCircle className="size-4" /> Novo recebimento</Button></DialogTrigger>
+            <DialogTrigger asChild><Button className="rounded-full h-11 px-5 shadow-sm"><PlusCircle className="size-4" /> Novo recebimento</Button></DialogTrigger>
             <NewReceivableDialog companyId={selected!} categorias={categorias.filter((c) => c.tipo === "entrada")} contas={contas} centros={centros} onDone={() => { setOpenNew(false); qc.invalidateQueries({ queryKey: ["receivables"] }); }} />
           </Dialog>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card label="Total em aberto" value={formatMoney(totals.aberto)} />
-        <Card label="Vencidos" value={formatMoney(totals.vencido)} tone="destructive" />
-        <Card label="Recebidos no filtro" value={formatMoney(totals.recebido)} tone="success" />
+      {/* Resumo */}
+      <div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-5 sm:px-7 sm:py-6 grid gap-5 lg:grid-cols-[1fr_1.7fr] lg:items-center">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Total a receber</div>
+          <div className="font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums">{formatMoney(resumo.aberto)}</div>
+          <div className="text-xs text-muted-foreground mt-1">{resumo.qtdAberto} recebimento(s) em aberto</div>
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          {([
+            ["vencidos", "Vencidas", resumo.vencido, `${resumo.qtdVencido} em atraso`, resumo.qtdVencido > 0 ? "text-destructive" : "text-muted-foreground"],
+            ["7d", "Próximos 7 dias", resumo.semana, `${resumo.qtdSemana} a vencer`, "text-foreground"],
+            ["feitos", "Recebidas", resumo.feitoMes, "neste mês", "text-success"],
+          ] as const).map(([v, rotulo, valor, dica, cor]) => {
+            const ativo = v === "feitos" ? status === "recebido" : periodo === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  if (v === "feitos") { setPeriodo("todos"); setStatus(ativo ? "todos" : "recebido"); }
+                  else { setStatus("todos"); setPeriodo(ativo ? "todos" : v); }
+                }}
+                className={`text-left rounded-2xl px-3.5 py-3 transition-colors min-w-0 ${ativo ? "bg-background shadow-sm ring-1 ring-primary/30" : "bg-background/60 hover:bg-background"}`}
+              >
+                <div className={`text-[11px] font-medium ${cor}`}>{rotulo}</div>
+                <div className="font-display font-semibold text-sm sm:text-lg tabular-nums truncate">{formatMoney(valor)}</div>
+                <div className="text-[10px] text-muted-foreground truncate">{dica}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="bg-card border rounded-2xl p-4 shadow-card grid gap-3 md:grid-cols-5">
-        <div className="md:col-span-2">
-          <Label className="text-xs text-muted-foreground">Buscar</Label>
-          <div className="relative">
-            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} className="pl-9" placeholder="Descrição ou cliente..." />
+      {/* Busca e filtros */}
+      <div className="space-y-3">
+        <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+          <div className="relative flex-1">
+            <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10 h-11 rounded-full bg-card border shadow-sm" placeholder="Buscar por descrição ou cliente..." />
+          </div>
+          <div className="inline-flex rounded-full bg-muted p-1 self-start lg:self-auto">
+            {([["todos", "Todas"], ["em_aberto", "Em aberto"], ["recebido", "Recebidas"]] as const).map(([v, r]) => (
+              <button key={v} type="button" onClick={() => setStatus(v)}
+                className={`px-4 h-9 rounded-full text-sm font-medium transition-colors ${status === v ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                {r}
+              </button>
+            ))}
           </div>
         </div>
-        <FilterSelect label="Status" value={status} onChange={(v) => setStatus(v as typeof status)} options={[["todos", "Todos"], ["em_aberto", "Em aberto"], ["vencido", "Vencidos"], ["recebido", "Recebidos"]]} />
-        <FilterSelect label="Período" value={periodo} onChange={(v) => setPeriodo(v as typeof periodo)} options={[["todos", "Todos"], ["7d", "Próximos 7 dias"], ["30d", "Próximos 30 dias"], ["vencidos", "Apenas vencidos"]]} />
-        <FilterSelect label="Centro" value={centro} onChange={setCentro} options={[["todos", "Todos"], ...centros.map((c) => [c.id, c.nome] as [string, string])]} />
-        <FilterSelect label="Categoria" value={categoria} onChange={setCategoria} options={[["todas", "Todas"], ...categorias.filter((c) => c.tipo === "entrada").map((c) => [c.id, c.nome] as [string, string])]} />
-      </div>
-
-      <div className="bg-card border rounded-2xl shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vencimento</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Forma</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum recebimento encontrado.</TableCell></TableRow>
-              ) : filtered.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>{formatDate(p.vencimento)}</TableCell>
-                  <TableCell className="font-medium">{p.descricao}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{p.cliente ?? "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{p.forma_recebimento ?? "—"}</TableCell>
-                  <TableCell>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full border ${
-                      p.status === "recebido" ? "bg-success/10 text-success border-success/20" :
-                      p.status === "vencido" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                      "bg-warning/10 text-warning-foreground border-warning/30"
-                    }`}>{p.status.replace("_", " ")}</span>
-                  </TableCell>
-                  <TableCell className="text-right font-display font-semibold">{formatMoney(Number(p.valor))}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {p.status !== "recebido" ? (
-                      <Button size="sm" variant="outline" onClick={() => markReceived.mutate(p)}>
-                        <CheckCircle2 className="size-4" /> Receber
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" onClick={() => confirm("Estornar este recebimento?") && revert.mutate(p)}>
-                        <Undo2 className="size-4" /> Estornar
-                      </Button>
-                    )}
-                    <Button size="icon" variant="ghost" onClick={() => confirm("Excluir este lançamento?") && del.mutate(p.id)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="flex flex-wrap items-center gap-2">
+          {([["todos", "Qualquer data"], ["vencidos", "Só vencidas"], ["7d", "Próximos 7 dias"], ["30d", "Próximos 30 dias"]] as const).map(([v, r]) => (
+            <button key={v} type="button" onClick={() => setPeriodo(v)}
+              className={`h-8 px-3 rounded-full text-xs font-medium border transition-colors ${periodo === v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}>
+              {r}
+            </button>
+          ))}
+          <Select value={categoria} onValueChange={setCategoria}>
+            <SelectTrigger className="h-8 w-[180px] rounded-full text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as categorias</SelectItem>
+              {categorias.filter((c) => c.tipo === "entrada").map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {centros.length > 0 && (
+            <Select value={centro} onValueChange={setCentro}>
+              <SelectTrigger className="h-8 w-[180px] rounded-full text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os centros de custo</SelectItem>
+                {centros.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          {filtrosAtivos && (
+            <button type="button" className="h-8 px-3 rounded-full text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => { setQuery(""); setStatus("todos"); setPeriodo("todos"); setCategoria("todas"); setCentro("todos"); }}>
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 
-    </div>
-  );
-}
-
-function Card({ label, value, tone }: { label: string; value: string; tone?: "destructive" | "success" }) {
-  const cls = tone === "destructive" ? "text-destructive" : tone === "success" ? "text-success" : "";
-  return (
-    <div className="bg-card border rounded-2xl p-5 shadow-card">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`font-display font-bold text-2xl mt-2 ${cls}`}>{value}</div>
-    </div>
-  );
-}
-
-function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
-  return (
-    <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger><SelectValue /></SelectTrigger>
-        <SelectContent>{options.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-      </Select>
+      {/* Lista */}
+      <section className="bg-card rounded-3xl shadow-card p-2 sm:p-3">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-10">Carregando...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-10">Nenhum recebimento encontrado.</p>
+        ) : (
+          <ul>
+            {filtered.map((p) => {
+              const feito = p.status === "recebido";
+              const atrasado = !feito && p.vencimento < hoje;
+              const dias = Math.round((new Date(p.vencimento + "T12:00:00").getTime() - new Date(hoje + "T12:00:00").getTime()) / 86400000);
+              const [, m, d] = p.vencimento.split("-");
+              const situacao = feito ? "Recebida" : atrasado ? (dias === -1 ? "Venceu ontem" : `Atrasada ${-dias} dias`) : dias === 0 ? "Vence hoje" : dias === 1 ? "Vence amanhã" : `Vence em ${dias} dias`;
+              const corSituacao = feito ? "bg-success/12 text-success" : atrasado ? "bg-destructive/10 text-destructive" : dias <= 3 ? "bg-warning/15 text-warning-foreground" : "bg-muted text-muted-foreground";
+              const detalhe = [p.cliente, p.categoria_id ? catNome.get(p.categoria_id) : null, p.forma_recebimento].filter(Boolean).join(" · ");
+              return (
+                <li key={p.id} className="group flex items-center gap-3 sm:gap-4 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                  <div className={`w-12 shrink-0 rounded-2xl py-1.5 text-center ${feito ? "bg-success/10 text-success" : atrasado ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+                    <div className="font-display font-bold text-lg leading-none tabular-nums">{d}</div>
+                    <div className="text-[10px] uppercase tracking-wider mt-0.5">{MESES[Number(m) - 1]}</div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`font-medium text-sm truncate ${feito ? "text-muted-foreground" : ""}`}>{p.descricao}</span>
+                      <span className={`shrink-0 rounded-full px-2 py-px text-[10px] font-medium ${corSituacao}`}>{situacao}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {detalhe || "—"}
+                    </div>
+                  </div>
+                  <div className={`text-sm sm:text-base font-display font-semibold tabular-nums whitespace-nowrap ${feito ? "text-muted-foreground" : ""}`}>
+                    {formatMoney(Number(p.valor))}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!feito ? (
+                      <Button size="sm" className="rounded-full h-8 px-3" onClick={() => markReceived.mutate(p)}>
+                        <CheckCircle2 className="size-3.5" /> Receber
+                      </Button>
+                    ) : (
+                      <button type="button" title="Estornar" className="size-8 grid place-items-center rounded-full hover:bg-background sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                        onClick={() => confirm("Estornar este recebimento?") && revert.mutate(p)}>
+                        <Undo2 className="size-3.5" />
+                      </button>
+                    )}
+                    <button type="button" title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                      onClick={() => confirm("Excluir este lançamento?") && del.mutate(p.id)}>
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
