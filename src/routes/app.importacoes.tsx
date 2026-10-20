@@ -30,6 +30,8 @@ import {
   type BankFields, type ParsedFile, type Rule,
 } from "@/lib/import-engine";
 import { SCHEMAS } from "@/lib/import-schemas";
+import { useServerFn } from "@tanstack/react-start";
+import { extractStatementFromFile } from "@/lib/statement-ai.functions";
 import { GenericImportWizard } from "@/components/imports/GenericImportWizard";
 
 export const Route = createFileRoute("/app/importacoes")({
@@ -202,20 +204,60 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
     },
   });
 
+  const lerComIa = useServerFn(extractStatementFromFile);
+  const [lendoIa, setLendoIa] = useState(false);
+
+  // Foto ou PDF: a IA lê as movimentações e devolve no mesmo formato das outras importações
+  const lerArquivoComIa = async (f: File): Promise<ParsedFile> => {
+    const { mediaType, data } = await arquivoParaBase64(f);
+    const out = await lerComIa({ data: { mediaType, data } });
+    if (!out.legivel || out.transacoes.length === 0) {
+      throw new Error(out.observacao || "Não encontrei movimentações neste arquivo.");
+    }
+    if (out.observacao) toast.warning(out.observacao);
+    return {
+      columns: ["Data", "Descricao", "Valor", "Documento"],
+      rows: out.transacoes.map((t) => ({
+        Data: t.data,
+        Descricao: t.descricao,
+        Valor: String(t.valor),
+        Documento: t.documento,
+      })),
+    };
+  };
+
   const handleFile = async (f: File) => {
     setFile(f);
+    const nome = f.name.toLowerCase();
+    const ehImagem = f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic)$/.test(nome);
+    const ehPdf = nome.endsWith(".pdf");
     try {
-      const p = await parseFile(f);
+      let p: ParsedFile;
+      if (ehImagem || ehPdf) {
+        setLendoIa(true);
+        try {
+          p = await lerArquivoComIa(f);
+        } catch (e) {
+          // PDF com texto ainda pode ser lido pelo método antigo se a IA falhar
+          if (!ehPdf) throw e;
+          console.error(e);
+          p = await parseFile(f);
+        } finally {
+          setLendoIa(false);
+        }
+      } else {
+        p = await parseFile(f);
+      }
       if (p.rows.length === 0) {
         toast.error("Não foi possível ler o arquivo (vazio).");
         return;
       }
       setParsed(p);
       setMapping(autoMapColumns(p.columns));
-      toast.success("Arquivo enviado com sucesso.");
+      toast.success(ehImagem || ehPdf ? `${p.rows.length} movimentações lidas. Confira antes de importar.` : "Arquivo enviado com sucesso.");
       setStep(3);
     } catch (e: any) {
-      toast.error("Não foi possível ler o arquivo.");
+      toast.error(e?.message ? `Não foi possível ler o arquivo: ${e.message}` : "Não foi possível ler o arquivo.");
       console.error(e);
     }
   };
@@ -527,7 +569,7 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
         <Card>
           <CardHeader>
             <CardTitle>Envie o arquivo</CardTitle>
-            <CardDescription>Formatos aceitos: CSV, XLSX, OFX. PDF é experimental — revise tudo antes de confirmar.</CardDescription>
+            <CardDescription>Formatos aceitos: OFX (recomendado), CSV, XLSX, PDF ou foto/print do extrato. PDF e foto são lidos por IA — revise tudo antes de confirmar.</CardDescription>
           </CardHeader>
           <CardContent>
             <div
@@ -537,12 +579,12 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
               className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer hover:bg-muted/40 transition"
             >
               <FileSpreadsheet className="size-10 mx-auto text-muted-foreground" />
-              <p className="mt-3 font-medium">Arraste o arquivo aqui ou clique para selecionar</p>
-              <p className="text-xs text-muted-foreground mt-1">PDF · CSV · XLSX · OFX (até 5MB)</p>
+              <p className="mt-3 font-medium">{lendoIa ? "Lendo o extrato com IA… isso leva alguns segundos" : "Arraste o arquivo aqui ou clique para selecionar"}</p>
+              <p className="text-xs text-muted-foreground mt-1">OFX · CSV · XLSX · PDF · JPG · PNG (até 5MB)</p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.csv,.xlsx,.xls,.ofx"
+                accept=".pdf,.csv,.xlsx,.xls,.ofx,.jpg,.jpeg,.png,.webp,image/*"
                 className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
               />
@@ -644,6 +686,49 @@ function ImportWizard({ type, onBack, onDone }: { type: ImportType; onBack: () =
       )}
     </div>
   );
+}
+
+type MidiaIa = "image/jpeg" | "image/png" | "image/webp" | "image/gif" | "application/pdf";
+
+// Converte o arquivo para base64. Fotos são reduzidas (lado maior até 2000px, JPEG)
+// para ficarem leves e legíveis; PDF vai como está, até 5 MB.
+async function arquivoParaBase64(f: File): Promise<{ mediaType: MidiaIa; data: string }> {
+  const lerComo = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+      r.onerror = () => reject(new Error("Falha ao ler o arquivo."));
+      r.readAsDataURL(blob);
+    });
+
+  if (f.name.toLowerCase().endsWith(".pdf")) {
+    if (f.size > 5 * 1024 * 1024) throw new Error("PDF maior que 5 MB. Envie por partes.");
+    return { mediaType: "application/pdf", data: await lerComo(f) };
+  }
+
+  const url = URL.createObjectURL(f);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("Formato de imagem não suportado. Envie em JPG ou PNG."));
+      i.src = url;
+    });
+    const escala = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * escala);
+    canvas.height = Math.round(img.naturalHeight * escala);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Não foi possível processar a imagem.");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    if (!blob) throw new Error("Não foi possível processar a imagem.");
+    return { mediaType: "image/jpeg", data: await lerComo(blob) };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function dateClose(d1: string, d2: string, dias: number) {
