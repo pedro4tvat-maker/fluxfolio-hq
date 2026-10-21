@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMoney } from "@/lib/format";
 
@@ -14,10 +14,10 @@ const moedaCurta = (v: number) =>
 function DicaGrafico({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl bg-popover/95 backdrop-blur border shadow-lg px-3 py-2 text-xs">
+    <div className="rounded-xl bg-popover/95 backdrop-blur border shadow-lg px-3 py-2 text-xs min-w-[170px]">
       {label && <div className="font-semibold mb-1">{label}</div>}
       {payload.map((p) => (
-        <div key={p.name} className="flex items-center gap-2">
+        <div key={p.name} className="flex items-center gap-2 whitespace-nowrap">
           <span className="size-2 rounded-full" style={{ background: p.color }} />
           <span className="text-muted-foreground">{p.name}</span>
           <span className="ml-auto font-medium tabular-nums">{formatMoney(p.value)}</span>
@@ -36,6 +36,8 @@ export function FluxoGraficos({
   categorias: { id: string; nome: string }[];
   compacto?: boolean;
 }) {
+  // Categoria em destaque na rosca (ao passar o mouse); o centro mostra o nome e o valor dela
+  const [destaque, setDestaque] = useState<number | null>(null);
   const realizados = useMemo(() => lancamentos.filter((t) => t.status === "realizado"), [lancamentos]);
 
   const serie = useMemo(() => {
@@ -125,26 +127,34 @@ export function FluxoGraficos({
             <div className="relative shrink-0" style={{ width: compacto ? 132 : 170, height: compacto ? 132 : 170 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={cats.dados} dataKey="valor" nameKey="nome" innerRadius="68%" outerRadius="100%" paddingAngle={3} cornerRadius={8} stroke="none">
-                    {cats.dados.map((c) => <Cell key={c.nome} fill={c.cor} />)}
+                  <Pie data={cats.dados} dataKey="valor" nameKey="nome" innerRadius="68%" outerRadius="100%" paddingAngle={3} cornerRadius={8} stroke="none"
+                    onMouseEnter={(_, i) => setDestaque(i)} onMouseLeave={() => setDestaque(null)}>
+                    {cats.dados.map((c, i) => <Cell key={c.nome} fill={c.cor} opacity={destaque === null || destaque === i ? 1 : 0.35} />)}
                   </Pie>
-                  <Tooltip content={<DicaGrafico />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 grid place-items-center text-center pointer-events-none">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Saídas</div>
-                  <div className="font-display font-bold text-sm tabular-nums">{formatMoney(cats.total)}</div>
+                <div className="px-4 max-w-full">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">
+                    {destaque !== null ? cats.dados[destaque]?.nome : "Saídas"}
+                  </div>
+                  <div className="font-display font-bold text-sm tabular-nums">
+                    {formatMoney(destaque !== null ? cats.dados[destaque]?.valor ?? 0 : cats.total)}
+                  </div>
+                  {destaque !== null && (
+                    <div className="text-[10px] text-muted-foreground tabular-nums">{cats.dados[destaque]?.pct.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%</div>
+                  )}
                 </div>
               </div>
             </div>
             <ul className="flex-1 w-full space-y-2 text-sm">
-              {cats.dados.map((c) => (
-                <li key={c.nome} className="flex items-center gap-2.5">
+              {cats.dados.map((c, i) => (
+                <li key={c.nome} onMouseEnter={() => setDestaque(i)} onMouseLeave={() => setDestaque(null)}
+                  className={`flex items-center gap-2.5 rounded-lg px-1.5 -mx-1.5 py-0.5 transition-colors cursor-default ${destaque === i ? "bg-muted" : ""}`}>
                   <span className="size-2.5 rounded-full shrink-0" style={{ background: c.cor }} />
                   <span className="truncate">{c.nome}</span>
                   <span className="ml-auto shrink-0 tabular-nums text-muted-foreground text-xs">
-                    {c.pct.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%
+                    {formatMoney(c.valor)} · {c.pct.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%
                   </span>
                 </li>
               ))}
