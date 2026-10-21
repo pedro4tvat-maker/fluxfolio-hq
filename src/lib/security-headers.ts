@@ -4,15 +4,15 @@ const SUPABASE = "https://lzqwuffiiebpfzoqtzuo.supabase.co";
 const SUPABASE_WS = "wss://lzqwuffiiebpfzoqtzuo.supabase.co";
 
 // Política de conteúdo: de onde o site pode carregar scripts, estilos, imagens e conexões.
-// Começa em modo "Report-Only" (só registra violações no console, não bloqueia) para
-// confirmar que nada legítimo é barrado; depois passa para modo bloqueante.
+// Modo bloqueante: o navegador recusa qualquer recurso fora desta lista.
+// Cloudflare: Turnstile (captcha) e Web Analytics (cloudflareinsights).
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   `img-src 'self' data: blob: ${SUPABASE}`,
-  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS}`,
+  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} https://cloudflareinsights.com`,
   "frame-src 'self' blob: https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -32,7 +32,7 @@ const HEADERS: Record<string, string> = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Bloqueia acesso a câmera, microfone, localização etc.
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
-  "Content-Security-Policy-Report-Only": CSP,
+  "Content-Security-Policy": CSP,
 };
 
 export function withSecurityHeaders(response: Response): Response {
