@@ -409,12 +409,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Money({ v }: { v: number | string }) {
+function Money({ v, sinal }: { v: number | string; sinal?: boolean }) {
   const n = typeof v === "string" ? Number(v) : v;
-  return <span className={n < 0 ? "text-destructive" : ""}>{formatMoney(n)}</span>;
+  const r = Math.round(n * 100) / 100;
+  // sinal: entradas/resultados positivos com "+", saídas com "−" (usado na DRE)
+  const txt = sinal && r !== 0 ? `${r > 0 ? "+" : "−"} ${formatMoney(Math.abs(r))}` : formatMoney(n);
+  return <span className={n < 0 ? "text-destructive" : ""}>{txt}</span>;
 }
 
-function Table({ rows, moneyCols = [] as string[] }: { rows: Record<string, unknown>[]; moneyCols?: string[] }) {
+function Table({ rows, moneyCols = [] as string[], sinal }: { rows: Record<string, unknown>[]; moneyCols?: string[]; sinal?: boolean }) {
   if (!rows.length) return <p className="text-sm text-muted-foreground">Sem dados.</p>;
   const headers = Object.keys(rows[0]);
   return (
@@ -434,7 +437,7 @@ function Table({ rows, moneyCols = [] as string[] }: { rows: Record<string, unkn
                 const percent = typeof v === "number" && isPercentRow(r);
                 return (
                   <td key={h} className={`py-2 pr-4 ${isMoney ? "font-mono text-right" : ""}`}>
-                    {percent ? `${(v as number).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%` : typeof v === "number" && isMoney ? <Money v={v} /> : typeof v === "number" ? v.toLocaleString("pt-BR") : String(v ?? "")}
+                    {percent ? `${(v as number).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%` : typeof v === "number" && isMoney ? <Money v={v} sinal={sinal} /> : typeof v === "number" ? v.toLocaleString("pt-BR") : String(v ?? "")}
                   </td>
                 );
               })}
@@ -487,7 +490,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
               <span>Existem <strong>{r.semClassificacao}</strong> categorias de saída sem classificação (custo variável, custo fixo, dedução ou despesa financeira). Elas entram como despesa operacional. Classifique em Configurações da Empresa → Estruturas auxiliares → Categorias.</span>
             </div>
           )}
-          <Table rows={r.rows} moneyCols={["Valor"]} />
+          <Table rows={r.rows} moneyCols={["Valor"]} sinal />
         </>
       );
     }

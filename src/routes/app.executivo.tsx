@@ -55,6 +55,12 @@ const CHART_PALETTE = [BRAND.primary, BRAND.secondary, BRAND.support, BRAND.ligh
 
 const fmt = (n: number) => formatMoney(n);
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
+// Valor com sinal explícito: entradas/resultados positivos com "+", saídas com "−"
+const fmtSinal = (n: number) => {
+  const v = Math.round(n * 100) / 100;
+  if (v === 0) return formatMoney(0);
+  return `${v > 0 ? "+" : "−"} ${formatMoney(Math.abs(v))}`;
+};
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 function Executivo() {
@@ -387,17 +393,17 @@ function Executivo() {
               {mesEmAndamento && <> O mês {cur.label} ainda está em andamento (dados até {fmtBr(hojeIso)}).</>}
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              <Kpi label="Receita bruta" value={fmt(tot!.receitaBruta)} />
-              <Kpi label="Impostos e deduções" value={fmt(tot!.receitaBruta - tot!.receitaLiquida)} />
-              <Kpi label="Receita líquida" value={fmt(tot!.receitaLiquida)} />
-              <Kpi label="CMV (custo do vendido)" value={fmt(tot!.custosVariaveis)} />
-              <Kpi label="Lucro bruto" value={fmt(tot!.receitaLiquida - tot!.custosVariaveis)} />
-              <Kpi label="Despesas operacionais" value={fmt(tot!.custosFixos)} />
-              <Kpi label="Lucro operacional" value={fmt(tot!.resultadoOperacional)} />
-              <Kpi label="Resultado financeiro e IR/CSLL" value={fmt(tot!.lucroLiquido - tot!.resultadoOperacional)} />
+              <Kpi label="Receita bruta" value={fmtSinal(tot!.receitaBruta)} />
+              <Kpi label="Impostos e deduções" value={fmtSinal(-(tot!.receitaBruta - tot!.receitaLiquida))} />
+              <Kpi label="Receita líquida" value={fmtSinal(tot!.receitaLiquida)} />
+              <Kpi label="CMV (custo do vendido)" value={fmtSinal(-tot!.custosVariaveis)} />
+              <Kpi label="Lucro bruto" value={fmtSinal(tot!.receitaLiquida - tot!.custosVariaveis)} />
+              <Kpi label="Despesas operacionais" value={fmtSinal(-tot!.custosFixos)} />
+              <Kpi label="Lucro operacional" value={fmtSinal(tot!.resultadoOperacional)} />
+              <Kpi label="Resultado financeiro e IR/CSLL" value={fmtSinal(tot!.lucroLiquido - tot!.resultadoOperacional)} />
               <Kpi label="Margem operacional" value={fmtPct(tot!.margemOperacional)} />
               <Kpi label="Margem bruta" value={fmtPct(mc?.summary.mcPct ?? 0)} />
-              <Kpi label="Lucro líquido" value={fmt(tot!.lucroLiquido)} />
+              <Kpi label="Lucro líquido" value={fmtSinal(tot!.lucroLiquido)} />
               <Kpi label="Ticket médio" value={fmt(tot!.ticketMedio)} />
               <Kpi label="Qtd. vendas" value={String(tot!.qtdVendas)} />
               <Kpi label="A receber (vencidas)" value={fmt(rec?.summary.vencido ?? 0)} />
@@ -509,7 +515,7 @@ function Executivo() {
                             <li key={r.Linha} className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-2 ${total ? "bg-primary/5 font-semibold" : ""}`}>
                               <span className={`text-sm ${total ? "" : "text-muted-foreground"} ${r.Linha.startsWith("(") ? "" : "italic"}`}>{r.Linha}</span>
                               <span className={`text-sm tabular-nums font-display ${total ? "font-bold" : ""} ${v < 0 && !pct ? "text-destructive" : ""}`}>
-                                {pct ? fmtPct(v) : fmt(v)}
+                                {pct ? fmtPct(v) : fmtSinal(v)}
                               </span>
                             </li>
                           );
@@ -546,16 +552,16 @@ function Executivo() {
                       </tr>
                     </thead>
                     <tbody>
-                      <ComparativoRow label="Receita bruta" values={serie.map((s) => s.receitaBruta)} money />
-                      <ComparativoRow label="(−) Impostos e deduções" values={serie.map((s) => s.receitaBruta - s.receitaLiquida)} money />
-                      <ComparativoRow label="Receita líquida" values={serie.map((s) => s.receitaLiquida)} money />
-                      <ComparativoRow label="CMV (custo do vendido)" values={serie.map((s) => s.custosVariaveis)} money />
-                      <ComparativoRow label="Lucro bruto" values={serie.map((s) => s.receitaLiquida - s.custosVariaveis)} money />
-                      <ComparativoRow label="Despesas operacionais" values={serie.map((s) => s.custosFixos)} money />
-                      <ComparativoRow label="Lucro operacional" values={serie.map((s) => s.resultadoOperacional)} money />
+                      <ComparativoRow label="(+) Receita bruta" values={serie.map((s) => s.receitaBruta)} money />
+                      <ComparativoRow label="(−) Impostos e deduções" values={serie.map((s) => -(s.receitaBruta - s.receitaLiquida))} money />
+                      <ComparativoRow label="(=) Receita líquida" values={serie.map((s) => s.receitaLiquida)} money />
+                      <ComparativoRow label="(−) CMV (custo do vendido)" values={serie.map((s) => -s.custosVariaveis)} money />
+                      <ComparativoRow label="(=) Lucro bruto" values={serie.map((s) => s.receitaLiquida - s.custosVariaveis)} money />
+                      <ComparativoRow label="(−) Despesas operacionais" values={serie.map((s) => -s.custosFixos)} money />
+                      <ComparativoRow label="(=) Lucro operacional" values={serie.map((s) => s.resultadoOperacional)} money />
                       <ComparativoRow label="Margem operacional (%)" values={serie.map((s) => s.margemOperacional)} />
                       <ComparativoRow label="(±) Resultado financeiro e IR/CSLL" values={serie.map((s) => s.lucroLiquido - s.resultadoOperacional)} money />
-                      <ComparativoRow label="Lucro líquido" values={serie.map((s) => s.lucroLiquido)} money />
+                      <ComparativoRow label="(=) Lucro líquido" values={serie.map((s) => s.lucroLiquido)} money />
                       <ComparativoRow label="Ticket médio" values={serie.map((s) => s.ticketMedio)} money />
                       <ComparativoRow label="Qtd. vendas" values={serie.map((s) => s.qtdVendas)} />
                     </tbody>
@@ -748,7 +754,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 }
 
 function ComparativoRow({ label, values, money }: { label: string; values: number[]; money?: boolean }) {
-  const fmtVal = (v: number) => (money ? fmt(v) : v.toLocaleString("pt-BR", { maximumFractionDigits: 1 }));
+  const fmtVal = (v: number) => (money ? fmtSinal(v) : v.toLocaleString("pt-BR", { maximumFractionDigits: 1 }));
   const varLast = values.length >= 2 && values[values.length - 2] !== 0
     ? ((values[values.length - 1] - values[values.length - 2]) / Math.abs(values[values.length - 2])) * 100
     : null;
@@ -756,7 +762,7 @@ function ComparativoRow({ label, values, money }: { label: string; values: numbe
     <tr className="border-t">
       <td className="py-2 px-3 font-medium">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className="py-2 px-3 text-right font-mono">{fmtVal(v)}</td>
+        <td key={i} className={`py-2 px-3 text-right font-mono ${money && v < 0 ? "text-destructive" : ""}`}>{fmtVal(v)}</td>
       ))}
       <td className="py-2 px-3 text-right font-mono" style={{ color: varLast == null ? undefined : varLast >= 0 ? BRAND.primary : "#c0392b" }}>
         {varLast == null ? "—" : `${varLast >= 0 ? "+" : ""}${varLast.toFixed(1)}%`}
