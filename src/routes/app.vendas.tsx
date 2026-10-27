@@ -372,7 +372,22 @@ function VendasPage() {
           .limit(5000),
 
       ]);
-      return { tx: tx.data ?? [], rec: rec.data ?? [], movs: movs.data ?? [], saleItems: (saleItems.data ?? []) as SaleItemSnapshot[] };
+      // Só entra aqui o que é VENDA: lançamento gerado por esta tela (OS, itens da venda,
+      // baixa de estoque vinculada) ou descrito como "Venda...". Aportes, empréstimos,
+      // recebimentos avulsos e outras entradas do caixa ficam de fora.
+      const itens = (saleItems.data ?? []) as SaleItemSnapshot[];
+      const ligados = new Set<string>([
+        ...itens.map((it) => `${it.sale_type}:${it.sale_id}`),
+        ...(movs.data ?? []).filter((m) => m.related_sale_id).map((m) => `${m.related_sale_type}:${m.related_sale_id}`),
+      ]);
+      const ehVenda = (r: { id: string; descricao: string | null; os_code: string | null }, tipo: "vista" | "prazo") =>
+        !!r.os_code || ligados.has(`${tipo}:${r.id}`) || /^\s*venda\b/i.test(r.descricao ?? "");
+      return {
+        tx: (tx.data ?? []).filter((r) => ehVenda(r, "vista")),
+        rec: (rec.data ?? []).filter((r) => ehVenda(r, "prazo")),
+        movs: movs.data ?? [],
+        saleItems: itens,
+      };
     },
   });
 
