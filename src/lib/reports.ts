@@ -955,14 +955,6 @@ export type Inconsistencia = {
 
 export function buildInconsistencias(data: ReportData, period: Period): Inconsistencia[] {
   const out: Inconsistencia[] = [];
-  const vendasVista = data.transactions.filter(
-    (t) =>
-      t.status === "realizado" &&
-      t.tipo === "entrada" &&
-      inPeriod(t.data, period) &&
-      !isNonRevenueTx(t, buildCategoryMap(data.categories)),
-  );
-  const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
   const itensPorVenda = new Map<string, SaleItemReport[]>();
   data.saleItems.forEach((it) => {
     const k = `${it.sale_type}:${it.sale_id}`;
@@ -970,6 +962,23 @@ export function buildInconsistencias(data: ReportData, period: Period): Inconsis
     arr.push(it);
     itensPorVenda.set(k, arr);
   });
+  // Só confere vendas registradas pela tela de Vendas (têm OS ou itens). Entradas lançadas direto
+  // no caixa/contas a receber (recebimento avulso, iFood/99Food sem itens) não são cobradas como pendência.
+  const daTelaDeVendas = (id: string, tipo: "vista" | "prazo", os: string | null | undefined) =>
+    !!os || itensPorVenda.has(`${tipo}:${id}`);
+  const vendasVista = data.transactions.filter(
+    (t) =>
+      t.status === "realizado" &&
+      t.tipo === "entrada" &&
+      inPeriod(t.data, period) &&
+      !t.receivable_id &&
+      !isNonRevenueTx(t, buildCategoryMap(data.categories)) &&
+      daTelaDeVendas(t.id, "vista", (t as any).os_code),
+  );
+  // Venda a prazo entra no período pela data da venda, não pelo vencimento.
+  const vendasPrazo = data.receivables.filter(
+    (r) => inPeriod(dataDaVendaPrazo(r), period) && r.status !== "cancelado" && daTelaDeVendas(r.id, "prazo", (r as any).os_code),
+  );
 
   const check = (
     saleId: string,
