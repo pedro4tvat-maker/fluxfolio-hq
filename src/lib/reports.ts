@@ -333,7 +333,8 @@ function grupoDaSaida(t: { categoria_id: string | null }, catMap: Map<string, Ca
   return "operacionais";
 }
 
-const PALAVRAS_CMV = /insumo|materia_prima|mercadoria|revenda|embalage|ingrediente|hortifruti|acougue|cmv|custo_d[oa]s?_(produto|mercadoria|servico)|compra_de_(produto|mercadoria|estoque)|estoque/;
+// "Fornecedores" é a categoria-padrão de compras criada em toda empresa nova (compra de mercadoria/insumo).
+const PALAVRAS_CMV = /fornecedor|insumo|materia_prima|mercadoria|revenda|embalage|ingrediente|hortifruti|acougue|cmv|custo_d[oa]s?_(produto|mercadoria|servico)|compra_de_(produto|mercadoria|estoque)|estoque/;
 const PALAVRAS_FINANCEIRO = /juros|tarifa_banc|tarifas_banc|iof|encargo_financ|multa_banc/;
 
 // Data em que a venda a prazo foi feita (created_at no dia local); vencimento só como reserva.
