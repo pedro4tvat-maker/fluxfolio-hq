@@ -325,8 +325,16 @@ function grupoDaSaida(t: { categoria_id: string | null }, catMap: Map<string, Ca
   if (cat.is_deduction || b === "impostos") return "deducoes";
   if (cat.is_variable_cost || b === "custos_variaveis") return "cmv";
   if (cat.is_financial_expense || b === "despesas_financeiras") return "financeiro";
+  // Categoria ainda sem nenhuma classificação: custo do produto/serviço vendido reconhecido pelo nome
+  // (insumos, mercadoria para revenda, matéria-prima, embalagem…). O resto fica em despesas operacionais.
+  const semClassificacao = !cat.is_fixed_cost && !b;
+  if (semClassificacao && PALAVRAS_CMV.test(nome)) return "cmv";
+  if (semClassificacao && PALAVRAS_FINANCEIRO.test(nome)) return "financeiro";
   return "operacionais";
 }
+
+const PALAVRAS_CMV = /insumo|materia_prima|mercadoria|revenda|embalage|ingrediente|hortifruti|acougue|cmv|custo_d[oa]s?_(produto|mercadoria|servico)|compra_de_(produto|mercadoria|estoque)|estoque/;
+const PALAVRAS_FINANCEIRO = /juros|tarifa_banc|tarifas_banc|iof|encargo_financ|multa_banc/;
 
 // Data em que a venda a prazo foi feita (created_at no dia local); vencimento só como reserva.
 export function dataDaVendaPrazo(r: { created_at?: string | null; vencimento: string }): string {
@@ -379,20 +387,16 @@ export function buildDRE(data: ReportData, period: Period) {
   const deducoes = impostosVendas + devolucoes;
   const receitaLiquida = receitaBruta - deducoes;
 
-  // (-) CMV/CPV/CSP: custo do que saiu do estoque nas vendas do período (itens da venda).
-  // Sem itens com custo, usa as saídas em categorias de custo variável (insumos, mercadoria, serviço).
-  const idsVista = new Set(fat.vista.map((t) => t.id));
-  const idsPrazo = new Set(fat.prazo.map((r) => r.id));
-  const cmvItens = data.saleItems
-    .filter((it) => (it.sale_type === "vista" && idsVista.has(it.sale_id)) || (it.sale_type === "prazo" && idsPrazo.has(it.sale_id)))
-    .reduce((s, it) => s + (it.total_cost || 0), 0);
-  const cmvCategorias = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "cmv"));
-  const cmvPorEstoque = cmvItens > 0;
-  const cmv = cmvPorEstoque ? cmvItens : cmvCategorias;
+  // (-) CMV/CPV/CSP: saídas do período em categorias de custo do produto/serviço vendido
+  // (custo variável: insumos, mercadoria para revenda, embalagens…). Antes, quando havia venda com
+  // itens, o custo vinha só dos itens e as compras de insumo desapareciam da DRE.
+  const cmvTx = saidas.filter((t) => grupoDaSaida(t, catMap) === "cmv");
+  const cmv = soma(cmvTx);
   const lucroBruto = receitaLiquida - cmv;
 
   // (-) Despesas operacionais: vendas, administrativas, gerais e pessoal
-  const despesasOperacionais = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "operacionais"));
+  const despesasTx = saidas.filter((t) => grupoDaSaida(t, catMap) === "operacionais");
+  const despesasOperacionais = soma(despesasTx);
   // (±) Outras receitas e despesas operacionais
   const outrasOperacionais = soma(entradas.filter((t) => grupoDaEntrada(t, catMap) === "outras"));
   const lucroOperacional = lucroBruto - despesasOperacionais + outrasOperacionais;
@@ -407,7 +411,17 @@ export function buildDRE(data: ReportData, period: Period) {
   const irCsll = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "ir_csll"));
   const lucroLiquido = lair - irCsll;
   const margemLiquida = receitaLiquida > 0 ? (lucroLiquido / receitaLiquida) * 100 : 0;
-  const semClassificacao = data.categories.filter((c) => c.tipo === "saida" && !c.is_variable_cost && !c.is_fixed_cost && !c.is_deduction && !c.is_financial_expense && !c.is_non_operating && !c.is_internal_transfer).length;
+  const detalhe = (l: Tx[]) => {
+    const m = new Map<string, number>();
+    l.forEach((t) => {
+      const nome = catMap.get(t.categoria_id ?? "")?.nome ?? "Sem categoria";
+      m.set(nome, (m.get(nome) ?? 0) + t.valor);
+    });
+    return [...m.entries()].sort((x, y) => y[1] - x[1]).map(([nome, v]) => ({ Linha: `      · ${nome}`, Valor: -v }));
+  };
+  // Categorias de saída sem classificação que também não foram reconhecidas pelo nome (caem em despesa operacional)
+  const semClassificacao = data.categories.filter((c) => c.tipo === "saida" && !c.is_variable_cost && !c.is_fixed_cost && !c.is_deduction && !c.is_financial_expense && !c.is_non_operating && !c.is_internal_transfer
+    && !toBucket(c.kpi_classification) && !PALAVRAS_CMV.test(slug(c.nome)) && !PALAVRAS_FINANCEIRO.test(slug(c.nome))).length;
 
   return {
     rows: [
@@ -415,9 +429,11 @@ export function buildDRE(data: ReportData, period: Period) {
       { Linha: "(-) Impostos sobre vendas (DAS/Simples, ICMS, ISS, PIS, Cofins, IPI)", Valor: -impostosVendas },
       { Linha: "(-) Devoluções e abatimentos", Valor: -devolucoes },
       { Linha: "(=) Receita Líquida", Valor: receitaLiquida },
-      { Linha: cmvPorEstoque ? "(-) CMV / CPV / CSP (custo do que saiu do estoque)" : "(-) CMV / CPV / CSP", Valor: -cmv },
+      { Linha: "(-) CMV / CPV / CSP (custo do que foi vendido)", Valor: -cmv },
+      ...detalhe(cmvTx),
       { Linha: "(=) Lucro Bruto", Valor: lucroBruto },
       { Linha: "(-) Despesas Operacionais (vendas, administrativas, gerais e pessoal)", Valor: -despesasOperacionais },
+      ...detalhe(despesasTx),
       { Linha: "(±) Outras Receitas e Despesas Operacionais", Valor: outrasOperacionais },
       { Linha: "(=) Lucro Operacional", Valor: lucroOperacional },
       { Linha: "(±) Resultado Financeiro", Valor: resultadoFinanceiro },
@@ -629,7 +645,7 @@ export function buildPontoEquilibrio(data: ReportData, period: Period) {
   return {
     rows: [
       { Linha: "Despesas Operacionais", Valor: custosFixos },
-      { Linha: "Margem de Contribuição (%)", Valor: mcPct * 100 },
+      { Linha: "Margem Bruta (%)", Valor: mcPct * 100 },
       { Linha: "Ponto de Equilíbrio (R$)", Valor: pe },
       { Linha: "Receita Atual", Valor: s.receitaLiquida },
       { Linha: "Diferença", Valor: diff },
@@ -865,7 +881,7 @@ export function buildIndicadores(data: ReportData, period: Period) {
     rows: [
       { Indicador: "Margem Líquida (%)", Valor: s.margemLiquida },
       { Indicador: "Margem Operacional (%)", Valor: margemOp },
-      { Indicador: "Margem de Contribuição (%)", Valor: mcPct },
+      { Indicador: "Margem Bruta (%)", Valor: mcPct },
       { Indicador: "EBITDA", Valor: ebitda },
       { Indicador: "Liquidez Corrente", Valor: liquidez },
       { Indicador: "Ponto de Equilíbrio (R$)", Valor: pe.rows[2].Valor },

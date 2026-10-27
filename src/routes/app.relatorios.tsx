@@ -484,7 +484,7 @@ function RenderReport({ type, data, dataPrev, filiais, period, prevPeriod, onExp
           {r.semClassificacao > 0 && (
             <div className="rounded-2xl bg-amber-500/10 p-3 text-sm flex gap-2 items-start">
               <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-              <span>Existem <strong>{r.semClassificacao}</strong> categorias sem classificação financeira. Isso pode afetar a precisão da DRE. Configure-as no Centro de Custos.</span>
+              <span>Existem <strong>{r.semClassificacao}</strong> categorias de saída sem classificação (custo variável, custo fixo, dedução ou despesa financeira). Elas entram como despesa operacional. Classifique em Configurações da Empresa → Estruturas auxiliares → Categorias.</span>
             </div>
           )}
           <Table rows={r.rows} moneyCols={["Valor"]} />

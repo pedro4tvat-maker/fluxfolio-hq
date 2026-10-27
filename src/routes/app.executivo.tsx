@@ -396,7 +396,7 @@ function Executivo() {
               <Kpi label="Lucro operacional" value={fmt(tot!.resultadoOperacional)} />
               <Kpi label="Resultado financeiro e IR/CSLL" value={fmt(tot!.lucroLiquido - tot!.resultadoOperacional)} />
               <Kpi label="Margem operacional" value={fmtPct(tot!.margemOperacional)} />
-              <Kpi label="Margem contribuição" value={fmtPct(mc?.summary.mcPct ?? 0)} />
+              <Kpi label="Margem bruta" value={fmtPct(mc?.summary.mcPct ?? 0)} />
               <Kpi label="Lucro líquido" value={fmt(tot!.lucroLiquido)} />
               <Kpi label="Ticket médio" value={fmt(tot!.ticketMedio)} />
               <Kpi label="Qtd. vendas" value={String(tot!.qtdVendas)} />
