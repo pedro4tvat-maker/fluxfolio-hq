@@ -254,8 +254,8 @@ function Executivo() {
       const kpis = {
         receita_bruta_total_periodo: t.receitaBruta,
         receita_liquida_total_periodo: t.receitaLiquida,
-        custos_variaveis_total_periodo: t.custosVariaveis,
-        custos_fixos_total_periodo: t.custosFixos,
+        cmv_custo_do_vendido_total_periodo: t.custosVariaveis,
+        despesas_operacionais_total_periodo: t.custosFixos,
         resultado_operacional_total_periodo: t.resultadoOperacional,
         margem_operacional_periodo_pct: Number(t.margemOperacional.toFixed(1)),
         lucro_liquido_total_periodo: t.lucroLiquido,
@@ -389,8 +389,8 @@ function Executivo() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               <Kpi label="Receita bruta" value={fmt(tot!.receitaBruta)} />
               <Kpi label="Receita líquida" value={fmt(tot!.receitaLiquida)} />
-              <Kpi label="Custos variáveis" value={fmt(tot!.custosVariaveis)} />
-              <Kpi label="Custos fixos" value={fmt(tot!.custosFixos)} />
+              <Kpi label="CMV (custo do vendido)" value={fmt(tot!.custosVariaveis)} />
+              <Kpi label="Despesas operacionais" value={fmt(tot!.custosFixos)} />
               <Kpi label="Despesas financeiras" value={fmt(tot!.despesasFin)} />
               <Kpi label="Resultado operacional" value={fmt(tot!.resultadoOperacional)} />
               <Kpi label="Margem operacional" value={fmtPct(tot!.margemOperacional)} />
@@ -522,8 +522,9 @@ function Executivo() {
                     <tbody>
                       <ComparativoRow label="Receita bruta" values={serie.map((s) => s.receitaBruta)} money />
                       <ComparativoRow label="Receita líquida" values={serie.map((s) => s.receitaLiquida)} money />
-                      <ComparativoRow label="Custos variáveis" values={serie.map((s) => s.custosVariaveis)} money />
-                      <ComparativoRow label="Custos fixos" values={serie.map((s) => s.custosFixos)} money />
+                      <ComparativoRow label="CMV (custo do vendido)" values={serie.map((s) => s.custosVariaveis)} money />
+                      <ComparativoRow label="Lucro bruto" values={serie.map((s) => s.receitaLiquida - s.custosVariaveis)} money />
+                      <ComparativoRow label="Despesas operacionais" values={serie.map((s) => s.custosFixos)} money />
                       <ComparativoRow label="Resultado operacional" values={serie.map((s) => s.resultadoOperacional)} money />
                       <ComparativoRow label="Margem operacional (%)" values={serie.map((s) => s.margemOperacional)} />
                       <ComparativoRow label="Lucro líquido" values={serie.map((s) => s.lucroLiquido)} money />

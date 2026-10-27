@@ -239,7 +239,9 @@ type DreBucket =
   | "custos_fixos"
   | "despesas_operacionais"
   | "marketing"
-  | "despesas_financeiras";
+  | "despesas_financeiras"
+  | "receitas_financeiras"
+  | "ir_csll";
 
 const BUCKET_ALIASES: Record<DreBucket, string[]> = {
   receita_bruta: [
@@ -268,6 +270,8 @@ const BUCKET_ALIASES: Record<DreBucket, string[]> = {
   ],
   marketing: ["marketing", "marketing_vendas", "marketing_e_vendas"],
   despesas_financeiras: ["despesas_financeiras", "despesa_financeira", "juros", "encargos_financeiros"],
+  receitas_financeiras: ["receitas_financeiras", "receita_financeira", "rendimentos", "rendimento", "juros_recebidos", "aplicacoes"],
+  ir_csll: ["ir_csll", "irpj", "csll", "irpj_csll", "imposto_de_renda", "provisao_ir_csll"],
 };
 
 const ALIAS_TO_BUCKET: Map<string, DreBucket> = (() => {
@@ -302,6 +306,28 @@ export function buildCategoryMap(categories: Category[]) {
   return new Map(categories.map((c) => [c.id, c]));
 }
 
+// Onde uma ENTRADA operacional cai na DRE, pela classificação da categoria.
+function grupoDaEntrada(t: { categoria_id: string | null }, catMap: Map<string, Category>): "vendas" | "outras" | "financeiro" {
+  const cat = catMap.get(t.categoria_id ?? "");
+  const b = toBucket(cat?.kpi_classification);
+  if (b === "outras_receitas") return "outras";
+  if (b === "receitas_financeiras") return "financeiro";
+  return "vendas";
+}
+
+// Onde uma SAÍDA operacional cai na DRE (flags da categoria têm prioridade; depois a classificação e o nome).
+function grupoDaSaida(t: { categoria_id: string | null }, catMap: Map<string, Category>): "deducoes" | "cmv" | "operacionais" | "financeiro" | "ir_csll" {
+  const cat = catMap.get(t.categoria_id ?? "");
+  if (!cat) return "operacionais";
+  const b = toBucket(cat.kpi_classification);
+  const nome = slug(cat.nome);
+  if (b === "ir_csll" || /(^|_)(irpj|csll)(_|$)|imposto_de_renda/.test(nome)) return "ir_csll";
+  if (cat.is_deduction || b === "impostos") return "deducoes";
+  if (cat.is_variable_cost || b === "custos_variaveis") return "cmv";
+  if (cat.is_financial_expense || b === "despesas_financeiras") return "financeiro";
+  return "operacionais";
+}
+
 // Data em que a venda a prazo foi feita (created_at no dia local); vencimento só como reserva.
 export function dataDaVendaPrazo(r: { created_at?: string | null; vencimento: string }): string {
   if (r.created_at) {
@@ -323,7 +349,7 @@ export function buildFaturamento(data: ReportData, period: Period) {
   const catMap = buildCategoryMap(data.categories);
   const vista = data.transactions.filter(
     (t) => t.status === "realizado" && t.tipo === "entrada" && inPeriod(t.data, period)
-      && !t.receivable_id && !isNonRevenueTx(t, catMap),
+      && !t.receivable_id && !isNonRevenueTx(t, catMap) && grupoDaEntrada(t, catMap) === "vendas",
   );
   const prazo = data.receivables.filter(
     (r) => r.status !== "cancelado" && inPeriod(dataDaVendaPrazo(r), period) && !isNonRevenueTx(r, catMap),
@@ -336,79 +362,78 @@ export function buildFaturamento(data: ReportData, period: Period) {
 export function buildDRE(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
   const catMap = buildCategoryMap(data.categories);
+  const soma = (l: Tx[]) => l.reduce((s, t) => s + t.valor, 0);
+  // Aportes, empréstimos, retiradas e transferências internas ficam fora da DRE.
+  const saidas = realized.filter((t) => t.tipo === "saida" && !isNonRevenueTx(t, catMap));
+  const entradas = realized.filter((t) => t.tipo === "entrada" && !t.receivable_id && !isNonRevenueTx(t, catMap));
 
-  // Só saídas viram dedução/custo/despesa. Uma entrada numa categoria marcada
-  // como custo (ex.: "Vendas" com custo variável ligado por engano) é receita,
-  // e não pode ser descontada de novo como custo.
-  const bucketOf = (t: Tx): string | null => {
-    if (t.tipo !== "saida") return null;
-    const cat = catMap.get(t.categoria_id ?? "");
-    if (!cat) return null;
-    if (cat.is_non_operating || cat.is_internal_transfer) return null;
-    if (cat.is_deduction) return "impostos";
-    if (cat.is_variable_cost) return "custos_variaveis";
-    if (cat.is_fixed_cost) return "custos_fixos";
-    if (cat.is_financial_expense) return "despesas_financeiras";
-    return null;
-  };
-
-  // Receita Bruta = faturamento do período (vendas à vista + vendas a prazo feitas no período),
-  // sem aportes, empréstimos e transferências. Ver buildFaturamento.
-  const receitaBruta = buildFaturamento(data, period).total;
-
-
-
-  const deducoes = realized
-    .filter((t) => bucketOf(t) === "impostos")
-    .reduce((s, t) => s + t.valor, 0);
-
+  // (+) Receita bruta de vendas e serviços: faturamento do período (ver buildFaturamento)
+  const fat = buildFaturamento(data, period);
+  const receitaBruta = fat.total;
+  // (-) Deduções: devoluções, abatimentos e tributos sobre vendas
+  const deducoes = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "deducoes"));
   const receitaLiquida = receitaBruta - deducoes;
 
-  const custosVariaveis = realized
-    .filter((t) => bucketOf(t) === "custos_variaveis")
-    .reduce((s, t) => s + t.valor, 0);
+  // (-) CMV/CPV/CSP: custo do que saiu do estoque nas vendas do período (itens da venda).
+  // Sem itens com custo, usa as saídas em categorias de custo variável (insumos, mercadoria, serviço).
+  const idsVista = new Set(fat.vista.map((t) => t.id));
+  const idsPrazo = new Set(fat.prazo.map((r) => r.id));
+  const cmvItens = data.saleItems
+    .filter((it) => (it.sale_type === "vista" && idsVista.has(it.sale_id)) || (it.sale_type === "prazo" && idsPrazo.has(it.sale_id)))
+    .reduce((s, it) => s + (it.total_cost || 0), 0);
+  const cmvCategorias = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "cmv"));
+  const cmvPorEstoque = cmvItens > 0;
+  const cmv = cmvPorEstoque ? cmvItens : cmvCategorias;
+  const lucroBruto = receitaLiquida - cmv;
 
-  const margemContribuicao = receitaLiquida - custosVariaveis;
+  // (-) Despesas operacionais: vendas, administrativas, gerais e pessoal
+  const despesasOperacionais = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "operacionais"));
+  // (±) Outras receitas e despesas operacionais
+  const outrasOperacionais = soma(entradas.filter((t) => grupoDaEntrada(t, catMap) === "outras"));
+  const lucroOperacional = lucroBruto - despesasOperacionais + outrasOperacionais;
 
-  const custosFixos = realized
-    .filter((t) => bucketOf(t) === "custos_fixos")
-    .reduce((s, t) => s + t.valor, 0);
+  // (±) Resultado financeiro: rendimentos e juros recebidos menos juros, tarifas e encargos pagos
+  const receitasFinanceiras = soma(entradas.filter((t) => grupoDaEntrada(t, catMap) === "financeiro"));
+  const despesasFinanceiras = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "financeiro"));
+  const resultadoFinanceiro = receitasFinanceiras - despesasFinanceiras;
+  const lair = lucroOperacional + resultadoFinanceiro;
 
-  // Saídas não operacionais (pagamento de empréstimo, retirada de sócio) e
-  // transferências internas não são despesa: ficam fora da DRE, como nas entradas.
-  const despesasOperacionais = realized
-    .filter((t) => t.tipo === "saida" && !bucketOf(t) && !isNonRevenueTx(t, catMap))
-    .reduce((s, t) => s + t.valor, 0);
-
-  const ebitda = margemContribuicao - custosFixos - despesasOperacionais;
-
-  const despesasFinanceiras = realized
-    .filter((t) => bucketOf(t) === "despesas_financeiras")
-    .reduce((s, t) => s + t.valor, 0);
-
-  const lucroLiquido = ebitda - despesasFinanceiras;
+  // (-) Provisão para IRPJ e CSLL
+  const irCsll = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "ir_csll"));
+  const lucroLiquido = lair - irCsll;
   const margemLiquida = receitaLiquida > 0 ? (lucroLiquido / receitaLiquida) * 100 : 0;
   const semClassificacao = data.categories.filter((c) => c.tipo === "saida" && !c.is_variable_cost && !c.is_fixed_cost && !c.is_deduction && !c.is_financial_expense && !c.is_non_operating && !c.is_internal_transfer).length;
 
   return {
     rows: [
-      { Linha: "1. Receita Bruta (Vendas)", Valor: receitaBruta },
-      { Linha: "2. Deduções (Impostos/Devol)", Valor: -deducoes },
-      { Linha: "3. = RECEITA LÍQUIDA", Valor: receitaLiquida },
-      { Linha: "4. (–) Custos Variáveis (CMV/Serv)", Valor: -custosVariaveis },
-      { Linha: "5. = MARGEM DE CONTRIBUIÇÃO", Valor: margemContribuicao },
-      { Linha: "6. (–) Custos Fixos (Estrutura)", Valor: -custosFixos },
-      { Linha: "7. (–) Despesas Operacionais", Valor: -despesasOperacionais },
-      { Linha: "8. = EBITDA / Lucro Operacional", Valor: ebitda },
-      { Linha: "9. (–) Despesas Financeiras / Juros", Valor: -despesasFinanceiras },
-      { Linha: "10. = LUCRO LÍQUIDO", Valor: lucroLiquido },
+      { Linha: "(+) Receita Bruta de Vendas e Serviços", Valor: receitaBruta },
+      { Linha: "(-) Deduções (devoluções, abatimentos e tributos sobre vendas)", Valor: -deducoes },
+      { Linha: "(=) Receita Líquida", Valor: receitaLiquida },
+      { Linha: cmvPorEstoque ? "(-) CMV / CPV / CSP (custo do que saiu do estoque)" : "(-) CMV / CPV / CSP", Valor: -cmv },
+      { Linha: "(=) Lucro Bruto", Valor: lucroBruto },
+      { Linha: "(-) Despesas Operacionais (vendas, administrativas, gerais e pessoal)", Valor: -despesasOperacionais },
+      { Linha: "(±) Outras Receitas e Despesas Operacionais", Valor: outrasOperacionais },
+      { Linha: "(=) Lucro Operacional", Valor: lucroOperacional },
+      { Linha: "(±) Resultado Financeiro", Valor: resultadoFinanceiro },
+      { Linha: "(=) Lucro Antes do IR e da CSLL (LAIR)", Valor: lair },
+      { Linha: "(-) Provisão para IRPJ e CSLL", Valor: -irCsll },
+      { Linha: "(=) Lucro Líquido do Exercício", Valor: lucroLiquido },
       { Linha: "Margem Líquida (%)", Valor: margemLiquida },
     ],
     summary: {
       receitaBruta,
+      deducoes,
       receitaLiquida,
-      margemContribuicao,
-      resultadoOperacional: ebitda,
+      cmv,
+      lucroBruto,
+      // compatibilidade: telas antigas leem "margem de contribuição" (= lucro bruto) e "resultado operacional"
+      margemContribuicao: lucroBruto,
+      despesasOperacionais,
+      outrasOperacionais,
+      resultadoOperacional: lucroOperacional,
+      resultadoFinanceiro,
+      lair,
+      irCsll,
       lucroLiquido,
       margemLiquida,
     },
@@ -539,7 +564,7 @@ export function buildMargemContribuicao(data: ReportData, period: Period) {
       .map((t) => t.id),
   );
   const vendasPrazoIds = new Set(
-    data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado").map((r) => r.id),
+    data.receivables.filter((r) => inPeriod(dataDaVendaPrazo(r), period) && r.status !== "cancelado").map((r) => r.id),
   );
   const itensPeriodo = data.saleItems.filter(
     (it) =>
@@ -588,15 +613,14 @@ export function buildPontoEquilibrio(data: ReportData, period: Period) {
   const dre = buildDRE(data, period);
   const s = dre.summary;
   const mcPct = s.receitaLiquida > 0 ? s.margemContribuicao / s.receitaLiquida : 0;
-  const custosFixos = s.receitaLiquida - s.margemContribuicao > 0
-    ? Math.max(0, s.margemContribuicao - s.resultadoOperacional)
-    : 0;
+  // Despesas operacionais do período (estrutura que precisa ser paga pelo lucro bruto)
+  const custosFixos = Math.max(0, s.despesasOperacionais - s.outrasOperacionais);
   const pe = mcPct > 0 ? custosFixos / mcPct : 0;
   const diff = s.receitaLiquida - pe;
   const status = pe === 0 ? "indefinido" : diff > pe * 0.1 ? "acima" : diff > -pe * 0.1 ? "proximo" : "abaixo";
   return {
     rows: [
-      { Linha: "Custos Fixos", Valor: custosFixos },
+      { Linha: "Despesas Operacionais", Valor: custosFixos },
       { Linha: "Margem de Contribuição (%)", Valor: mcPct * 100 },
       { Linha: "Ponto de Equilíbrio (R$)", Valor: pe },
       { Linha: "Receita Atual", Valor: s.receitaLiquida },
