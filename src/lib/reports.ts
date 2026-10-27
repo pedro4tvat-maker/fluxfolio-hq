@@ -370,8 +370,13 @@ export function buildDRE(data: ReportData, period: Period) {
   // (+) Receita bruta de vendas e serviços: faturamento do período (ver buildFaturamento)
   const fat = buildFaturamento(data, period);
   const receitaBruta = fat.total;
-  // (-) Deduções: devoluções, abatimentos e tributos sobre vendas
-  const deducoes = soma(saidas.filter((t) => grupoDaSaida(t, catMap) === "deducoes"));
+  // (-) Deduções: tributos sobre vendas (DAS/Simples, ICMS, ISS, PIS, Cofins, IPI) e devoluções/abatimentos.
+  // Categoria de dedução com nome de devolução/abatimento/desconto vai para a segunda linha; o resto é imposto.
+  const ehDevolucao = (t: Tx) => /devolu|abatim|descont|estorno/.test(slug(catMap.get(t.categoria_id ?? "")?.nome ?? ""));
+  const deducoesTx = saidas.filter((t) => grupoDaSaida(t, catMap) === "deducoes");
+  const devolucoes = soma(deducoesTx.filter(ehDevolucao));
+  const impostosVendas = soma(deducoesTx.filter((t) => !ehDevolucao(t)));
+  const deducoes = impostosVendas + devolucoes;
   const receitaLiquida = receitaBruta - deducoes;
 
   // (-) CMV/CPV/CSP: custo do que saiu do estoque nas vendas do período (itens da venda).
@@ -407,7 +412,8 @@ export function buildDRE(data: ReportData, period: Period) {
   return {
     rows: [
       { Linha: "(+) Receita Bruta de Vendas e Serviços", Valor: receitaBruta },
-      { Linha: "(-) Deduções (devoluções, abatimentos e tributos sobre vendas)", Valor: -deducoes },
+      { Linha: "(-) Impostos sobre vendas (DAS/Simples, ICMS, ISS, PIS, Cofins, IPI)", Valor: -impostosVendas },
+      { Linha: "(-) Devoluções e abatimentos", Valor: -devolucoes },
       { Linha: "(=) Receita Líquida", Valor: receitaLiquida },
       { Linha: cmvPorEstoque ? "(-) CMV / CPV / CSP (custo do que saiu do estoque)" : "(-) CMV / CPV / CSP", Valor: -cmv },
       { Linha: "(=) Lucro Bruto", Valor: lucroBruto },
@@ -423,6 +429,8 @@ export function buildDRE(data: ReportData, period: Period) {
     summary: {
       receitaBruta,
       deducoes,
+      impostosVendas,
+      devolucoes,
       receitaLiquida,
       cmv,
       lucroBruto,
