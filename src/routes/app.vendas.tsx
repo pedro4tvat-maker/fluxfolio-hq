@@ -126,6 +126,18 @@ type CompanyData = {
   cep: string | null;
 };
 
+// Data em que a venda a prazo foi REALIZADA. O título a receber guarda a data da venda em
+// created_at (o vencimento é só quando o cliente vai pagar). Converte para o dia local.
+function dataDaVenda(r: { created_at?: string | null; vencimento?: string | null }): string | null {
+  if (r.created_at) {
+    const d = new Date(r.created_at);
+    if (!Number.isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  return r.vencimento ?? null;
+}
+
 // ---------- Shared sale-description parsing ----------
 // Description format stored: "Venda - Cliente (2x Item A @21.00|c17.00, 1x Item B (250g) @33.00|c28.67)"
 
@@ -349,7 +361,7 @@ function VendasPage() {
           .limit(2000),
         supabase
           .from("receivables")
-          .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id, os_code")
+          .select("id, descricao, cliente, valor, vencimento, status, forma_recebimento, crm_contact_id, os_code, created_at")
           .eq("company_id", selected!)
           .is("deleted_at", null)
           .order("vencimento", { ascending: false })
@@ -633,6 +645,8 @@ function VendasPage() {
           crm_contact_id: cliente?.id ?? null,
           valor,
           vencimento: form.vencimento,
+          // data da venda (o vencimento é só a data do recebimento)
+          created_at: new Date(`${form.data_venda}T12:00:00`).toISOString(),
           forma_recebimento: form.forma_pagamento,
           conta_id: account?.id,
           status: "em_aberto",
@@ -688,7 +702,7 @@ function VendasPage() {
             custo_unitario: Number.isFinite(custoVenda) && custoVenda > 0 ? custoVenda : null,
             motivo: "Venda",
             stock_location_id: it.stock_location_id || null,
-            data: form.forma === "vista" ? form.data_venda : form.vencimento,
+            data: form.data_venda,
             related_sale_id: saleRefId,
             related_sale_type: saleRefType,
           });
@@ -861,6 +875,7 @@ function VendasPage() {
     valor: number | string | null;
     data?: string | null;
     vencimento?: string | null;
+    created_at?: string | null;
     forma_pagamento?: string | null;
     cliente?: string | null;
   }, tipo: "vista" | "prazo") {
@@ -870,7 +885,7 @@ function VendasPage() {
     const empresaEnd = [company?.endereco, company?.bairro, company?.cidade, company?.estado, company?.cep]
       .filter(Boolean)
       .join(", ");
-    const dataRef = tipo === "vista" ? row.data : row.vencimento;
+    const dataRef = tipo === "vista" ? row.data : dataDaVenda(row);
     const valor = Number(row.valor) || 0;
     const desc = row.descricao || "Venda";
     const matchCliente = desc.match(/Venda\s*-\s*([^(]+?)\s*\(/);
@@ -1197,17 +1212,17 @@ function VendasPage() {
 
   function buildSaleMarginRows(row: {
     id: string; descricao: string | null; valor: number | string | null;
-    data?: string | null; vencimento?: string | null;
+    data?: string | null; vencimento?: string | null; created_at?: string | null;
     forma_pagamento?: string | null; cliente?: string | null;
   }, tipo: "vista" | "prazo", sharedPool?: SaleMov[], sharedSaleItems?: SaleItemSnapshot[]) {
     const valor = Number(row.valor) || 0;
-    const dataRefRaw = tipo === "vista" ? row.data : row.vencimento;
+    const dataRefRaw = tipo === "vista" ? row.data : dataDaVenda(row);
     const pool: SaleMov[] = sharedPool ?? ((vendas?.movs ?? []).map((m) => ({ ...m })) as SaleMov[]);
     const itens = parseSaleItems(row.descricao, valor, dataRefRaw ?? null, pool, row.id, tipo, sharedSaleItems);
     const totalReceita = itens.reduce((a, b) => a + b.subtotal, 0);
     const totalCusto = itens.reduce((a, b) => a + b.custoTotal, 0);
     const margem = totalReceita - totalCusto;
-    const dataRef = tipo === "vista" ? row.data : row.vencimento;
+    const dataRef = tipo === "vista" ? row.data : dataDaVenda(row);
     const descLimpa = (row.descricao || "").replace(/\s*\([^)]*\)\s*$/, "");
     const matchCliente = descLimpa.match(/Venda\s*-\s*(.+)$/);
     const cliente = row.cliente || (matchCliente ? matchCliente[1].trim() : "Consumidor");
@@ -1316,7 +1331,7 @@ function VendasPage() {
       .filter((r) => inRange(r.data))
       .map((r) => buildSaleMarginRows(r, "vista", sharedPool, sharedSaleItems));
     const prazoRows = vendas.rec
-      .filter((r) => inRange(r.vencimento))
+      .filter((r) => inRange(dataDaVenda(r)))
       .map((r) => buildSaleMarginRows({ ...r, data: null, forma_pagamento: null }, "prazo", sharedPool, sharedSaleItems));
     const all = [...vistaRows, ...prazoRows];
     if (all.length === 0) { toast.error("Nenhuma venda no período selecionado"); return; }
@@ -1388,9 +1403,10 @@ function VendasPage() {
     valor: number | string | null;
     data?: string | null;
     vencimento?: string | null;
+    created_at?: string | null;
   }, tipo: "vista" | "prazo") {
     if (!selected) return;
-    const dataRef = (tipo === "vista" ? row.data : row.vencimento) || new Date().toISOString().slice(0, 10);
+    const dataRef = (tipo === "vista" ? row.data : dataDaVenda(row)) || new Date().toISOString().slice(0, 10);
 
     // 1) Bloqueia estorno duplicado
     const { data: jaEstornados } = await supabase
@@ -1561,6 +1577,7 @@ function VendasPage() {
     valor: number | string | null;
     data?: string | null;
     vencimento?: string | null;
+    created_at?: string | null;
     forma_pagamento?: string | null;
     cliente?: string | null;
     crm_contact_id?: string | null;
@@ -1610,7 +1627,7 @@ function VendasPage() {
       setForm({
         forma: tipo,
         forma_pagamento: row.forma_pagamento || "Pix",
-        data_venda: (row.data || new Date().toISOString().slice(0, 10)).slice(0, 10),
+        data_venda: (row.data || dataDaVenda(row) || new Date().toISOString().slice(0, 10)).slice(0, 10),
         vencimento: (row.vencimento || new Date().toISOString().slice(0, 10)).slice(0, 10),
         observacoes: "",
       });
@@ -1648,12 +1665,12 @@ function VendasPage() {
       return m ? m[1].trim() : null;
     };
     const vista = (vendas?.tx ?? []).filter((r) => dentro(r.data)).map((r) => ({
-      chave: `v-${r.id}`, tipo: "vista" as const, row: r, data: r.data as string,
+      chave: `v-${r.id}`, tipo: "vista" as const, row: r, data: r.data as string, venc: null as string | null,
       titulo: tituloDe(r.descricao, (r as { os_code?: string | null }).os_code),
       cliente: clienteDe(r.descricao), forma: r.forma_pagamento ?? null, status: null as string | null, valor: Number(r.valor) || 0,
     }));
-    const prazo = (vendas?.rec ?? []).filter((r) => dentro(r.vencimento)).map((r) => ({
-      chave: `p-${r.id}`, tipo: "prazo" as const, row: r, data: r.vencimento as string,
+    const prazo = (vendas?.rec ?? []).filter((r) => dentro(dataDaVenda(r))).map((r) => ({
+      chave: `p-${r.id}`, tipo: "prazo" as const, row: r, data: dataDaVenda(r) as string, venc: r.vencimento as string | null,
       titulo: tituloDe(r.descricao, (r as { os_code?: string | null }).os_code),
       cliente: r.cliente ?? clienteDe(r.descricao), forma: r.forma_recebimento ?? null, status: r.status as string | null, valor: Number(r.valor) || 0,
     }));
@@ -1684,7 +1701,7 @@ function VendasPage() {
     const existing = new Set((vendas.saleItems ?? []).map((it) => `${it.sale_type}:${it.sale_id}`));
     const rows = [
       ...vendas.tx.map((r) => ({ ...r, saleType: "vista" as const, dataRef: r.data })),
-      ...vendas.rec.map((r) => ({ ...r, saleType: "prazo" as const, dataRef: r.vencimento })),
+      ...vendas.rec.map((r) => ({ ...r, saleType: "prazo" as const, dataRef: dataDaVenda(r) })),
     ].filter((r) => !existing.has(`${r.saleType}:${r.id}`));
 
     let corrigidas = 0;
@@ -2154,7 +2171,7 @@ function VendasPage() {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {[v.cliente, prazo ? `vence ${formatDate(v.data)}` : formatDate(v.data), v.forma].filter(Boolean).join(" · ")}
+                        {[v.cliente, formatDate(v.data), prazo && v.venc ? `recebe ${formatDate(v.venc)}` : null, v.forma].filter(Boolean).join(" · ")}
                       </div>
                     </div>
                     <div className={`text-sm sm:text-base font-display font-semibold tabular-nums whitespace-nowrap ${prazo ? "" : "text-success"}`}>
