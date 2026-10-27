@@ -16,6 +16,8 @@ export type Tx = {
   centro_custo_id: string | null;
   conta_id: string | null;
   forma_pagamento: string | null;
+  // preenchido quando a entrada é a baixa de um título de Contas a Receber
+  receivable_id?: string | null;
 };
 
 export type Category = {
@@ -58,6 +60,7 @@ export type Receivable = {
   status: string;
   forma_recebimento: string | null;
   categoria_id: string | null;
+  created_at?: string | null;
 };
 
 export type Product = {
@@ -132,7 +135,7 @@ export async function fetchReportData(
     applyCC(applyBranch(
       supabase
         .from("transactions")
-        .select("id, data, tipo, valor, descricao, status, categoria_id, centro_custo_id, conta_id, forma_pagamento, os_code")
+        .select("id, data, tipo, valor, descricao, status, categoria_id, centro_custo_id, conta_id, forma_pagamento, os_code, receivable_id")
         .eq("company_id", companyId)
         .is("deleted_at", null)
         // Busca o histórico até o fim do período para calcular corretamente
@@ -152,7 +155,7 @@ export async function fetchReportData(
     applyBranch(
       supabase
         .from("receivables")
-        .select("id, descricao, cliente, valor, vencimento, data_recebimento, status, forma_recebimento, categoria_id, os_code")
+        .select("id, descricao, cliente, valor, vencimento, data_recebimento, status, forma_recebimento, categoria_id, os_code, created_at")
         .eq("company_id", companyId)
         .is("deleted_at", null),
       branchId,
@@ -299,6 +302,37 @@ export function buildCategoryMap(categories: Category[]) {
   return new Map(categories.map((c) => [c.id, c]));
 }
 
+// Data em que a venda a prazo foi feita (created_at no dia local); vencimento só como reserva.
+export function dataDaVendaPrazo(r: { created_at?: string | null; vencimento: string }): string {
+  if (r.created_at) {
+    const d = new Date(r.created_at);
+    if (!Number.isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  return r.vencimento;
+}
+
+/**
+ * Faturamento do período (competência das vendas):
+ *  - entradas realizadas no período que NÃO são baixa de título a receber (venda à vista, Pix, cartão…);
+ *  - + títulos a receber criados no período (venda a prazo / iFood / 99Food), mesmo que o dinheiro caia depois.
+ * A baixa do título no mês seguinte não conta de novo. Aportes, empréstimos e transferências ficam de fora.
+ */
+export function buildFaturamento(data: ReportData, period: Period) {
+  const catMap = buildCategoryMap(data.categories);
+  const vista = data.transactions.filter(
+    (t) => t.status === "realizado" && t.tipo === "entrada" && inPeriod(t.data, period)
+      && !t.receivable_id && !isNonRevenueTx(t, catMap),
+  );
+  const prazo = data.receivables.filter(
+    (r) => r.status !== "cancelado" && inPeriod(dataDaVendaPrazo(r), period) && !isNonRevenueTx(r, catMap),
+  );
+  const totalVista = vista.reduce((s, t) => s + t.valor, 0);
+  const totalPrazo = prazo.reduce((s, r) => s + r.valor, 0);
+  return { total: totalVista + totalPrazo, totalVista, totalPrazo, qtd: vista.length + prazo.length, vista, prazo };
+}
+
 export function buildDRE(data: ReportData, period: Period) {
   const realized = data.transactions.filter((t) => t.status === "realizado" && inPeriod(t.data, period));
   const catMap = buildCategoryMap(data.categories);
@@ -318,11 +352,9 @@ export function buildDRE(data: ReportData, period: Period) {
     return null;
   };
 
-  // Receita Bruta = apenas entradas operacionais (exclui aportes, empréstimos
-  // recebidos e transferências entre contas da própria empresa).
-  const receitaBruta = realized
-    .filter((t) => t.tipo === "entrada" && !isNonRevenueTx(t, catMap))
-    .reduce((s, t) => s + t.valor, 0);
+  // Receita Bruta = faturamento do período (vendas à vista + vendas a prazo feitas no período),
+  // sem aportes, empréstimos e transferências. Ver buildFaturamento.
+  const receitaBruta = buildFaturamento(data, period).total;
 
 
 
@@ -741,7 +773,7 @@ export function buildVendasMargem(data: ReportData, period: Period) {
       inPeriod(t.data, period) &&
       !isNonRevenueTx(t, buildCategoryMap(data.categories)),
   );
-  const vendasPrazo = data.receivables.filter((r) => inPeriod(r.vencimento, period) && r.status !== "cancelado");
+  const vendasPrazo = data.receivables.filter((r) => inPeriod(dataDaVendaPrazo(r), period) && r.status !== "cancelado");
   const vendaIdsVista = new Set(vendasVista.map((v) => v.id));
   const vendaIdsPrazo = new Set(vendasPrazo.map((v) => v.id));
   const itens = data.saleItems.filter(
@@ -751,8 +783,11 @@ export function buildVendasMargem(data: ReportData, period: Period) {
   );
   const vendasComItens = new Set(itens.map((it) => `${it.sale_type}:${it.sale_id}`));
   const faturamentoItens = itens.reduce((s, it) => s + it.total_revenue, 0);
-  const qtd = vendasComItens.size;
-  const ticket = qtd > 0 ? faturamentoItens / qtd : 0;
+  // Quantidade e ticket: pelas vendas com itens; se a empresa lança vendas sem itens
+  // (direto no caixa ou em Contas a Receber), usa os registros de faturamento do período.
+  const fat = buildFaturamento(data, period);
+  const qtd = Math.max(vendasComItens.size, fat.qtd);
+  const ticket = qtd > 0 ? Math.max(faturamentoItens, fat.total) / qtd : 0;
   const produtos = itens.map((it) => ({
     Produto: it.product_name_snapshot,
     Quantidade: it.quantity,
