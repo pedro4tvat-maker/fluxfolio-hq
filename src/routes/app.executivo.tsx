@@ -388,11 +388,13 @@ function Executivo() {
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               <Kpi label="Receita bruta" value={fmt(tot!.receitaBruta)} />
+              <Kpi label="Impostos e deduções" value={fmt(tot!.receitaBruta - tot!.receitaLiquida)} />
               <Kpi label="Receita líquida" value={fmt(tot!.receitaLiquida)} />
               <Kpi label="CMV (custo do vendido)" value={fmt(tot!.custosVariaveis)} />
+              <Kpi label="Lucro bruto" value={fmt(tot!.receitaLiquida - tot!.custosVariaveis)} />
               <Kpi label="Despesas operacionais" value={fmt(tot!.custosFixos)} />
-              <Kpi label="Despesas financeiras" value={fmt(tot!.despesasFin)} />
-              <Kpi label="Resultado operacional" value={fmt(tot!.resultadoOperacional)} />
+              <Kpi label="Lucro operacional" value={fmt(tot!.resultadoOperacional)} />
+              <Kpi label="Resultado financeiro e IR/CSLL" value={fmt(tot!.lucroLiquido - tot!.resultadoOperacional)} />
               <Kpi label="Margem operacional" value={fmtPct(tot!.margemOperacional)} />
               <Kpi label="Margem contribuição" value={fmtPct(mc?.summary.mcPct ?? 0)} />
               <Kpi label="Lucro líquido" value={fmt(tot!.lucroLiquido)} />
@@ -493,6 +495,30 @@ function Executivo() {
                   )}
                 </div>
 
+                {/* DRE do período, no modelo contábil */}
+                {dre && (
+                  <>
+                    <SectionTitle>DRE do período</SectionTitle>
+                    <div className="rounded-3xl bg-card shadow-card p-2 sm:p-3 mb-6">
+                      <ul>
+                        {dre.rows.map((r) => {
+                          const total = r.Linha.startsWith("(=)");
+                          const pct = r.Linha.includes("(%)");
+                          const v = Number(r.Valor);
+                          return (
+                            <li key={r.Linha} className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-2 ${total ? "bg-primary/5 font-semibold" : ""}`}>
+                              <span className={`text-sm ${total ? "" : "text-muted-foreground"} ${r.Linha.startsWith("(") ? "" : "italic"}`}>{r.Linha}</span>
+                              <span className={`text-sm tabular-nums font-display ${total ? "font-bold" : ""} ${v < 0 && !pct ? "text-destructive" : ""}`}>
+                                {pct ? fmtPct(v) : fmt(v)}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </>
+                )}
+
                 {/* Tabela comparativa */}
                 <SectionTitle>Tabela comparativa mensal</SectionTitle>
                 <div className="overflow-x-auto rounded-2xl bg-card shadow-card">
@@ -521,12 +547,14 @@ function Executivo() {
                     </thead>
                     <tbody>
                       <ComparativoRow label="Receita bruta" values={serie.map((s) => s.receitaBruta)} money />
+                      <ComparativoRow label="(−) Impostos e deduções" values={serie.map((s) => s.receitaBruta - s.receitaLiquida)} money />
                       <ComparativoRow label="Receita líquida" values={serie.map((s) => s.receitaLiquida)} money />
                       <ComparativoRow label="CMV (custo do vendido)" values={serie.map((s) => s.custosVariaveis)} money />
                       <ComparativoRow label="Lucro bruto" values={serie.map((s) => s.receitaLiquida - s.custosVariaveis)} money />
                       <ComparativoRow label="Despesas operacionais" values={serie.map((s) => s.custosFixos)} money />
-                      <ComparativoRow label="Resultado operacional" values={serie.map((s) => s.resultadoOperacional)} money />
+                      <ComparativoRow label="Lucro operacional" values={serie.map((s) => s.resultadoOperacional)} money />
                       <ComparativoRow label="Margem operacional (%)" values={serie.map((s) => s.margemOperacional)} />
+                      <ComparativoRow label="(±) Resultado financeiro e IR/CSLL" values={serie.map((s) => s.lucroLiquido - s.resultadoOperacional)} money />
                       <ComparativoRow label="Lucro líquido" values={serie.map((s) => s.lucroLiquido)} money />
                       <ComparativoRow label="Ticket médio" values={serie.map((s) => s.ticketMedio)} money />
                       <ComparativoRow label="Qtd. vendas" values={serie.map((s) => s.qtdVendas)} />
