@@ -584,22 +584,22 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
       <div className="grid grid-cols-7 gap-px bg-border/60 rounded-2xl overflow-hidden">
         {weekdays.map((w) => <div key={w} className="bg-muted text-xs font-medium text-muted-foreground p-2 text-center">{w}</div>)}
         {cells.map((d, i) => {
-          if (!d) return <div key={i} className="bg-card min-h-[100px]" />;
+          if (!d) return <div key={i} className="bg-card min-h-[64px] sm:min-h-[100px]" />;
           const key = iso(d);
           const items = byDate.get(key) ?? [];
           const isToday = key === todayKey;
           return (
-            <div key={i} className={`bg-card min-h-[100px] p-1.5 group relative ${isToday ? "ring-2 ring-primary ring-inset" : ""}`}>
+            <div key={i} className={`bg-card min-h-[64px] sm:min-h-[100px] p-0.5 sm:p-1.5 group relative ${isToday ? "ring-2 ring-primary ring-inset" : ""}`}>
               <div className="flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setDayModalDate(key)}
-                  className="text-[11px] text-muted-foreground hover:text-primary hover:underline"
+                  className="min-w-7 h-7 sm:min-w-0 sm:h-auto text-xs sm:text-[11px] text-muted-foreground hover:text-primary hover:underline"
                   title="Ver todas as atividades do dia"
                 >
                   {d.getDate()}
                 </button>
-                <button onClick={() => onNewOnDate(key)} className="sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 text-[10px] text-primary hover:underline">+ nova</button>
+                <button onClick={() => onNewOnDate(key)} className="hidden sm:inline sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 text-[10px] text-primary hover:underline">+ nova</button>
               </div>
               <div className="space-y-0.5 mt-1">
                 {items.slice(0, 3).map((a) => (
@@ -631,12 +631,12 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
     const start = addDays(ref, -ref.getDay());
     const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
     return (
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
         {days.map((d) => {
           const key = iso(d);
           const items = (byDate.get(key) ?? []).sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
           return (
-            <div key={key} className="bg-card rounded-3xl shadow-card p-2 min-h-[260px]">
+            <div key={key} className="bg-card rounded-3xl shadow-card p-3 sm:p-2 sm:min-h-[260px]">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs">
                   <div className="text-muted-foreground">{weekdays[d.getDay()]}</div>
@@ -703,7 +703,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
           <div className="flex rounded-full bg-muted p-1 overflow-hidden">
             {(["dia", "semana", "mes"] as const).map((v) => (
               <button key={v} onClick={() => setView(v)}
-                className={`px-3 py-1 text-xs capitalize ${view === v ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>{v}</button>
+                className={`rounded-full px-3 h-8 text-xs capitalize ${view === v ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>{v}</button>
             ))}
           </div>
           <Button size="sm" onClick={() => onNewOnDate(view === "mes" ? today() : selectedDate)}><Plus className="size-3" /> Nova Atividade</Button>

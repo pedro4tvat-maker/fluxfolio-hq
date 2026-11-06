@@ -317,7 +317,7 @@ function ConsultantPanel() {
       </div>
 
       {/* Seção 1: Resumo Executivo */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <MetricCard 
           label="Empresas Ativas" 
           value={ativas.length} 
@@ -538,7 +538,7 @@ function ConsultantPanel() {
 
 function MetricCard({ label, value, icon: Icon, trend, variant = "default", to }: { label: string; value: string | number; icon: any; trend?: string; variant?: "default" | "destructive" | "warning"; to: string }) {
   return (
-    <Link to={to} className="bg-card rounded-3xl shadow-card p-5 shadow-sm hover:shadow-md transition-all group">
+    <Link to={to} className="bg-card rounded-3xl shadow-card p-4 sm:p-5 hover:shadow-md transition-all group">
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2 rounded-full ${
           variant === "destructive" ? "bg-destructive/10 text-destructive" : 
@@ -550,7 +550,7 @@ function MetricCard({ label, value, icon: Icon, trend, variant = "default", to }
         <ArrowRight className="size-4 text-muted-foreground sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
       </div>
       <div className="space-y-1">
-        <div className={`text-2xl font-display font-bold tabular-nums ${
+        <div className={`text-lg sm:text-2xl font-display font-bold tabular-nums break-words ${
           variant === "destructive" && Number(value) > 0 ? "text-destructive" : 
           variant === "warning" && Number(value) > 0 ? "text-warning-foreground" : "text-foreground"
         }`}>

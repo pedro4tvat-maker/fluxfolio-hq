@@ -671,7 +671,7 @@ function labelFor(f: BankFields) {
 function StepBar({ step }: { step: number }) {
   const steps = ["Empresa/Conta", "Arquivo", "Mapeamento", "—", "Revisão"];
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
       {steps.map((s, i) => {
         const n = i + 1;
         if (s === "—") return null;
@@ -679,8 +679,8 @@ function StepBar({ step }: { step: number }) {
         return (
           <div key={i} className="flex items-center gap-2">
             <div className={`size-6 rounded-full grid place-items-center text-[10px] font-semibold ${done ? "bg-emerald-500 text-white" : active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{n}</div>
-            <span className={active ? "font-medium" : "text-muted-foreground"}>{s}</span>
-            {i < steps.length - 1 && <div className="w-6 h-px bg-border" />}
+            <span className={active ? "font-medium" : "hidden sm:inline text-muted-foreground"}>{s}</span>
+            {i < steps.length - 1 && <div className="w-3 sm:w-6 h-px bg-border" />}
           </div>
         );
       })}

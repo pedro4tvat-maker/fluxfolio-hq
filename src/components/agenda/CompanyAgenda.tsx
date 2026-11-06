@@ -269,19 +269,19 @@ function CalendarView({ activities, onNewOnDate, onSelect }: {
           <div key={w} className="bg-muted text-[11px] font-medium text-muted-foreground text-center py-1">{w}</div>
         ))}
         {cells.map((d, i) => {
-          if (!d) return <div key={`e${i}`} className="bg-card min-h-[92px]" />;
+          if (!d) return <div key={`e${i}`} className="bg-card min-h-[64px] sm:min-h-[92px]" />;
           const key = isoDay(d);
           const items = (byDate.get(key) ?? []).slice().sort((a, b) => a.activity_date.localeCompare(b.activity_date));
           return (
-            <div key={key} className="bg-card min-h-[92px] p-1.5 space-y-1">
+            <div key={key} className="bg-card min-h-[64px] sm:min-h-[92px] p-0.5 sm:p-1.5 space-y-1">
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => setDayModal(key)}
-                  className={`text-[11px] font-medium rounded px-1 ${key === tk ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                  className={`min-w-7 h-7 sm:min-w-0 sm:h-auto text-xs sm:text-[11px] font-medium rounded-full px-1 ${key === tk ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                 >
                   {d.getDate()}
                 </button>
-                <button onClick={() => onNewOnDate(key)} className="text-[10px] text-primary hover:underline">+</button>
+                <button onClick={() => onNewOnDate(key)} className="hidden sm:inline text-[10px] text-primary hover:underline">+</button>
               </div>
               {items.slice(0, 3).map((a) => (
                 <button key={a.id} onClick={() => onSelect(a)} className={`w-full text-left text-[10px] rounded px-1 py-0.5 border truncate ${colorOf(a)}`}>

@@ -131,7 +131,7 @@ function OrcamentoPage() {
           <h1 className="text-2xl sm:text-3xl font-display font-bold">Orçamento</h1>
           <p className="text-sm text-muted-foreground mt-1">Defina quanto pretende gastar ou faturar em cada categoria e acompanhe mês a mês.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center rounded-full bg-card shadow-sm border h-11 px-1">
             <button type="button" onClick={() => mudarMes(-1)} className="size-9 grid place-items-center rounded-full hover:bg-muted" aria-label="Mês anterior"><ChevronLeft className="size-4" /></button>
             <span className="px-2 text-sm font-medium min-w-[130px] text-center">{NOMES_MES[mes - 1]} {ano}</span>

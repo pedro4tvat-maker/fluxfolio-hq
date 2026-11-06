@@ -392,7 +392,7 @@ function Executivo() {
               Soma de {fmtBr(inicio)} a {fmtBr(fim)}.
               {mesEmAndamento && <> O mês {cur.label} ainda está em andamento (dados até {fmtBr(hojeIso)}).</>}
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               <Kpi label="Receita bruta" value={fmtSinal(tot!.receitaBruta)} />
               <Kpi label="Impostos e deduções" value={fmtSinal(-(tot!.receitaBruta - tot!.receitaLiquida))} />
               <Kpi label="Receita líquida" value={fmtSinal(tot!.receitaLiquida)} />
@@ -733,7 +733,7 @@ function Kpi({ label, value, delta }: { label: string; value: string; delta?: nu
   return (
     <div className="rounded-2xl bg-muted/40 p-3" style={{ borderColor: BRAND.neutral }}>
       <div className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</div>
-      <div className="font-semibold text-lg mt-0.5" style={{ color: BRAND.graphite }}>{value}</div>
+      <div className="font-semibold text-base sm:text-lg mt-0.5 break-words" style={{ color: BRAND.graphite }}>{value}</div>
       {showDelta && (
         <div className="text-[11px] mt-0.5 flex items-center gap-1" style={{ color: positive ? BRAND.primary : "#c0392b" }}>
           {positive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}

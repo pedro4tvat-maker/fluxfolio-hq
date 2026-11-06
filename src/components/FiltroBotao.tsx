@@ -33,7 +33,7 @@ export function FiltroBotao({ grupos, resumo }: { grupos: GrupoFiltro[]; resumo?
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[320px] rounded-2xl p-4 space-y-4">
+      <PopoverContent align="end" className="w-[min(320px,calc(100vw-1.5rem))] rounded-2xl p-4 space-y-4">
         {grupos.map((g) => (
           <div key={g.titulo} className="space-y-2">
             <div className="text-xs font-medium text-muted-foreground">{g.titulo}</div>

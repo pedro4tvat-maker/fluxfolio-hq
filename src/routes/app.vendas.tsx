@@ -1816,7 +1816,7 @@ function VendasPage() {
             <div className="flex gap-2">
               <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
                 <PopoverTrigger asChild>
-                  <Button type="button" variant="outline" role="combobox" className="flex-1 justify-between font-normal">
+                  <Button type="button" variant="outline" role="combobox" className="flex-1 min-w-0 justify-between font-normal">
                     {cliente
                       ? <span className="truncate">{cliente.name}{cliente.cpf_cnpj ? ` · ${cliente.cpf_cnpj}` : ""}</span>
                       : <span className="text-muted-foreground">Selecionar cliente do CRM (opcional)</span>}
@@ -1886,9 +1886,9 @@ function VendasPage() {
 
 
           <div className="md:col-span-2 space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Label>Itens da venda</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Popover open={productPickerOpen} onOpenChange={setProductPickerOpen}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="outline" size="sm">
@@ -1939,23 +1939,23 @@ function VendasPage() {
                   return (
                     <div key={idx} className="rounded-2xl bg-muted/40 p-3 sm:p-4 space-y-2">
                       <div className="grid grid-cols-12 gap-2 items-center">
-                        <div className="col-span-5">
+                        <div className="col-span-12 sm:col-span-5">
                           <Label className="text-xs text-muted-foreground">Descrição</Label>
                           <Input value={it.nome} onChange={(e) => updateItem(idx, { nome: e.target.value })} />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-4 sm:col-span-2">
                           <Label className="text-xs text-muted-foreground">Qtd</Label>
                           <Input type="number" min="0" step="1" className="text-center"
                             value={it.quantidade}
                             onChange={(e) => updateItem(idx, { quantidade: e.target.value })} />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-8 sm:col-span-2">
                           <Label className="text-xs text-muted-foreground">Preço un.</Label>
                           <CurrencyInput className="text-right"
                             value={it.preco_unitario}
                             onChange={(v) => updateItem(idx, { preco_unitario: v })} />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-10 sm:col-span-2">
                           <Label className="text-xs text-muted-foreground">
                             Custo un. {it.product_id && it.custo_padrao ? `(padrão ${formatMoney(Number(it.custo_padrao))})` : ""}
                           </Label>
@@ -1964,7 +1964,7 @@ function VendasPage() {
                             value={it.custo_unitario}
                             onChange={(v) => updateItem(idx, { custo_unitario: v })} />
                         </div>
-                        <div className="col-span-1 flex justify-end pt-5">
+                        <div className="col-span-2 sm:col-span-1 flex justify-end pt-5">
                           <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)}>
                             <Trash2 className="size-4 text-destructive" />
                           </Button>
@@ -2010,8 +2010,8 @@ function VendasPage() {
                           />
                         )}
                       </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground pl-1">
-                        <div className="flex gap-3">
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground pl-1">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1">
                           <span>Subtotal: <b className="text-foreground">{formatMoney(subtotal)}</b></span>
                           {custo > 0 && (
                             <span>
@@ -2078,7 +2078,7 @@ function VendasPage() {
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
               <Button type="button" variant="outline" className="rounded-full" disabled={items.length === 0} onClick={() => generateOrderHTML({ openPrint: true })}>
                 <FileText className="size-4" /> Pré-visualizar OS
               </Button>

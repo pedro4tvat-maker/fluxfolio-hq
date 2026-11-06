@@ -309,7 +309,7 @@ function JornadaPage() {
         <TabsContent value="tabela" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <Table>
+              <Table className="tabela-fixa">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empresa</TableHead>

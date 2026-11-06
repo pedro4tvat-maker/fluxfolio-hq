@@ -408,7 +408,7 @@ function PlanoAcaoPage() {
       ) : view === "lista" ? (
         <Card>
           <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="tabela-fixa w-full text-sm">
               <thead className="bg-muted/40 text-xs uppercase">
                 <tr>
                   <th className="text-left p-3">Ação</th>
