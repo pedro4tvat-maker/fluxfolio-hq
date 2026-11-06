@@ -56,11 +56,11 @@ export function FluxoListaCompacta<T extends Item>({
                 const auto = !!(t.payable_id || t.receivable_id);
                 const detalhe = [t.categoria_id ? cat.get(t.categoria_id) : null, t.conta_id ? conta.get(t.conta_id) : null, t.forma_pagamento].filter(Boolean).join(" · ");
                 return (
-                  <li key={t.id} className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-muted/60 transition-colors">
+                  <li key={t.id} className="group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 rounded-2xl px-3 py-2.5 hover:bg-muted/60 transition-colors">
                     <span className={`size-9 shrink-0 rounded-full grid place-items-center ${entrada ? "bg-success/12 text-success" : "bg-destructive/10 text-destructive"}`}>
                       {entrada ? <ArrowUpRight className="size-4" /> : <ArrowDownLeft className="size-4" />}
                     </span>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto">
                       <div className="flex items-center gap-1.5 font-medium text-sm truncate">
                         <span className="truncate">{t.descricao}</span>
                         {auto && <Lock className="size-3 text-muted-foreground shrink-0" aria-label="Gerado por Contas a Pagar/Receber" />}
@@ -70,10 +70,10 @@ export function FluxoListaCompacta<T extends Item>({
                         {t.status === "previsto" && <span className="ml-1.5 rounded-full bg-warning/15 px-1.5 py-px text-[10px] text-warning-foreground">previsto</span>}
                       </div>
                     </div>
-                    <div className={`text-sm font-display font-semibold tabular-nums whitespace-nowrap ${entrada ? "text-success" : "text-destructive"}`}>
+                    <div className={`ml-12 sm:ml-0 text-sm font-display font-semibold tabular-nums whitespace-nowrap ${entrada ? "text-success" : "text-destructive"}`}>
                       {entrada ? "+" : "−"} {formatMoney(t.valor)}
                     </div>
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <div className="ml-auto sm:ml-0 flex items-center gap-0.5 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <button type="button" onClick={() => onEditar(t)} className="size-8 grid place-items-center rounded-full hover:bg-background" title="Editar">
                         <Pencil className="size-3.5" />
                       </button>

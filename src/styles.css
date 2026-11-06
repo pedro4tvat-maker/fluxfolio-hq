@@ -119,6 +119,27 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+  /* Filhos de grid podem encolher: sem isso, conteúdo largo estoura a tela no celular */
+  .grid > * {
+    min-width: 0;
+  }
+  @media (max-width: 639px) {
+    /* Ao rolar uma tabela larga para o lado, o nome da linha continua visível */
+    table.tabela-fixa th:first-child,
+    table.tabela-fixa td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background-color: var(--color-card);
+      max-width: 42vw;
+      box-shadow: 1px 0 0 var(--color-border);
+    }
+    input[type="date"] {
+      min-width: 0;
+      padding-inline: 0.5rem;
+      font-size: 0.875rem;
+    }
+  }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     letter-spacing: -0.01em;

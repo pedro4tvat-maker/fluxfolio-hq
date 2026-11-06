@@ -267,7 +267,7 @@ function Historicos() {
             Estes dados <b>não</b> geram vendas, OS, estoque ou movimentos financeiros.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <BranchSwitcher />
           <Button variant="outline" onClick={exportCsv} disabled={!filtered.length}>
             <FileDown className="size-4" /> CSV
@@ -291,7 +291,7 @@ function Historicos() {
       </div>
 
       <div className="rounded-3xl overflow-x-auto bg-card shadow-card">
-        <table className="w-full text-sm">
+        <table className="tabela-fixa w-full text-sm">
           <thead className="bg-muted text-xs uppercase text-muted-foreground">
             <tr>
               <th className="px-3 py-2 text-left">Período</th>

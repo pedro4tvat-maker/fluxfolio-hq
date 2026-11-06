@@ -81,11 +81,11 @@ function ContactProfile() {
             <Button className="rounded-full" onClick={() => setEditOpen(true)}><Pencil className="size-4" /> Editar</Button>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {([["Já recebido", recebido, "text-success"], ["Em aberto", aberto, "text-foreground"], ["Em atraso", atrasado, atrasado > 0 ? "text-destructive" : "text-muted-foreground"]] as const).map(([r, v, cor]) => (
-            <div key={r} className="rounded-2xl bg-background/70 px-3.5 py-3">
+            <div key={r} className="flex items-center justify-between gap-3 sm:block rounded-2xl bg-background/70 px-3.5 py-2.5 sm:py-3">
               <div className={`text-[11px] font-medium ${cor}`}>{r}</div>
-              <div className="font-display font-semibold text-sm sm:text-lg tabular-nums truncate">{formatMoney(v)}</div>
+              <div className="font-display font-semibold text-base sm:text-lg tabular-nums whitespace-nowrap">{formatMoney(v)}</div>
             </div>
           ))}
         </div>

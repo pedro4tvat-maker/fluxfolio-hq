@@ -422,7 +422,7 @@ function Table({ rows, moneyCols = [] as string[], sinal }: { rows: Record<strin
   const headers = Object.keys(rows[0]);
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="tabela-fixa w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-muted-foreground border-b border-border/50">
             {headers.map((h) => <th key={h} className="py-2 pr-4 font-medium">{h}</th>)}

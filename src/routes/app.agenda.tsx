@@ -599,7 +599,7 @@ function CalendarTab({ activities, companyMap, onSelect, onNewOnDate }: {
                 >
                   {d.getDate()}
                 </button>
-                <button onClick={() => onNewOnDate(key)} className="opacity-0 group-hover:opacity-100 text-[10px] text-primary hover:underline">+ nova</button>
+                <button onClick={() => onNewOnDate(key)} className="sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 text-[10px] text-primary hover:underline">+ nova</button>
               </div>
               <div className="space-y-0.5 mt-1">
                 {items.slice(0, 3).map((a) => (

@@ -363,7 +363,7 @@ function PhaseCard({ phase, checklist, deliverables, companyId, onChanged }: {
                     <div className={c.status === "concluido" ? "line-through text-muted-foreground" : ""}>{c.title}</div>
                     {c.due_date && <div className="text-[10px] text-muted-foreground">Prazo: {new Date(c.due_date).toLocaleDateString("pt-BR")}</div>}
                   </div>
-                  <Button size="icon" variant="ghost" className="size-6 opacity-0 group-hover:opacity-100" onClick={() => delCheck(c.id)}>
+                  <Button size="icon" variant="ghost" className="size-6 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100" onClick={() => delCheck(c.id)}>
                     <Trash2 className="size-3" />
                   </Button>
                 </div>
@@ -391,7 +391,7 @@ function PhaseCard({ phase, checklist, deliverables, companyId, onChanged }: {
                       {d.due_date && <span className="text-[10px] text-muted-foreground">Prazo: {new Date(d.due_date).toLocaleDateString("pt-BR")}</span>}
                     </div>
                   </div>
-                  <Button size="icon" variant="ghost" className="size-6 opacity-0 group-hover:opacity-100" onClick={() => delDeliv(d.id)}>
+                  <Button size="icon" variant="ghost" className="size-6 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100" onClick={() => delDeliv(d.id)}>
                     <Trash2 className="size-3" />
                   </Button>
                 </div>

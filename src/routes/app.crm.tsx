@@ -178,12 +178,12 @@ function CRMPage() {
               const zap = linkWhatsApp(c.whatsapp || c.phone);
               const local = [c.city, c.state].filter(Boolean).join("/");
               return (
-                <li key={c.id} className="group flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
-                  <Link to="/app/crm/$id" params={{ id: c.id }} className="flex items-center gap-3 min-w-0 flex-1">
+                <li key={c.id} className="group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                  <Link to="/app/crm/$id" params={{ id: c.id }} className="flex items-center gap-3 min-w-0 flex-1 basis-full sm:basis-auto">
                     <span className={`size-10 shrink-0 rounded-full grid place-items-center text-sm font-semibold ${c.status === "inativo" || c.status === "perdido" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
                       {iniciais(c.name)}
                     </span>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-medium text-sm truncate">{c.name}</span>
                         <span className="shrink-0 rounded-full bg-muted px-2 py-px text-[10px] font-medium text-muted-foreground">{labelTipo(c.tipo)}</span>
@@ -197,7 +197,7 @@ function CRMPage() {
                       </div>
                     </div>
                   </Link>
-                  <div className="flex items-center gap-0.5 shrink-0">
+                  <div className="ml-auto sm:ml-0 flex items-center gap-0.5 shrink-0">
                     {zap && (
                       <a href={zap} target="_blank" rel="noopener noreferrer" title="Conversar no WhatsApp" className="size-8 grid place-items-center rounded-full hover:bg-background text-success">
                         <MessageCircle className="size-4" />
@@ -208,7 +208,7 @@ function CRMPage() {
                         <UserCheck className="size-4" />
                       </button>
                     )}
-                    <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <button type="button" onClick={() => openEdit(c)} title="Editar" className="size-8 grid place-items-center rounded-full hover:bg-background"><Pencil className="size-3.5" /></button>
                       {c.status !== "inativo" && (
                         <button type="button" onClick={() => inativar(c)} title="Inativar" className="size-8 grid place-items-center rounded-full hover:bg-background"><UserX className="size-3.5" /></button>

@@ -515,11 +515,11 @@ function EstoquePage() {
                 const venda = Number(p.preco_venda);
                 const margem = venda > 0 ? ((venda - custo) / venda) * 100 : null;
                 return (
-                  <li key={p.id} className="group flex items-center gap-3 sm:gap-4 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                  <li key={p.id} className="group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 sm:gap-4 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
                     <span className={`size-10 shrink-0 rounded-full grid place-items-center ${status === "out" ? "bg-destructive/10 text-destructive" : status === "low" ? "bg-warning/15 text-warning-foreground" : "bg-primary/10 text-primary"}`}>
                       {status === "out" ? <PackageX className="size-4" /> : status === "low" ? <AlertTriangle className="size-4" /> : <Package className="size-4" />}
                     </span>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-medium text-sm truncate">{p.nome}</span>
                         {status !== "ok" && (
@@ -533,7 +533,7 @@ function EstoquePage() {
                         <span className="hidden sm:inline"> · custo {formatMoney(custo)} · venda {formatMoney(venda)}{margem !== null ? ` (${margem.toFixed(0)}% margem)` : ""}</span>
                       </div>
                     </div>
-                    <div className="w-24 sm:w-32 shrink-0 text-right">
+                    <div className="w-24 sm:w-32 shrink-0 sm:text-right">
                       <div className="font-display font-semibold tabular-nums">
                         {qtd} <span className="text-xs font-normal text-muted-foreground">un.</span>
                       </div>
@@ -542,7 +542,7 @@ function EstoquePage() {
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-0.5">mín. {min}</div>
                     </div>
-                    <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <div className="ml-auto sm:ml-0 flex items-center gap-0.5 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <button type="button" title="Entrada" className="size-8 grid place-items-center rounded-full hover:bg-background text-success" onClick={() => { setMoveForm({ ...emptyMovement, product_id: p.id, tipo: "entrada" }); setMoveOpen(true); }}>
                         <ArrowDownToLine className="size-3.5" />
                       </button>

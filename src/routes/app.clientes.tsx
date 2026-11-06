@@ -182,7 +182,7 @@ function ClientesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="tabela-fixa w-full text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="p-3">Empresa</th>
@@ -218,7 +218,7 @@ function ClientesPage() {
                       </span>
                     </td>
                     <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button asChild size="icon" variant="ghost" title="Relatórios" className="h-8 w-8" onClick={() => localStorage.setItem("sfp:selected_company", c.id)}>
                           <Link to="/app/relatorios"><FileBarChart className="size-4" /></Link>
                         </Button>

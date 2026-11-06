@@ -113,7 +113,7 @@ function DocumentosPage() {
         </div>
 
         <div className="rounded-3xl bg-card shadow-card overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="tabela-fixa w-full text-sm">
             <thead className="bg-muted/50 text-left">
               <tr>
                 <th className="px-4 py-2 font-medium">Arquivo</th>

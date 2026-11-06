@@ -189,7 +189,7 @@ function ContasAPagar() {
           <div className="font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums">{formatMoney(resumo.aberto)}</div>
           <div className="text-xs text-muted-foreground mt-1">{resumo.qtdAberto} conta(s) em aberto</div>
         </div>
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {([
             ["vencidos", "Vencidas", resumo.vencido, `${resumo.qtdVencido} em atraso`, resumo.qtdVencido > 0 ? "text-destructive" : "text-muted-foreground"],
             ["7d", "Próximos 7 dias", resumo.semana, `${resumo.qtdSemana} a vencer`, "text-foreground"],
@@ -204,10 +204,10 @@ function ContasAPagar() {
                   if (v === "feitos") { setPeriodo("todos"); setStatus(ativo ? "todos" : "pago"); }
                   else { setStatus("todos"); setPeriodo(ativo ? "todos" : v); }
                 }}
-                className={`text-left rounded-2xl px-3.5 py-3 transition-colors min-w-0 ${ativo ? "bg-background shadow-sm ring-1 ring-primary/30" : "bg-background/60 hover:bg-background"}`}
+                className={`grid grid-cols-[1fr_auto] items-center gap-x-3 sm:block text-left rounded-2xl px-3.5 py-2.5 sm:py-3 transition-colors min-w-0 ${ativo ? "bg-background shadow-sm ring-1 ring-primary/30" : "bg-background/60 hover:bg-background"}`}
               >
                 <div className={`text-[11px] font-medium ${cor}`}>{rotulo}</div>
-                <div className="font-display font-semibold text-sm sm:text-lg tabular-nums truncate">{formatMoney(valor)}</div>
+                <div className="col-start-2 row-start-1 row-span-2 font-display font-semibold text-base sm:text-lg tabular-nums whitespace-nowrap">{formatMoney(valor)}</div>
                 <div className="text-[10px] text-muted-foreground truncate">{dica}</div>
               </button>
             );
@@ -252,12 +252,12 @@ function ContasAPagar() {
               const corSituacao = feito ? "bg-success/12 text-success" : atrasado ? "bg-destructive/10 text-destructive" : dias <= 3 ? "bg-warning/15 text-warning-foreground" : "bg-muted text-muted-foreground";
               const detalhe = [p.fornecedor, p.categoria_id ? catNome.get(p.categoria_id) : null, p.forma_pagamento].filter(Boolean).join(" · ");
               return (
-                <li key={p.id} className="group flex items-center gap-3 sm:gap-4 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                <li key={p.id} className="group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 sm:gap-4 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
                   <div className={`w-12 shrink-0 rounded-2xl py-1.5 text-center ${feito ? "bg-success/10 text-success" : atrasado ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
                     <div className="font-display font-bold text-lg leading-none tabular-nums">{d}</div>
                     <div className="text-[10px] uppercase tracking-wider mt-0.5">{MESES[Number(m) - 1]}</div>
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={`font-medium text-sm truncate ${feito ? "text-muted-foreground" : ""}`}>{p.descricao}</span>
                       <span className={`shrink-0 rounded-full px-2 py-px text-[10px] font-medium ${corSituacao}`}>{situacao}</span>
@@ -267,21 +267,21 @@ function ContasAPagar() {
                       {!p.centro_custo_id && centros.length > 0 && <span className="text-warning-foreground"> · sem centro de custo</span>}
                     </div>
                   </div>
-                  <div className={`text-sm sm:text-base font-display font-semibold tabular-nums whitespace-nowrap ${feito ? "text-muted-foreground" : ""}`}>
+                  <div className={`ml-[3.75rem] sm:ml-0 text-sm sm:text-base font-display font-semibold tabular-nums whitespace-nowrap ${feito ? "text-muted-foreground" : ""}`}>
                     {formatMoney(Number(p.valor))}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="ml-auto sm:ml-0 flex items-center gap-1 shrink-0">
                     {!feito ? (
                       <Button size="sm" className="rounded-full h-8 px-3" onClick={() => markPaid.mutate(p)}>
                         <CheckCircle2 className="size-3.5" /> Pagar
                       </Button>
                     ) : (
-                      <button type="button" title="Estornar" className="size-8 grid place-items-center rounded-full hover:bg-background sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                      <button type="button" title="Estornar" className="size-8 grid place-items-center rounded-full hover:bg-background sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => confirm("Estornar este pagamento?") && revert.mutate(p)}>
                         <Undo2 className="size-3.5" />
                       </button>
                     )}
-                    <button type="button" title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    <button type="button" title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => confirm("Excluir este lançamento?") && del.mutate(p.id)}>
                       <Trash2 className="size-3.5" />
                     </button>

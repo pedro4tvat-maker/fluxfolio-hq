@@ -374,7 +374,7 @@ function ConsultantPanel() {
                         <p className="text-sm font-medium text-foreground leading-tight">{a.text}</p>
                         <p className="text-xs text-muted-foreground mt-1">Ação recomendada</p>
                       </div>
-                      <Button asChild variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity"><Link to={a.href || "/app/clientes"}>Tratar</Link></Button>
+                      <Button asChild variant="ghost" size="sm" className="sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 transition-opacity"><Link to={a.href || "/app/clientes"}>Tratar</Link></Button>
                     </div>
                   ))}
                   
@@ -467,7 +467,7 @@ function ConsultantPanel() {
                           </div>
                         </td>
                         <td className="px-5 py-3 text-right">
-                          <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 transition-opacity">
                             <Link to="/app/empresa/$id" params={{ id: c.id }}><ArrowRight className="size-4" /></Link>
                           </Button>
                         </td>
@@ -547,7 +547,7 @@ function MetricCard({ label, value, icon: Icon, trend, variant = "default", to }
         }`}>
           <Icon className="size-5" />
         </div>
-        <ArrowRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+        <ArrowRight className="size-4 text-muted-foreground sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
       </div>
       <div className="space-y-1">
         <div className={`text-2xl font-display font-bold tabular-nums ${
@@ -786,7 +786,7 @@ function ClientDashboard() {
           <p className="text-sm text-muted-foreground">{greeting}</p>
           <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight">Visão geral</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
+        <div className="flex w-full sm:w-auto flex-wrap items-center gap-2 text-sm [&>*]:flex-1 sm:[&>*]:flex-none">
           <CompanySwitcher />
           {branches.length > 1 && <BranchSwitcher />}
         </div>
@@ -799,17 +799,17 @@ function ClientDashboard() {
             <div>
               <div className="text-xs uppercase tracking-wider text-muted-foreground">Saldo disponível</div>
               <div className={`font-display font-bold text-3xl sm:text-4xl mt-1 tabular-nums ${data.saldo < 0 ? "text-destructive" : ""}`}>{formatMoney(data.saldo)}</div>
-              <div className="text-xs text-muted-foreground mt-1">{company.nome}{branches.length > 1 ? ` · ${branchLabel}` : ""}</div>
+              <div className="hidden sm:block text-xs text-muted-foreground mt-1">{company.nome}{branches.length > 1 ? ` · ${branchLabel}` : ""}</div>
             </div>
-            <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
               {([
                 ["Entradas", data.entradas, data.entradasDelta, "text-success", false],
                 ["Saídas", data.saidas, data.saidasDelta, "text-destructive", true],
                 ["Resultado", data.resultado, null, data.resultado < 0 ? "text-destructive" : "text-success", false],
               ] as const).map(([rotulo, valor, delta, cor, inverso]) => (
-                <Link key={rotulo} to="/app/fluxo-caixa" className="rounded-2xl bg-background/70 hover:bg-background px-3 py-2.5 transition-colors min-w-0">
+                <Link key={rotulo} to="/app/fluxo-caixa" className="grid grid-cols-[1fr_auto] items-center gap-x-3 sm:block rounded-2xl bg-background/70 hover:bg-background px-3 py-2.5 transition-colors min-w-0">
                   <div className={`text-[11px] font-medium ${cor}`}>{rotulo} do mês</div>
-                  <div className="font-display font-semibold text-sm sm:text-base tabular-nums truncate">{formatMoney(valor)}</div>
+                  <div className="col-start-2 row-start-1 row-span-2 font-display font-semibold text-base tabular-nums whitespace-nowrap">{formatMoney(valor)}</div>
                   {delta != null && (
                     <div className={`text-[10px] ${(delta >= 0) !== inverso ? "text-success" : "text-destructive"}`}>
                       {delta >= 0 ? "+" : ""}{delta.toFixed(0)}% vs mês passado

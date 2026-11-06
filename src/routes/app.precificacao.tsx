@@ -143,7 +143,33 @@ function PrecificacaoPage() {
         </div>
       </div>
 
-      <div className="bg-card rounded-3xl shadow-card overflow-hidden">
+      {/* Celular: cartões */}
+      <div className="sm:hidden space-y-3">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-10">Carregando...</p>
+        ) : records.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-10">Nenhuma precificação cadastrada ainda.</p>
+        ) : records.map((r) => (
+          <div key={r.id} className="bg-card rounded-3xl shadow-card p-4">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-sm">{r.nome}</div>
+                <div className="text-xs text-muted-foreground">{r.categoria ?? "—"}</div>
+              </div>
+              <button type="button" title="Editar" className="size-9 shrink-0 grid place-items-center rounded-full hover:bg-muted" onClick={() => openEdit(r)}><Pencil className="size-4" /></button>
+              <button type="button" title="Excluir" className="size-9 shrink-0 grid place-items-center rounded-full hover:bg-muted" onClick={() => remove(r)}><Trash2 className="size-4" /></button>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm">
+              <div><dt className="text-[11px] text-muted-foreground">Custo total</dt><dd className="tabular-nums">{formatMoney(custoTotal(r))}</dd></div>
+              <div><dt className="text-[11px] text-muted-foreground">Preço sugerido</dt><dd className="tabular-nums font-semibold">{formatMoney(Number(r.preco_sugerido))}</dd></div>
+              <div><dt className="text-[11px] text-muted-foreground">Preço atual</dt><dd className="tabular-nums">{formatMoney(Number(r.preco_atual))}</dd></div>
+              <div><dt className="text-[11px] text-muted-foreground">Margem atual · markup</dt><dd className={`tabular-nums ${Number(r.margem_atual) < 0 ? "text-destructive" : ""}`}>{Number(r.margem_atual).toFixed(1)}% · {Number(r.markup).toFixed(2)}x</dd></div>
+            </dl>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden sm:block bg-card rounded-3xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">

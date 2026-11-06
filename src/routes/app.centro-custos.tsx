@@ -125,7 +125,7 @@ function CentroCustosPage() {
 
       <div className="bg-card rounded-3xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
+          <table className="tabela-fixa w-full text-sm min-w-[700px]">
             <thead className="bg-muted/50 text-xs uppercase">
               <tr>
                 <th className="text-left p-3">Centro</th>
@@ -164,13 +164,13 @@ function CentroCustosPage() {
                     <div className="flex justify-end gap-1">
                       {editingId === r.id ? (
                         <>
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => salvarEdicao(r.id)} aria-label="Salvar"><Check className="size-4" /></Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)} aria-label="Cancelar"><X className="size-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-9 w-9 sm:h-7 sm:w-7" onClick={() => salvarEdicao(r.id)} aria-label="Salvar"><Check className="size-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-9 w-9 sm:h-7 sm:w-7" onClick={() => setEditingId(null)} aria-label="Cancelar"><X className="size-4" /></Button>
                         </>
                       ) : (
                         <>
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditValue(r.nome); setEditClass(r.kpi_classification ?? ""); }} aria-label="Editar"><Pencil className="size-4" /></Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => excluir(r.id, r.nome)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-9 w-9 sm:h-7 sm:w-7" onClick={() => { setEditingId(r.id); setEditValue(r.nome); setEditClass(r.kpi_classification ?? ""); }} aria-label="Editar"><Pencil className="size-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-9 w-9 sm:h-7 sm:w-7 text-destructive" onClick={() => excluir(r.id, r.nome)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
                         </>
                       )}
                     </div>

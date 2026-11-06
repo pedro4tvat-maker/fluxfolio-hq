@@ -367,9 +367,9 @@ function Executivo() {
       </div>
 
       {/* Cabeçalho do relatório */}
-      <div className="bg-card rounded-3xl shadow-card p-6 print:border-0 print:shadow-none print:rounded-none print:p-2">
-        <div className="flex items-center gap-3 border-b pb-4 mb-4" style={{ borderColor: BRAND.support }}>
-          <FileText className="size-6" style={{ color: BRAND.primary }} />
+      <div className="bg-card rounded-3xl shadow-card p-4 sm:p-6 print:border-0 print:shadow-none print:rounded-none print:p-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 border-b pb-4 mb-4" style={{ borderColor: BRAND.support }}>
+          <FileText className="hidden sm:block size-6 shrink-0" style={{ color: BRAND.primary }} />
           <div className="flex-1">
             <h2 className="font-display text-2xl font-bold" style={{ color: BRAND.graphite }}>{company?.nome ?? "—"}</h2>
             <p className="text-sm text-muted-foreground">
@@ -377,8 +377,8 @@ function Executivo() {
               Período: {inicio} a {fim} • {branchId ? "Filial específica" : "Consolidado"}
             </p>
           </div>
-          <div className="text-xs text-muted-foreground text-right">
-            Gerado em<br />{new Date().toLocaleString("pt-BR")}
+          <div className="text-xs text-muted-foreground sm:text-right">
+            Gerado em<br className="hidden sm:block" /> {new Date().toLocaleString("pt-BR")}
           </div>
         </div>
 
@@ -528,7 +528,7 @@ function Executivo() {
                 {/* Tabela comparativa */}
                 <SectionTitle>Tabela comparativa mensal</SectionTitle>
                 <div className="overflow-x-auto rounded-2xl bg-card shadow-card">
-                  <table className="w-full text-sm">
+                  <table className="tabela-fixa w-full text-sm">
                     <thead style={{ backgroundColor: BRAND.sand }}>
                       <tr>
                         <th className="text-left py-2 px-3 text-xs uppercase font-medium">Indicador</th>
@@ -595,7 +595,7 @@ function Executivo() {
               <>
                 <SectionTitle>Inconsistências encontradas</SectionTitle>
                 <div className="overflow-x-auto rounded-2xl bg-card shadow-card">
-                  <table className="w-full text-sm">
+                  <table className="tabela-fixa w-full text-sm">
                     <thead style={{ backgroundColor: BRAND.sand }}>
                       <tr>
                         <th className="text-left py-2 px-3 text-xs uppercase">OS</th>
@@ -762,7 +762,7 @@ function ComparativoRow({ label, values, money }: { label: string; values: numbe
     <tr className="border-t">
       <td className="py-2 px-3 font-medium">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className={`py-2 px-3 text-right font-mono ${money && v < 0 ? "text-destructive" : ""}`}>{fmtVal(v)}</td>
+        <td key={i} className={`py-2 px-3 text-right font-mono whitespace-nowrap ${money && v < 0 ? "text-destructive" : ""}`}>{fmtVal(v)}</td>
       ))}
       <td className="py-2 px-3 text-right font-mono" style={{ color: varLast == null ? undefined : varLast >= 0 ? BRAND.primary : "#c0392b" }}>
         {varLast == null ? "—" : `${varLast >= 0 ? "+" : ""}${varLast.toFixed(1)}%`}

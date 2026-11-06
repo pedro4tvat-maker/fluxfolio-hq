@@ -1760,15 +1760,15 @@ function VendasPage() {
                 {listaVendas.qtd} venda(s) · ticket médio {formatMoney(listaVendas.ticket)}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {([
                 ["À vista", listaVendas.totalVista, ShoppingBag, "text-success"],
                 ["A prazo", listaVendas.totalPrazo, CalendarClock, "text-primary"],
                 ["Em aberto", listaVendas.emAberto, Receipt, "text-warning-foreground"],
               ] as const).map(([rotulo, valor, Icone, cor]) => (
-                <div key={rotulo} className="rounded-2xl bg-background/70 px-3 py-2.5">
+                <div key={rotulo} className="flex items-center justify-between gap-3 sm:block rounded-2xl bg-background/70 px-3 py-2.5">
                   <div className={`flex items-center gap-1.5 text-[11px] font-medium ${cor}`}><Icone className="size-3.5" /> {rotulo}</div>
-                  <div className="font-display font-semibold text-sm sm:text-base tabular-nums mt-0.5 truncate">{formatMoney(valor)}</div>
+                  <div className="font-display font-semibold text-base tabular-nums sm:mt-0.5 whitespace-nowrap">{formatMoney(valor)}</div>
                 </div>
               ))}
             </div>
@@ -2154,11 +2154,11 @@ function VendasPage() {
                 const prazo = v.tipo === "prazo";
                 const linhaPrazo = { ...v.row, data: null, forma_pagamento: null } as typeof v.row & { data: null; forma_pagamento: null };
                 return (
-                  <li key={v.chave} className="group flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                  <li key={v.chave} className="group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
                     <span className={`size-10 shrink-0 rounded-full grid place-items-center ${prazo ? "bg-primary/10 text-primary" : "bg-success/12 text-success"}`}>
                       {prazo ? <CalendarClock className="size-4" /> : <ShoppingBag className="size-4" />}
                     </span>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-medium text-sm truncate">{v.titulo}</span>
                         <span className={`shrink-0 rounded-full px-2 py-px text-[10px] font-medium ${prazo ? "bg-primary/10 text-primary" : "bg-success/12 text-success"}`}>
@@ -2174,10 +2174,10 @@ function VendasPage() {
                         {[v.cliente, formatDate(v.data), prazo && v.venc ? `recebe ${formatDate(v.venc)}` : null, v.forma].filter(Boolean).join(" · ")}
                       </div>
                     </div>
-                    <div className={`text-sm sm:text-base font-display font-semibold tabular-nums whitespace-nowrap ${prazo ? "" : "text-success"}`}>
+                    <div className={`ml-[3.25rem] sm:ml-0 text-sm sm:text-base font-display font-semibold tabular-nums whitespace-nowrap ${prazo ? "" : "text-success"}`}>
                       {formatMoney(v.valor)}
                     </div>
-                    <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <div className="ml-auto sm:ml-0 flex items-center gap-0.5 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <button type="button" title="Editar venda" className="size-8 grid place-items-center rounded-full hover:bg-background"
                         onClick={() => prazo
                           ? editSale({ ...v.row, data: null, forma_pagamento: (v.row as { forma_recebimento?: string | null }).forma_recebimento ?? null }, "prazo")

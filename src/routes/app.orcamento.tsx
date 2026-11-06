@@ -205,7 +205,7 @@ function OrcamentoPage() {
                     : (diferenca >= 0 ? "text-muted-foreground" : "text-destructive");
                   return (
                     <li key={r.id} className="group rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{r.categoria}</p>
                           <p className="text-xs text-muted-foreground tabular-nums">{formatMoney(r.realizado)} de {formatMoney(r.orcado)}</p>
@@ -220,8 +220,8 @@ function OrcamentoPage() {
                           ) : (
                             <>
                               <span className={`text-xs font-medium mr-1 ${corTexto}`}>{texto}</span>
-                              <button type="button" className="size-8 grid place-items-center rounded-full hover:bg-background sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={() => { setEditingId(r.id); setEditValue(String(r.orcado)); }} aria-label="Editar"><Pencil className="size-3.5" /></button>
-                              <button type="button" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={() => excluir(r.id)} aria-label="Excluir"><Trash2 className="size-3.5" /></button>
+                              <button type="button" className="size-8 grid place-items-center rounded-full hover:bg-background sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingId(r.id); setEditValue(String(r.orcado)); }} aria-label="Editar"><Pencil className="size-3.5" /></button>
+                              <button type="button" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => excluir(r.id)} aria-label="Excluir"><Trash2 className="size-3.5" /></button>
                             </>
                           )}
                         </div>

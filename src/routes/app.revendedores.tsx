@@ -218,11 +218,11 @@ function LocationsTab({ companyId }: { companyId: string }) {
           locations.length === 0 ? <p className="text-sm text-muted-foreground text-center py-10">Nenhum centro cadastrado.</p> : (
           <ul>
             {locations.map((l) => (
-              <li key={l.id} className="group flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+              <li key={l.id} className="group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
                 <span className={`size-10 shrink-0 rounded-full grid place-items-center ${l.ativa ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                   <Warehouse className="size-4" />
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-medium text-sm truncate">{l.nome}</span>
                     {l.is_default && <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-px text-[10px] font-medium"><Star className="size-2.5" /> Padrão</span>}
@@ -232,7 +232,7 @@ function LocationsTab({ companyId }: { companyId: string }) {
                     {[LOC_ROTULO[l.tipo] ?? l.tipo, l.responsavel ? `responsável: ${l.responsavel}` : null].filter(Boolean).join(" · ")}
                   </div>
                 </div>
-                <div className="flex items-center gap-0.5">
+                <div className="ml-auto sm:ml-0 flex items-center gap-0.5">
                   <StockViewDialog companyId={companyId} location={l} />
                   <button type="button" title="Editar" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => openEdit(l)}><Pencil className="size-3.5" /></button>
                   <button type="button" title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive" onClick={() => remove(l)}><Trash2 className="size-3.5" /></button>
@@ -358,11 +358,11 @@ function ResellersTab({ companyId }: { companyId: string }) {
             {resellers.map((r) => {
               const centro = locations.find((l) => l.id === r.stock_location_id)?.nome;
               return (
-                <li key={r.id} className="group flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
+                <li key={r.id} className="group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
                   <span className={`size-10 shrink-0 rounded-full grid place-items-center text-sm font-semibold ${r.ativo ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                     {iniciais(r.nome) || <Users className="size-4" />}
                   </span>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-medium text-sm truncate">{r.nome}</span>
                       {!r.ativo && <span className="shrink-0 rounded-full bg-muted text-muted-foreground px-2 py-px text-[10px] font-medium">Inativo</span>}
@@ -373,11 +373,11 @@ function ResellersTab({ companyId }: { companyId: string }) {
                       {r.email && <span className="hidden md:inline-flex items-center gap-1 truncate"><Mail className="size-3" /> {r.email}</span>}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="ml-[3.25rem] sm:ml-0 text-right shrink-0">
                     <div className="font-display font-semibold tabular-nums">{Number(r.commission_pct)}%</div>
                     <div className="text-[10px] text-muted-foreground">comissão</div>
                   </div>
-                  <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                  <div className="ml-auto sm:ml-0 flex items-center gap-0.5 sm:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                     <button type="button" title="Editar" className="size-8 grid place-items-center rounded-full hover:bg-background" onClick={() => openEdit(r)}><Pencil className="size-3.5" /></button>
                     <button type="button" title="Excluir" className="size-8 grid place-items-center rounded-full hover:bg-background text-destructive" onClick={() => remove(r)}><Trash2 className="size-3.5" /></button>
                   </div>
